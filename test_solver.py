@@ -55,6 +55,12 @@ calls = [("analyse", base), ("design_stiffness", base), ("design_tmd", {"p": bas
          ("euler", base), ("race", base), ("det", base), ("verify", {}),
          ("detect", {"lat": 27.7, "lon": 55.2, "mag": 6, "stations": st, "cities": st, "show": 0}),
          ("record", {"x": ns["synth_seismogram"](200, 6)["x"], "fs": 20}), ("seismometer", {"f0": 1, "zeta": 0.7, "freqs": [0.5, 1, 2]})]
+variants = {"1 storey": dict(base, N=1, m=[3e5], k=[4e8]), "40-storey frame": dict(base, N=40, m=[3e5] * 40, k=[4e8] * 40),
+            "wall only": dict(base, N=30, m=[4e5] * 30, k=[3e8] * 30, system="wall"), "frame + core": dict(base, N=30, m=[4e5] * 30, k=[3e8] * 30, system="dual"),
+            "bracing": dict(base, brace={"on": True, "A": 0.004, "bay": 6}), "floor dampers": dict(base, visc={"on": True, "c": 5e6}),
+            "soft storey": dict(base, k=[1e8] + [4e8] * 7)}
+for label, v in variants.items():
+    calls += [("analyse", v), ("race", v), ("euler", v), ("det", v)]
 for name, arg in calls:
     r = json.loads(ns["api"](name, json.dumps(arg)))
     report(not (isinstance(r, dict) and "error" in r), "page call: " + name, r.get("error", "") if isinstance(r, dict) else "")
