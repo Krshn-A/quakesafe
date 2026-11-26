@@ -2,16 +2,9 @@
 
 A one-page tool for building sway, earthquake protection and earthquake detection, built for a numerical methods course.
 
+**Live page:** https://krshn-a.github.io/quakesafe/
+
 The whole app is `index.html`. The numerical solver is Python, embedded in that file and run in the browser by Pyodide. Every method is written by hand; `numpy` is used only to hold arrays, and no `numpy.linalg` routine is called.
-
-## Host it with GitHub Pages
-
-1. Open this repository on GitHub and go to **Settings → Pages**.
-2. Under **Build and deployment**, set **Source** to **Deploy from a branch**.
-3. Choose branch **main** and folder **/ (root)**, then **Save**.
-4. After a minute or two the page is live at `https://<your-username>.github.io/quakesafe/`.
-
-The first load takes several seconds while the browser downloads Python.
 
 ## What it does
 
@@ -21,8 +14,10 @@ The first load takes several seconds while the browser downloads Python.
 | 2 · Shake test | Damped response to steady shaking across frequencies; tuned mass damper, base isolation and inter-storey dampers; condition number of the undamped system |
 | 3 · Detect | Trigger on synthetic recordings; distance from the P-to-S gap; epicentre from station distances; magnitude; warning time per city; damage check from a period change |
 | 4 · Numerics lab | Every linear solver on one problem; iterative convergence; SOR relaxation scan; determinant roots; root-finding comparison; Euler error growth; regression |
-| 5 · Verify | 47 checks against exact formulas, hand calculations and second methods |
+| 5 · Verify | 50 checks against exact formulas, hand calculations and second methods |
 | 6 · Limits and sources | Assumptions, what is synthetic, references |
+
+A tab can be linked directly: add `#shake`, `#detect`, `#lab`, `#verify` or `#about` to the address.
 
 ## Methods and where they are used
 
@@ -43,6 +38,18 @@ The first load takes several seconds while the browser downloads Python.
 | Mean and standard deviation | Detection trigger; magnitude across stations; hold-out error |
 | Euler's method | Free vibration, showing energy growth and round-off |
 
+## Run it on your own computer
+
+Serve the folder with any web server. Python has one built in:
+
+```
+python -m http.server 8000
+```
+
+Then open http://localhost:8000. The first load takes several seconds while the browser downloads Python (about 9 MB from cdn.jsdelivr.net); after that the browser keeps it.
+
+There is nothing to install and nothing to build. To change the app, edit `index.html` and reload. (Opening the file by double-clicking it has not been tested; use the server.)
+
 ## Run the tests
 
 ```
@@ -50,7 +57,32 @@ pip install numpy
 python test_solver.py
 ```
 
-The script extracts the solver from `index.html`, so it tests exactly what the page runs. It uses `numpy.linalg` only as a referee.
+The script extracts the solver from `index.html`, so it tests exactly what the page runs. It uses `numpy.linalg` only as a referee. It also checks that the page and its script agree (for example, that every element the script looks up exists). The same script runs on GitHub for every push and pull request (`.github/workflows/tests.yml`).
+
+What is tested, what is not, and the list of checks to do by hand in a browser are in [docs/TESTING.md](docs/TESTING.md).
+
+## How it is put together
+
+`index.html` has three parts:
+
+| Part | Where | Job |
+|---|---|---|
+| Page | the markup and styles at the top | Six tabs of sliders, tables and charts |
+| Solver | `<script type="text/python" id="solver">` | All the numerical methods and the models, in Python |
+| Page script | the last `<script>` | Keeps the sliders' values, asks the solver for results, draws them |
+
+The solver runs in a background thread (a web worker), so the page does not freeze while it computes. The page script and the solver talk through one function, `api(name, json)`.
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the design, the list of solver calls and the known failure cases.
+- [docs/adr/](docs/adr/) records the three main design decisions and why they were made.
+- [docs/TECH_DEBT.md](docs/TECH_DEBT.md) lists what is still weak, in order of priority.
+
+## Host it with GitHub Pages
+
+1. Open this repository on GitHub and go to **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **Deploy from a branch**.
+3. Choose branch **main** and folder **/ (root)**, then **Save**.
+4. After a minute or two the page is live at `https://<your-username>.github.io/quakesafe/`.
 
 ## What is synthetic or assumed
 
@@ -61,3 +93,16 @@ The script extracts the solver from `index.html`, so it tests exactly what the p
 - The slow-shaking period bands come from a summary of a published study and should be checked against the paper.
 
 See tab 6 in the app for the full list of limits.
+
+## Files
+
+```
+index.html                    the whole app: page, Python solver, page script
+test_solver.py                tests for the solver and for the page's wiring
+README.md                     this file
+docs/ARCHITECTURE.md          how the app is designed
+docs/TESTING.md               test plan and the manual browser checklist
+docs/TECH_DEBT.md             known weak points, in priority order
+docs/adr/                     design decisions and the reasons for them
+.github/workflows/tests.yml   runs test_solver.py on GitHub
+```

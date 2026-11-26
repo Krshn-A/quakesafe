@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QuakeSafe</title>
+<meta name="description" content="QuakeSafe: building sway, earthquake protection and earthquake detection, solved in the browser with hand-written numerical methods.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b6bcb'/%3E%3Cpath d='M4 21h4l3-11 4 17 4-13 3 7h6' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
 :root{--bg:#f4f6f8;--card:#fff;--ink:#17212b;--mut:#5d6b7a;--line:#d8dee5;--acc:#0b6bcb;--acc2:#c2410c;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--band:#f59e0b;--grid:#e6eaee}
 @media (prefers-color-scheme:dark){:root{--bg:#10151b;--card:#1a222b;--ink:#e6edf3;--mut:#9aa7b4;--line:#2d3742;--acc:#58a6ff;--acc2:#fb923c;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--band:#fbbf24;--grid:#263039}}
@@ -17,94 +20,106 @@ h2{font-size:15px;margin:0 0 8px}h3{font-size:13px;margin:12px 0 4px;color:var(-
 nav{display:flex;gap:4px;padding:8px 16px 0;flex-wrap:wrap;background:var(--card);border-bottom:1px solid var(--line)}
 nav button{border:0;background:none;color:var(--mut);padding:8px 12px;font:inherit;cursor:pointer;border-bottom:2px solid transparent}
 nav button.on{color:var(--acc);border-color:var(--acc);font-weight:600}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 main{padding:16px;max-width:1280px;margin:0 auto}
 .tab{display:none}.tab.on{display:block}
 .grid{display:grid;gap:14px;grid-template-columns:300px minmax(0,1fr) minmax(0,1fr)}
 .grid2{display:grid;gap:14px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-@media (max-width:980px){.grid,.grid2{grid-template-columns:minmax(0,1fr)}}
+/* medium screens: controls stay beside the first drawing, the third card drops below */
+@media (max-width:980px){.grid{grid-template-columns:minmax(230px,300px) minmax(0,1fr)}.grid>.card:nth-child(3){grid-column:1/-1}.grid2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.grid{grid-template-columns:minmax(0,1fr)}main{padding:10px}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}
 label{display:block;margin:8px 0 2px;color:var(--mut);font-size:12px}
 label b{color:var(--ink);font-weight:600;float:right}
 input[type=range]{width:100%}select,input[type=number],input[type=text],textarea{width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit}
 textarea{font-family:ui-monospace,Consolas,monospace;font-size:12px;height:150px}
 button.b{border:1px solid var(--acc);background:none;color:var(--acc);padding:6px 10px;border-radius:5px;font:inherit;cursor:pointer;margin:4px 4px 4px 0}
-button.b:hover{background:var(--acc);color:#fff}button.b.on{background:var(--acc);color:#fff}
+button.b:hover:not(:disabled){background:var(--acc);color:#fff}button.b.on{background:var(--acc);color:#fff}
+button.b:disabled{opacity:.45;cursor:not-allowed}
 .chk{display:flex;align-items:center;gap:6px;margin:8px 0 2px;font-weight:600}
 .chk input{width:auto}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 canvas{width:100%;display:block;border-radius:6px}
+#cvB,#cvMap{cursor:pointer}
 table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--mut);font-weight:600}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
 .pass{color:var(--ok)}.fail{color:var(--bad)}.note{color:var(--mut);font-size:12.5px}
 .warnbox{border-left:3px solid var(--warn);padding:6px 10px;margin:8px 0;background:var(--bg);font-size:13px}
+#bootNote{background:var(--card);margin:0 0 14px}
 .kv{display:grid;grid-template-columns:auto auto;gap:2px 12px;font-size:13px}.kv span:nth-child(odd){color:var(--mut)}.kv span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
 .scroll{overflow-x:auto}
 details{margin-top:8px}summary{cursor:pointer;color:var(--mut);font-size:12.5px}
 a{color:var(--acc)}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
 <header>
   <h1>QuakeSafe<small>building sway, protection and earthquake detection</small></h1>
-  <span id="status" class="busy">Loading Python…</span>
+  <span id="status" class="busy" role="status" aria-live="polite">Loading Python…</span>
 </header>
-<nav id="nav">
-  <button data-t="build" class="on">1 · Building</button>
-  <button data-t="shake">2 · Shake test</button>
-  <button data-t="detect">3 · Detect</button>
-  <button data-t="lab">4 · Numerics lab</button>
-  <button data-t="verify">5 · Verify</button>
-  <button data-t="about">6 · Limits and sources</button>
+<nav id="nav" role="tablist" aria-label="Sections">
+  <button role="tab" id="tab-build" aria-controls="t-build" aria-selected="true" data-t="build" class="on">1 · Building</button>
+  <button role="tab" id="tab-shake" aria-controls="t-shake" aria-selected="false" tabindex="-1" data-t="shake">2 · Shake test</button>
+  <button role="tab" id="tab-detect" aria-controls="t-detect" aria-selected="false" tabindex="-1" data-t="detect">3 · Detect</button>
+  <button role="tab" id="tab-lab" aria-controls="t-lab" aria-selected="false" tabindex="-1" data-t="lab">4 · Numerics lab</button>
+  <button role="tab" id="tab-verify" aria-controls="t-verify" aria-selected="false" tabindex="-1" data-t="verify">5 · Verify</button>
+  <button role="tab" id="tab-about" aria-controls="t-about" aria-selected="false" tabindex="-1" data-t="about">6 · Limits and sources</button>
 </nav>
 <main>
+<noscript><div class="warnbox">QuakeSafe needs JavaScript: the solver is Python running inside this page.</div></noscript>
+<div id="bootNote" class="warnbox" hidden></div>
 
 <!-- ============================ 1 BUILDING ============================ -->
-<section class="tab on" id="t-build">
+<section class="tab on" id="t-build" role="tabpanel" aria-labelledby="tab-build">
 <div class="grid">
   <div class="card">
     <h2>Building</h2>
-    <label>Preset (illustrative values)</label>
+    <label for="preset">Preset (illustrative values)</label>
     <select id="preset">
+      <option value="" hidden>Custom</option>
       <option value="apartment">8-storey apartment block</option>
       <option value="villa">3-storey villa</option>
       <option value="office">15-storey office</option>
       <option value="tower">30-storey tower with concrete core</option>
       <option value="soft">8-storey block with open ground floor</option>
     </select>
-    <label>Storeys <b id="vN"></b></label><input type="range" id="N" min="1" max="40" step="1">
-    <label>Storey height (m) <b id="vh"></b></label><input type="range" id="h" min="2.6" max="5" step="0.1">
-    <label>Mass per floor (tonnes) <b id="vmass"></b></label><input type="range" id="mass" min="50" max="1000" step="10">
-    <label>Column stiffness per storey (kN/mm) <b id="vstiff"></b></label><input type="range" id="stiff" min="20" max="2000" step="10">
-    <label>Structural system</label>
+    <label for="N">Storeys <b id="vN"></b></label><input type="range" id="N" min="1" max="40" step="1">
+    <label for="h">Storey height (m) <b id="vh"></b></label><input type="range" id="h" min="2.6" max="5" step="0.1">
+    <label for="mass">Mass per floor (tonnes) <b id="vmass"></b></label><input type="range" id="mass" min="50" max="1000" step="10">
+    <label for="stiff">Column stiffness per storey (kN/mm) <b id="vstiff"></b></label><input type="range" id="stiff" min="20" max="2000" step="10">
+    <label for="system">Structural system</label>
     <select id="system">
       <option value="frame">Frame (floors on columns)</option>
       <option value="wall">Wall or core (bends like a flagpole)</option>
       <option value="dual">Frame + core</option>
     </select>
-    <div id="eiRow"><label>Core bending stiffness EI (GN·m²) <b id="vEI"></b></label><input type="range" id="EI" min="100" max="10000" step="100"></div>
+    <div id="eiRow"><label for="EI">Core bending stiffness EI (GN·m²) <b id="vEI"></b></label><input type="range" id="EI" min="100" max="10000" step="100"></div>
     <label class="chk"><input type="checkbox" id="brace"> Steel bracing in every storey</label>
-    <div id="braceRow"><label>Brace area (cm²) <b id="vbraceA"></b></label><input type="range" id="braceA" min="5" max="200" step="5"></div>
-    <h3>Selected floor: <span id="selName">none</span></h3>
-    <p class="note" style="margin:0">Click a floor in the drawing to edit it.</p>
-    <label>Mass multiplier <b id="vmMul"></b></label><input type="range" id="mMul" min="0.2" max="4" step="0.1" disabled>
-    <label>Stiffness multiplier of the storey below it <b id="vkMul"></b></label><input type="range" id="kMul" min="0.1" max="3" step="0.05" disabled>
+    <div id="braceRow"><label for="braceA">Brace area (cm²) <b id="vbraceA"></b></label><input type="range" id="braceA" min="5" max="200" step="5"></div>
+    <h3>Edit one floor</h3>
+    <label for="floorSel">Floor (pick it here or click it in the drawing)</label>
+    <select id="floorSel"><option value="-1">None</option></select>
+    <label for="mMul">Mass multiplier <b id="vmMul"></b></label><input type="range" id="mMul" min="0.2" max="4" step="0.1" disabled>
+    <label for="kMul">Stiffness multiplier of the storey below it <b id="vkMul"></b></label><input type="range" id="kMul" min="0.1" max="3" step="0.05" disabled>
     <details><summary>Earthquake load settings (example values, take yours from the local code)</summary>
-      <label>S<sub>DS</sub> short-period design value (g) <b id="vSDS"></b></label><input type="range" id="SDS" min="0.1" max="1.5" step="0.05">
-      <label>S<sub>D1</sub> one-second design value (g) <b id="vSD1"></b></label><input type="range" id="SD1" min="0.05" max="1" step="0.05">
-      <label>Response factor R <b id="vR"></b></label><input type="range" id="R" min="1" max="8" step="0.5">
-      <label>Deflection factor C<sub>d</sub> <b id="vCd"></b></label><input type="range" id="Cd" min="1" max="6.5" step="0.5">
-      <label>Drift limit (% of storey height) <b id="vdlim"></b></label><input type="range" id="dlim" min="0.5" max="2.5" step="0.1">
+      <label for="SDS">S<sub>DS</sub> short-period design value (g) <b id="vSDS"></b></label><input type="range" id="SDS" min="0.1" max="1.5" step="0.05">
+      <label for="SD1">S<sub>D1</sub> one-second design value (g) <b id="vSD1"></b></label><input type="range" id="SD1" min="0.05" max="1" step="0.05">
+      <label for="R">Response factor R <b id="vR"></b></label><input type="range" id="R" min="1" max="8" step="0.5">
+      <label for="Cd">Deflection factor C<sub>d</sub> <b id="vCd"></b></label><input type="range" id="Cd" min="1" max="6.5" step="0.5">
+      <label for="dlim">Drift limit (% of storey height) <b id="vdlim"></b></label><input type="range" id="dlim" min="0.5" max="2.5" step="0.1">
     </details>
   </div>
   <div class="card">
     <h2>Sway</h2>
     <div id="viewBtns">
-      <button class="b on" data-v="static">Code load</button>
-      <button class="b" data-v="0">Mode 1</button>
-      <button class="b" data-v="1">Mode 2</button>
-      <button class="b" data-v="2">Mode 3</button>
+      <button class="b on" data-v="static" aria-pressed="true">Code load</button>
+      <button class="b" data-v="0" aria-pressed="false">Mode 1</button>
+      <button class="b" data-v="1" aria-pressed="false">Mode 2</button>
+      <button class="b" data-v="2" aria-pressed="false">Mode 3</button>
     </div>
-    <canvas id="cvB" height="520"></canvas>
+    <canvas id="cvB" data-h="520" role="img" aria-label="Drawing of the building swaying. The same numbers are in the results and the drift table."></canvas>
     <p class="note" id="viewNote"></p>
   </div>
   <div class="card">
@@ -116,93 +131,97 @@ a{color:var(--acc)}
     <h3>Design</h3>
     <button class="b" id="btnDesign">Find the minimum stiffness that passes</button>
     <div id="designOut" class="note"></div>
-    <canvas id="cvDesign" height="170" style="display:none"></canvas>
+    <canvas id="cvDesign" data-h="170" hidden role="img" aria-label="Chart: error per iteration for bisection, false position and fixed-point iteration."></canvas>
   </div>
 </div>
 </section>
 
 <!-- ============================ 2 SHAKE ============================ -->
-<section class="tab" id="t-shake">
+<section class="tab" id="t-shake" role="tabpanel" aria-labelledby="tab-shake">
 <div class="grid">
   <div class="card">
     <h2>Shaking and protection</h2>
-    <label>Structural damping (%) <b id="vzeta"></b></label><input type="range" id="zeta" min="0.5" max="10" step="0.5">
-    <label>Ground shaking strength (g) <b id="vag"></b></label><input type="range" id="ag" min="0.005" max="0.2" step="0.005">
+    <label for="zeta">Structural damping (%) <b id="vzeta"></b></label><input type="range" id="zeta" min="0.5" max="10" step="0.5">
+    <label for="ag">Ground shaking strength (g) <b id="vag"></b></label><input type="range" id="ag" min="0.005" max="0.2" step="0.005">
     <label class="chk"><input type="checkbox" id="tmd"> Tuned mass damper on the roof</label>
     <div id="tmdRow">
-      <label>Damper mass (% of the building's moving mass) <b id="vmu"></b></label><input type="range" id="mu" min="0.2" max="15" step="0.1">
-      <label>Tuning (damper frequency ÷ building frequency) <b id="vtf"></b></label><input type="range" id="tf" min="0.7" max="1.2" step="0.005">
-      <label>Damper's own damping (%) <b id="vzd"></b></label><input type="range" id="zd" min="0" max="40" step="0.5">
+      <label for="mu">Damper mass (% of the building's moving mass) <b id="vmu"></b></label><input type="range" id="mu" min="0.2" max="15" step="0.1">
+      <label for="tf">Tuning (damper frequency ÷ building frequency) <b id="vtf"></b></label><input type="range" id="tf" min="0.7" max="1.2" step="0.005">
+      <label for="zd">Damper's own damping (%) <b id="vzd"></b></label><input type="range" id="zd" min="0" max="40" step="0.5">
       <button class="b" id="btnRule">Use the textbook tuning rule</button>
-      <label>Target cut in peak sway (%) <b id="vtarget"></b></label><input type="range" id="target" min="10" max="60" step="5">
+      <label for="target">Target cut in peak sway (%) <b id="vtarget"></b></label><input type="range" id="target" min="10" max="60" step="5">
       <button class="b" id="btnTmd">Design the damper mass (bisection)</button>
       <div id="tmdOut" class="note"></div>
     </div>
     <label class="chk"><input type="checkbox" id="iso"> Base isolation</label>
     <div id="isoRow">
-      <label>Isolator stiffness (kN/mm) <b id="vkb"></b></label><input type="range" id="kb" min="1" max="400" step="1">
-      <label>Target period (s) <b id="vTiso"></b></label><input type="range" id="Tiso" min="1" max="5" step="0.1">
+      <label for="kb">Isolator stiffness (kN/mm) <b id="vkb"></b></label><input type="range" id="kb" min="1" max="400" step="1">
+      <label for="Tiso">Target period (s) <b id="vTiso"></b></label><input type="range" id="Tiso" min="1" max="5" step="0.1">
       <button class="b" id="btnIso">Design the isolator (bisection)</button>
       <div id="isoOut" class="note"></div>
     </div>
     <label class="chk"><input type="checkbox" id="visc"> Shock-absorber dampers between floors</label>
-    <div id="viscRow"><label>Damper size per storey (MN·s/m) <b id="vvc"></b></label><input type="range" id="vc" min="0.5" max="60" step="0.5"></div>
+    <div id="viscRow"><label for="vc">Damper size per storey (MN·s/m) <b id="vvc"></b></label><input type="range" id="vc" min="0.5" max="60" step="0.5"></div>
     <button class="b" id="btnPin">Pin this curve for comparison</button>
     <button class="b" id="btnUnpin">Clear pinned</button>
   </div>
   <div class="card">
     <h2>Roof sway against shaking frequency</h2>
-    <canvas id="cvSweep" height="300"></canvas>
-    <label>Shaking frequency <b id="vfreq"></b></label><input type="range" id="freq" min="0" max="100" step="1" value="20">
+    <canvas id="cvSweep" data-h="300" role="img" aria-label="Chart: roof sway against shaking frequency. The peak and the value at the chosen frequency are listed below it."></canvas>
+    <label for="freq">Shaking frequency <b id="vfreq"></b></label><input type="range" id="freq" min="0" max="100" step="1" value="20">
     <div class="kv" id="kvS"></div>
     <div id="bandOut"></div>
     <h3>Condition number of the undamped system</h3>
-    <canvas id="cvCond" height="170"></canvas>
+    <canvas id="cvCond" data-h="170" role="img" aria-label="Chart: condition number of the undamped system against shaking frequency, with a spike at each natural frequency."></canvas>
     <p class="note">The spikes sit exactly on the natural frequencies: there the undamped matrix K − Ω²M is singular.</p>
   </div>
   <div class="card">
     <h2>Motion at this frequency</h2>
-    <canvas id="cvS" height="520"></canvas>
+    <canvas id="cvS" data-h="520" role="img" aria-label="Drawing of the building moving at the chosen shaking frequency."></canvas>
     <p class="note">Steady shaking at one frequency. This is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies. Sway is exaggerated in the drawing.</p>
   </div>
 </div>
 </section>
 
 <!-- ============================ 3 DETECT ============================ -->
-<section class="tab" id="t-detect">
+<section class="tab" id="t-detect" role="tabpanel" aria-labelledby="tab-detect">
 <div class="grid">
   <div class="card">
     <h2>Earthquake</h2>
-    <p class="note" style="margin-top:0">Click the map to move the earthquake. Recordings are synthetic, so the true answer is known.</p>
-    <label>Magnitude <b id="vmag"></b></label><input type="range" id="mag" min="3" max="7.5" step="0.1">
-    <label>Background noise at the stations <b id="vnoise"></b></label><input type="range" id="noise" min="0.005" max="0.5" step="0.005">
-    <label>Trigger threshold (ratio) <b id="vthr"></b></label><input type="range" id="thr" min="2" max="15" step="0.5">
-    <label>Processing delay before the alert (s) <b id="vdelay"></b></label><input type="range" id="delay" min="0" max="20" step="1">
+    <p class="note" style="margin-top:0">Click the map to move the earthquake, or type its position. Recordings are synthetic, so the true answer is known.</p>
+    <div class="row2">
+      <div><label for="eqLat">Latitude (°N)</label><input type="number" id="eqLat" min="22" max="31" step="0.1"></div>
+      <div><label for="eqLon">Longitude (°E)</label><input type="number" id="eqLon" min="47" max="60" step="0.1"></div>
+    </div>
+    <label for="mag">Magnitude <b id="vmag"></b></label><input type="range" id="mag" min="3" max="7.5" step="0.1">
+    <label for="noise">Background noise at the stations <b id="vnoise"></b></label><input type="range" id="noise" min="0.005" max="0.5" step="0.005">
+    <label for="thr">Trigger threshold (ratio) <b id="vthr"></b></label><input type="range" id="thr" min="2" max="15" step="0.5">
+    <label for="delay">Processing delay before the alert (s) <b id="vdelay"></b></label><input type="range" id="delay" min="0" max="20" step="1">
     <label class="chk"><input type="checkbox" id="iran"> Add a station on the Iranian side (hypothetical)</label>
-    <label>Show the recording from</label><select id="showSt"></select>
+    <label for="showSt">Show the recording from</label><select id="showSt"></select>
     <h3>Result</h3>
     <div class="kv" id="kvD"></div>
     <h3>Your own recording</h3>
-    <label>CSV file: one column of samples, or two columns (time in s, value)</label>
+    <label for="csv">CSV file: one column of samples, or two columns (time in s, value)</label>
     <input type="file" id="csv" accept=".csv,.txt">
-    <label>Samples per second (for one-column files)</label><input type="number" id="csvFs" value="20">
+    <label for="csvFs">Samples per second (two-column files are resampled to this rate)</label><input type="number" id="csvFs" value="20" min="1" step="1">
     <button class="b" id="btnPhone">Record 25 s from this device's motion sensor</button>
     <div id="recOut" class="note"></div>
   </div>
   <div class="card">
     <h2>Stations and epicentre</h2>
-    <canvas id="cvMap" height="380"></canvas>
+    <canvas id="cvMap" data-h="380" role="img" aria-label="Schematic map of stations, cities, the true earthquake and the estimated epicentre. The table below lists the same distances."></canvas>
     <p class="note">Schematic map: positions only, no coastline. ▲ station · ● city · ★ true earthquake · ✚ estimate. Circles are the estimated distances.</p>
     <div class="scroll"><table id="tbSt"></table></div>
   </div>
   <div class="card">
     <h2>Recording and trigger</h2>
-    <canvas id="cvTrace" height="190"></canvas>
-    <canvas id="cvRatio" height="190"></canvas>
+    <canvas id="cvTrace" data-h="190" role="img" aria-label="Chart: the recording, with the P and S picks marked."></canvas>
+    <canvas id="cvRatio" data-h="190" role="img" aria-label="Chart: short-term over long-term average, with the trigger threshold."></canvas>
     <h3>Warning time</h3>
     <div class="scroll"><table id="tbCity"></table></div>
     <h3>Damage check after a quake</h3>
-    <label>Measured first period after the quake (s)</label><input type="number" id="Tmeas" step="0.01">
+    <label for="Tmeas">Measured first period after the quake (s)</label><input type="number" id="Tmeas" step="0.01" min="0">
     <button class="b" id="btnDamage">Estimate stiffness loss (bisection)</button>
     <div id="damageOut" class="note"></div>
   </div>
@@ -210,21 +229,21 @@ a{color:var(--acc)}
 </section>
 
 <!-- ============================ 4 LAB ============================ -->
-<section class="tab" id="t-lab">
-<p class="note">Everything here uses the building from tab 1. <button class="b" id="btnLab">Run all</button></p>
+<section class="tab" id="t-lab" role="tabpanel" aria-labelledby="tab-lab">
+<p class="note">Everything here uses the building from tab 1. <button class="b" id="btnLab">Run all</button> <b id="labStale" class="fail" hidden>The building has changed since this run. Run all again to update.</b></p>
 <div class="grid2">
-  <div class="card"><h2>Stiffness matrix K</h2><canvas id="cvK" height="260"></canvas><div id="kNote" class="note"></div></div>
+  <div class="card"><h2>Stiffness matrix K</h2><canvas id="cvK" data-h="260" role="img" aria-label="Picture of the stiffness matrix: which entries are positive, negative or zero."></canvas><div id="kNote" class="note"></div></div>
   <div class="card"><h2>One problem, every linear solver</h2><p class="note">Solving K·u = F for the code load.</p><div class="scroll"><table id="tbRace"></table></div></div>
-  <div class="card"><h2>Iterative solvers: error per iteration</h2><canvas id="cvIter" height="240"></canvas></div>
-  <div class="card"><h2>SOR: iterations against the relaxation factor ω</h2><canvas id="cvSor" height="240"></canvas></div>
-  <div class="card"><h2>Natural frequencies as roots of det(K − λM) = 0</h2><canvas id="cvDet" height="240"></canvas><div id="detOut" class="note"></div></div>
-  <div class="card"><h2>Root finding: three methods on the design problem</h2><canvas id="cvRoot" height="240"></canvas><div id="rootOut" class="note"></div></div>
-  <div class="card"><h2>Euler's method: energy that should stay constant</h2><canvas id="cvEuler" height="240"></canvas><div id="eulerOut" class="note"></div></div>
-  <div class="card"><h2>Euler's method: roof motion against the exact answer</h2><canvas id="cvEuler2" height="240"></canvas></div>
+  <div class="card"><h2>Iterative solvers: error per iteration</h2><canvas id="cvIter" data-h="240" role="img" aria-label="Chart: error per iteration for Jacobi, Gauss-Seidel and SOR."></canvas></div>
+  <div class="card"><h2>SOR: iterations against the relaxation factor ω</h2><canvas id="cvSor" data-h="240" role="img" aria-label="Chart: SOR iterations needed against the relaxation factor."></canvas></div>
+  <div class="card"><h2>Natural frequencies as roots of det(K − λM) = 0</h2><canvas id="cvDet" data-h="240" role="img" aria-label="Chart: the determinant against lambda, with its roots marked. The roots are listed below."></canvas><div id="detOut" class="note"></div></div>
+  <div class="card"><h2>Root finding: three methods on the design problem</h2><canvas id="cvRoot" data-h="240" role="img" aria-label="Chart: error per iteration for the three root-finding methods."></canvas><div id="rootOut" class="note"></div></div>
+  <div class="card"><h2>Euler's method: energy that should stay constant</h2><canvas id="cvEuler" data-h="240" role="img" aria-label="Chart: energy against time for three Euler step sizes."></canvas><div id="eulerOut" class="note"></div></div>
+  <div class="card"><h2>Euler's method: roof motion against the exact answer</h2><canvas id="cvEuler2" data-h="240" role="img" aria-label="Chart: roof position from Euler's method against the exact answer."></canvas></div>
   <div class="card">
     <h2>Regression: period against height</h2>
-    <p class="note">Rows are height (m), period (s). The sample rows are <b>synthetic</b>: made from the ASCE 7 concrete-frame formula T = 0.0466·h<sup>0.9</sup> with scatter added. Replace them with measured data, such as the tables in Goel and Chopra (1997).</p>
-    <textarea id="regData">9.6, 0.35
+    <p class="note" id="regHelp">Rows are height (m), period (s). The sample rows are <b>synthetic</b>: made from the ASCE 7 concrete-frame formula T = 0.0466·h<sup>0.9</sup> with scatter added. Replace them with measured data, such as the tables in Goel and Chopra (1997).</p>
+    <textarea id="regData" aria-label="Height and period rows" aria-describedby="regHelp">9.6, 0.35
 12.8, 0.43
 16, 0.58
 19.2, 0.61
@@ -240,22 +259,22 @@ a{color:var(--acc)}
     <button class="b" id="btnCal">Calibrate the model's stiffness to this curve (bisection)</button>
     <div id="regOut" class="note"></div>
   </div>
-  <div class="card"><h2>Fit</h2><canvas id="cvReg" height="300"></canvas></div>
+  <div class="card"><h2>Fit</h2><canvas id="cvReg" data-h="300" role="img" aria-label="Chart: measured periods against height with the fitted curve."></canvas></div>
 </div>
 </section>
 
 <!-- ============================ 5 VERIFY ============================ -->
-<section class="tab" id="t-verify">
+<section class="tab" id="t-verify" role="tabpanel" aria-labelledby="tab-verify">
 <div class="card">
   <h2>Verification</h2>
   <p class="note">Each row compares the solver with an exact formula, a hand calculation or a second method. The same checks run in the test script in the repository.</p>
-  <button class="b" id="btnVerify">Run all checks</button> <span id="verSum"></span>
+  <button class="b" id="btnVerify">Run all checks</button> <span id="verSum" role="status"></span>
   <div class="scroll"><table id="tbVer"></table></div>
 </div>
 </section>
 
 <!-- ============================ 6 ABOUT ============================ -->
-<section class="tab" id="t-about">
+<section class="tab" id="t-about" role="tabpanel" aria-labelledby="tab-about">
 <div class="grid2">
 <div class="card">
   <h2>What the model is</h2>
@@ -275,6 +294,7 @@ a{color:var(--acc)}
     <li>The damper tuning rule is exact only for a one-storey building with no damping and a force on the main mass.</li>
     <li>Epicentre: flat map, fixed depth, constant wave speeds (6.0 and 3.5 km/s by default).</li>
     <li>The damage check fits one overall stiffness factor. It cannot say which storey is damaged.</li>
+    <li>For wall and frame + core buildings the stiffness matrix is the inverse of a flexibility matrix, which is badly conditioned for many storeys. The residual shown on tab 1 can then rise to around 10<sup>−5</sup>, against 10<sup>−13</sup> for a frame.</li>
   </ul>
 </div>
 <div class="card">
@@ -299,7 +319,7 @@ a{color:var(--acc)}
     <li><a href="https://iitk.ac.in/nicee/wcee/article/14_02-0117.PDF">WCEE paper on UAE ground motion and tall buildings</a></li>
     <li><a href="https://earthquake.usgs.gov/monitoring/operations/stations/II/UOSS">USGS page for station II UOSS</a></li>
   </ul>
-  <p class="note">The solver is Python, embedded in this page and run in the browser by Pyodide. No numpy.linalg routine is used. View the page source to read it.</p>
+  <p class="note">The solver is Python, embedded in this page and run in the browser by Pyodide, in a background worker so the page stays responsive. No numpy.linalg routine is used. View the page source to read it.</p>
 </div>
 </div>
 </section>
@@ -795,7 +815,7 @@ def sweep_grid(mod, modes, npts=160):
 
 def sweep(mod, freqs, ag, want_cond=True, want_shapes=True):
     M = mod["M"]; n = len(M); F = -M * ag
-    Z = np.zeros((n, n)); amp = []; und = []; cond = []; A = []; B = []
+    amp = []; und = []; cond = []; A = []; B = []
     for f in freqs:
         Om = 2 * math.pi * f
         a, b = harmonic_solve(M, mod["C"], mod["K"], F, Om)
@@ -812,12 +832,27 @@ def sweep(mod, freqs, ag, want_cond=True, want_shapes=True):
     return {"amp": amp, "und": und, "cond": cond, "A": A, "B": B}
 
 
-def peak_near_mode(mod, f1, ag, npts=45, lo=0.6, hi=1.45):
-    M = mod["M"]; F = -M * ag; best = 0.0
-    for i in range(npts):
-        f = f1 * (lo + (hi - lo) * i / (npts - 1))
+def peak_near_mode(mod, f1, ag, npts=45, lo=0.6, hi=1.45, refine=3):
+    """Largest roof sway for shaking near the first natural frequency.
+    A coarse scan finds the highest point, then the grid is refined around it
+    three times. A lightly damped peak is narrower than the coarse spacing,
+    so the coarse scan alone would step over it and report too small a peak."""
+    M = mod["M"]; F = -M * ag
+    def amp(f):
         a, b = harmonic_solve(M, mod["C"], mod["K"], F, 2 * math.pi * f)
-        best = max(best, roof_amp(mod, a, b))
+        return roof_amp(mod, a, b)
+    step = f1 * (hi - lo) / (npts - 1); best = 0.0; fbest = f1
+    for i in range(npts):
+        f = f1 * lo + step * i; v = amp(f)
+        if v > best:
+            best = v; fbest = f
+    for _ in range(refine):
+        centre = fbest
+        for j in (-3, -2, -1, 1, 2, 3):                # quarter steps on both sides
+            f = centre + step * j / 4.0; v = amp(f)
+            if v > best:
+                best = v; fbest = f
+        step /= 4.0
     return best
 
 
@@ -836,16 +871,21 @@ def design_tmd(p, target, ag):
     q0 = dict(p); q0["tmd"] = {"on": False}
     m0 = build(q0); f1 = m0["w_ref"] / (2 * math.pi)
     peak0 = peak_near_mode(m0, f1, ag)
-    g = lambda mu: peak_near_mode(build(with_tmd(p, mu)), f1, ag) / peak0 - (1.0 - target)
-    curve = [[mu, g(mu) + (1.0 - target)] for mu in (0.002, 0.01, 0.04, 0.15)]
-    try:
-        mu, it, hist = bisection(g, 0.002, 0.15, 5e-3, 40)
-    except ValueError:
-        return {"error": "target not reachable with a damper between 0.2% and 15% of the modal mass",
-                "curve": curve, "peak0": peak0}
+    left = lambda mu: peak_near_mode(build(with_tmd(p, mu)), f1, ag) / peak0   # share of the sway that remains
+    g = lambda mu: left(mu) - (1.0 - target)
+    lo = 0.002; hi = 0.15
+    curve = [[mu, left(mu)] for mu in (lo, 0.01, 0.04, hi)]
+    if curve[0][1] <= 1.0 - target:                    # the smallest damper already beats the target
+        f, zd = tmd_rule(lo)
+        return {"mu": lo, "f": f, "zd": zd, "it": 0, "hist": [], "curve": curve, "peak0": peak0,
+                "peak": curve[0][1] * peak0, "smallest": True}
+    if curve[-1][1] > 1.0 - target:                    # even the largest damper is not enough
+        return {"error": "target not reachable: even a damper of 15%% of the moving mass leaves %.0f%% of the peak sway"
+                         % (100.0 * curve[-1][1]), "curve": curve, "peak0": peak0}
+    mu, it, hist = bisection(g, lo, hi, 5e-3, 40)
     f, zd = tmd_rule(mu)
     return {"mu": mu, "f": f, "zd": zd, "it": it, "hist": hist, "curve": curve, "peak0": peak0,
-            "peak": (g(mu) + 1.0 - target) * peak0}
+            "peak": left(mu) * peak0, "smallest": False}
 
 
 def period_of(p, scale=1.0):
@@ -881,18 +921,25 @@ def calibrate(p, T_target):
 # ---------------------------------------------------------------------
 # MODULE 1: Euler's method and error growth
 # ---------------------------------------------------------------------
+EULER_STOP = 1e30    # a run is ended once its energy has grown by this factor
+
+
 def euler_free(Ks, m, u0, dt, tend):
-    """Explicit Euler on  M u'' + K u = 0. Returns roof motion and energy."""
+    """Explicit Euler on  M u'' + K u = 0. Returns roof motion and energy.
+    The energy should stay at 1. A run that passes EULER_STOP is ended there."""
     u = np.array(u0, float); v = np.zeros(len(m)); n = int(round(tend / dt))
-    E0 = 0.5 * float(u @ (Ks @ u)); t = []; roof = []; en = []
+    E0 = 0.5 * float(u @ (Ks @ u)); t = []; roof = []; en = []; stopped = None
     stride = max(1, n // 400)
     for i in range(n + 1):
         if i % stride == 0:
             t.append(i * dt); roof.append(float(u[-1]))
             en.append((0.5 * float(v @ (m * v)) + 0.5 * float(u @ (Ks @ u))) / E0)
+            if en[-1] > EULER_STOP:                    # blown up: stop before the numbers overflow
+                stopped = i * dt
+                break
         a = -(Ks @ u) / m
         u, v = u + dt * v, v + dt * a
-    return {"t": t, "roof": roof, "energy": en}
+    return {"t": t, "roof": roof, "energy": en, "stopped": stopped}
 
 
 def euler_demo(p):
@@ -904,8 +951,9 @@ def euler_demo(p):
         r.update({"dt": dt, "frac": frac, "predicted": (1 + (w1 * dt) ** 2) ** nsteps})
         runs.append(r)
     lam_max, _, it = power_iteration(Ks, m)
-    return {"T1": T1, "runs": runs, "w_max": math.sqrt(lam_max), "power_iters": it,
-            "exact_t": runs[0]["t"], "exact": [0.05 * math.cos(w1 * t) for t in runs[0]["t"]]}
+    tx = [tend * i / 400.0 for i in range(401)]        # the exact answer has its own time grid
+    return {"T1": T1, "runs": runs, "w_max": math.sqrt(lam_max), "power_iters": it, "stop": EULER_STOP,
+            "exact_t": tx, "exact": [0.05 * math.cos(w1 * t) for t in tx]}
 
 
 # ---------------------------------------------------------------------
@@ -960,10 +1008,21 @@ def det_roots(p, nroots=3):
 # ---------------------------------------------------------------------
 # Regression: period vs height, and damage from a frequency drop
 # ---------------------------------------------------------------------
+def same_values(v):
+    """True when the numbers are all (nearly) equal, so no line can be fitted through them."""
+    return max(v) - min(v) <= 1e-9 * max(abs(max(v)), abs(min(v)), 1e-300)
+
+
 def regression(h, T):
+    if len(h) != len(T) or len(h) < 3:
+        return {"error": "need at least 3 rows of height and period"}
+    if min(h) <= 0 or min(T) <= 0:
+        return {"error": "heights and periods must be positive numbers"}
+    if same_values(h):
+        return {"error": "all the heights are the same, so a curve cannot be fitted through them"}
     C, xexp, r2, cond = fit_power_law(h, T)
     out = {"C": C, "x": xexp, "r2": r2, "cond": cond}
-    if len(h) >= 6:                                   # hold-out test: fit on half, test on the rest
+    if len(h) >= 6 and not same_values(h[0::2]):      # hold-out test: fit on half, test on the rest
         C2, x2, _, _ = fit_power_law(h[0::2], T[0::2])
         err = [(C2 * hh ** x2 - tt) / tt * 100.0 for hh, tt in zip(h[1::2], T[1::2])]
         out["holdout"] = {"C": C2, "x": x2, "mean_err": mean(err), "std_err": std(err), "n": len(err)}
@@ -974,10 +1033,18 @@ def damage(p, T_measured):
     """One overall stiffness-loss factor that explains a measured longer period."""
     q = dict(p); q["tmd"] = {"on": False}; q["iso"] = {"on": False}
     T0 = period_of(q)
-    if T_measured <= T0:
+    if not T_measured > T0:
         return {"error": "measured period is not longer than the healthy period", "T0": T0}
-    a, it, hist = bisection(lambda a: period_of(q, a) - T_measured, 1e-3, 1.0, 1e-8)
-    return {"alpha": a, "it": it, "T0": T0, "exact": (T0 / T_measured) ** 2}
+    lo = 1e-3; T_max = period_of(q, lo)                # the longest period the search can reach
+    if T_measured >= T_max:
+        return {"error": "measured period is too long for this model: with almost all of the column and wall "
+                         "stiffness gone its period is only %.3g s" % T_max, "T0": T0}
+    a, it, hist = bisection(lambda a: period_of(q, a) - T_measured, lo, 1.0, 1e-8)
+    # (T0/T)^2 is exact only when every stiffness scales together. Bracing is not scaled
+    # (a wall-only building has no bracing in the model, so there it is still exact).
+    scales_together = brace_stiffness(q) == 0.0 or q.get("system", "frame") == "wall"
+    exact = (T0 / T_measured) ** 2 if scales_together else None
+    return {"alpha": a, "it": it, "T0": T0, "exact": exact}
 
 
 # ---------------------------------------------------------------------
@@ -1093,13 +1160,19 @@ def detect(q):
             row["trace"] = {"x": rec["x"][::st], "ratio": pk["ratio"][::st], "dt": st / rec["fs"],
                             "noise_mean": pk["noise_mean"], "noise_std": pk["noise_std"]}
         rows.append(row)
-    out = {"stations": rows, "true_xy": [ex, ey], "epi": None, "cities": []}
-    if len(used) >= 3:
-        x, y, cond, res = locate([u[0] for u in used], [u[1] for u in used])
-        la, lo = to_latlon(x, y, lat0, lon0); mls = [r["ml"] for r in rows if r["ml"] is not None]
-        out["epi"] = {"lat": la, "lon": lo, "err_km": math.hypot(x - ex, y - ey), "cond": cond,
-                      "rms": math.sqrt(mean([v * v for v in res])), "n": len(used),
-                      "ml_mean": mean(mls), "ml_std": std(mls)}
+    out = {"stations": rows, "true_xy": [ex, ey], "epi": None, "epi_note": None, "cities": []}
+    if len(used) < 3:
+        out["epi_note"] = "needs 3 stations with both picks"
+    else:
+        try:
+            x, y, cond, res = locate([u[0] for u in used], [u[1] for u in used])
+        except (ZeroDivisionError, ValueError):       # singular: the circle equations are not independent
+            out["epi_note"] = "the stations lie on one line, so the circles do not fix a point"
+        else:
+            la, lo = to_latlon(x, y, lat0, lon0); mls = [r["ml"] for r in rows if r["ml"] is not None]
+            out["epi"] = {"lat": la, "lon": lo, "err_km": math.hypot(x - ex, y - ey), "cond": cond,
+                          "rms": math.sqrt(mean([v * v for v in res])), "n": len(used),
+                          "ml_mean": mean(mls), "ml_std": std(mls)}
     delay = float(q.get("delay", 5.0))
     for c in q.get("cities", []):
         cx, cy = to_xy(c["lat"], c["lon"], lat0, lon0); dc = math.hypot(cx - ex, cy - ey)
@@ -1118,6 +1191,39 @@ def analyse_record(x, fs, thr=5.0, vp=6.0, vs=3.5):
     if pk["tP"] is not None and pk["tS"] is not None:
         out["dist"] = (pk["tS"] - pk["tP"]) * vp * vs / (vp - vs)
     return out
+
+
+RECORD_MAX = 500000    # longest recording the trigger will work through, in samples
+
+
+def record(a):
+    """Check an uploaded or sensor recording, put it on an even time grid, run the trigger."""
+    try:
+        x = [float(v) for v in a["x"]]; fs = float(a["fs"])
+        t = [float(v) for v in a["t"]] if a.get("t") else None
+    except (TypeError, ValueError):
+        return {"error": "the recording has a value that is not a number"}
+    if not fs > 0:
+        return {"error": "samples per second must be a positive number"}
+    if t is not None:
+        if len(t) != len(x):
+            return {"error": "the time and value columns have different lengths"}
+        tk = []; xk = []
+        for ti, xi in zip(t, x):                       # keep only samples whose time moves forward
+            if not tk or ti > tk[-1]:
+                tk.append(ti); xk.append(xi)
+        if len(tk) < 0.9 * len(t):
+            return {"error": "the time column must keep increasing (%d of %d rows go backwards or repeat)"
+                             % (len(t) - len(tk), len(t))}
+        if len(tk) > 1 and (tk[-1] - tk[0]) * fs > RECORD_MAX:   # most often a time column in milliseconds
+            return {"error": "the recording covers %.0f s, which is %.0f samples at this rate (the limit is %d); "
+                             "check that the time column is in seconds" % (tk[-1] - tk[0], (tk[-1] - tk[0]) * fs, RECORD_MAX)}
+        x = resample_uniform(tk, xk, fs) if len(tk) > 1 else []
+    if len(x) < 2:
+        return {"error": "the recording has no usable samples"}
+    if len(x) > RECORD_MAX:
+        return {"error": "the recording has %d samples (the limit is %d); cut it down to the part around the event" % (len(x), RECORD_MAX)}
+    return analyse_record(x, fs, float(a.get("thr", 5.0)))
 
 
 def resample_uniform(t, x, fs):
@@ -1236,6 +1342,13 @@ def verify():
     fopt, _, _ = bisection(lambda f: (lambda lr: lr[0] - lr[1])(den_hartog_case(mu, f, z_rule, 401)), 0.85, 1.05, 1e-4)
     chk("Damper: equal-peak tuning vs textbook 1/(1+mu)", fopt, f_rule, 0.01, "Den Hartog")
     chk("Damper: peak sway vs textbook sqrt(1 + 2/mu)", max(den_hartog_case(mu, fopt, z_rule)), math.sqrt(1 + 2 / mu), 0.03, "Den Hartog")
+    lite = {"N": 1, "h": 3.0, "m": [1e5], "k": [2e7], "system": "frame", "zeta": 0.01}; ml = build(lite)
+    chk("Peak search finds a narrow resonance peak (1% damping)", peak_near_mode(ml, ml["w1"] / (2 * math.pi), 1.0),
+        1.0 / (200.0 * 2 * 0.01 * math.sqrt(1 - 0.01 ** 2)), 1e-3, "exact one-storey peak")
+    dt_ = design_tmd(p, 0.4, 0.05 * G)
+    chk("Damper design: sway left at the answer = 60%", dt_["peak"] / dt_["peak0"], 0.6, 0.01, "target cut 40%")
+    chk("Damper design: smallest damper is returned when it already beats the target",
+        design_tmd(dict(p, zeta=0.01), 0.1, 0.05 * G)["mu"], 0.002, 1e-12)
     # --- other design solves
     dm = damage(q, 1.2 * period_of(q))
     chk("Damage: stiffness factor vs exact (T0/T)^2", dm["alpha"], dm["exact"], 1e-6)
@@ -1324,11 +1437,9 @@ def api(name, payload):
         elif name == "race": r = method_race(a)
         elif name == "det": r = det_roots(a)
         elif name == "detect": r = detect(a)
-        elif name == "record":
-            x = a["x"]; fs = float(a["fs"])
-            if a.get("t"):
-                x = resample_uniform(a["t"], x, fs)
-            r = analyse_record(x, fs, float(a.get("thr", 5.0)))
+        elif name == "record": r = record(a)
+        elif name == "tmd_rule":
+            f, zd = tmd_rule(float(a["mu"])); r = {"f": f, "zd": zd}
         elif name == "seismometer": r = seismometer_response(float(a["f0"]), float(a["zeta"]), a["freqs"])
         elif name == "verify": r = verify()
         else: r = {"error": "unknown call " + name}
@@ -1336,33 +1447,88 @@ def api(name, payload):
         r = {"error": "%s: %s" % (type(ex).__name__, ex)}
     return json.dumps(_clean(r))
 </script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+<script type="text/js-worker" id="worker">
+// Runs the Python solver in a background thread, so the page never freezes while it computes.
+// Messages in:  {type: "start", source}  then  {type: "call", id, name, payload}
+// Messages out: {type: "progress" | "ready" | "failed", text}  and  {type: "result", id, json}
+const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
+let api = null;
+async function start(source) {
+  importScripts(PYODIDE + "pyodide.js");
+  const py = await loadPyodide({indexURL: PYODIDE});
+  postMessage({type: "progress", text: "Loading numpy…"});
+  await py.loadPackage("numpy");
+  py.runPython(source);
+  api = py.globals.get("api");
+  postMessage({type: "ready"});
+}
+onmessage = e => {
+  const m = e.data;
+  if (m.type === "start") { start(m.source).catch(err => postMessage({type: "failed", text: String((err && err.message) || err)})); return; }
+  let json;
+  try { json = api(m.name, m.payload); } catch (err) { json = JSON.stringify({error: String((err && err.message) || err)}); }
+  postMessage({type: "result", id: m.id, json});
+};
+</script>
 <script>
 "use strict";
-const $ = id => document.getElementById(id);
-const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const fmt = (v, d = 3) => v == null || !isFinite(v) ? "–" : (Math.abs(v) >= 1e5 || (Math.abs(v) < 1e-3 && v !== 0)) ? v.toExponential(2) : Number(v.toPrecision(d)).toString();
+// =====================================================================
+// QuakeSafe page script. It holds the sliders' state, sends requests to
+// the Python solver (which runs in the worker above) and draws the results.
+//   1 helpers          4 charts               7 detection tab
+//   2 state            5 building drawing     8 numerics lab and verify tab
+//   3 solver link      6 building and shake   9 tabs and start-up
+// =====================================================================
 
-// ------------------------------------------------------------ state
+// ------------------------------------------------------------ 1 helpers
+const $ = id => document.getElementById(id);
+const ESC = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
+const esc = s => String(s).replace(/[&<>"']/g, c => ESC[c]);     // for any text that goes into innerHTML
+const fmt = (v, d = 3) => v == null || !isFinite(v) ? "–" : (Math.abs(v) >= 1e5 || (Math.abs(v) < 1e-3 && v !== 0)) ? v.toExponential(2) : Number(v.toPrecision(d)).toString();
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const kvHtml = rows => rows.map(r => `<span>${r[0]}</span><span>${r[1]}</span>`).join("");
+const parseRows = txt => txt.split(/\r?\n/).map(l => l.split(/[,;\t ]+/).filter(Boolean).map(Number)).filter(r => r.length && r.every(isFinite));
+function debounce(fn, ms) { let t = null; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+// Theme colours are read once and cached. The cache is dropped when the colour scheme changes.
+let themeCache = {};
+const css = name => themeCache[name] || (themeCache[name] = getComputedStyle(document.documentElement).getPropertyValue(name).trim());
+const colour = c => c && c.startsWith("--") ? css(c) : c;        // "--acc" means "look it up at drawing time"
+
+// ------------------------------------------------------------ 2 state
 const S = {N: 8, h: 3.2, mass: 300, stiff: 400, system: "frame", EI: 3000, brace: false, braceA: 40,
   SDS: 0.8, SD1: 0.4, R: 5, Cd: 4.5, dlim: 2, zeta: 5, ag: 0.05,
   tmd: false, mu: 3, tf: 0.97, zd: 10, target: 40, iso: false, kb: 20, Tiso: 2.5, visc: false, vc: 5,
   mag: 6, noise: 0.02, thr: 5, delay: 5, iran: false};
-let tmeasUser = false, mMul = [], kMul = [], sel = -1, view = "static", R = null, pinned = null, DET = null, api = null;
+let mMul = [], kMul = [];      // per-floor multipliers on mass and on the stiffness of the storey below
+let sel = -1;                  // floor being edited, -1 = none
+let view = "static";           // what the building drawing shows: "static" or a mode number
+let R = null;                  // latest analysis result
+let pinned = null;             // sweep curve kept for comparison
+let DET = null, DET_ST = [];   // latest detection result and the station list it was computed for
+let REG = null;                // latest regression result
+let tmeasUser = false;         // true once the user has typed a measured period
+let labStamp = null;           // the building the numerics lab last ran on (as JSON)
 const PRESETS = {
   apartment: {N: 8, mass: 300, stiff: 400, system: "frame", h: 3.2},
   villa: {N: 3, mass: 150, stiff: 150, system: "frame", h: 3.2},
   office: {N: 15, mass: 400, stiff: 600, system: "frame", h: 3.6},
   tower: {N: 30, mass: 400, stiff: 300, system: "dual", EI: 3000, h: 3.2},
-  soft: {N: 8, mass: 300, stiff: 400, system: "frame", h: 3.2, soft: 0.25}};
+  soft: {N: 8, mass: 300, stiff: 400, system: "frame", h: 3.2, softStorey: 0.25}};
+const LIMITS = {stiff: [20, 2000], EI: [100, 10000], kb: [1, 400]};
 const BANDS = [[1.0, 1.75], [2.9, 4.0]];   // periods (s) reported for distant-earthquake shaking in the UAE
 const CITIES = [["Abu Dhabi", 24.45, 54.38], ["Dubai", 25.20, 55.27], ["Sharjah", 25.35, 55.39], ["Fujairah", 25.13, 56.33],
   ["Doha", 25.29, 51.53], ["Muscat", 23.59, 58.41], ["Manama", 26.23, 50.59], ["Bandar Abbas", 27.19, 56.27], ["Shiraz", 29.59, 52.58]];
 const STATIONS = [["UOSS (real)", 24.9453, 56.2042], ["Abu Dhabi", 24.45, 54.38], ["Doha", 25.29, 51.53], ["Muscat", 23.59, 58.41], ["Manama", 26.23, 50.59]];
+const MAPBOX = {lon0: 47, lon1: 60, lat0: 22, lat1: 31};
 const EQ = {lat: 27.7, lon: 55.2};
 
-function resize() { while (mMul.length < S.N) { mMul.push(1); kMul.push(1); } mMul.length = S.N; kMul.length = S.N; if (sel >= S.N) sel = -1; }
-function params() {
+function resize() {            // keep the per-floor lists as long as the building is tall
+  while (mMul.length < S.N) { mMul.push(1); kMul.push(1); }
+  mMul.length = S.N; kMul.length = S.N;
+  if (sel >= S.N) sel = -1;
+}
+function params() {            // the building in SI units, as the solver expects it
   resize();
   return {N: S.N, h: S.h, m: mMul.map(v => v * S.mass * 1000), k: kMul.map(v => v * S.stiff * 1e6), system: S.system, EI: S.EI * 1e9,
     zeta: S.zeta / 100, ag: S.ag, brace: {on: S.brace, A: S.braceA * 1e-4, bay: 6},
@@ -1370,337 +1536,622 @@ function params() {
     visc: {on: S.visc, c: S.vc * 1e6}, code: {SDS: S.SDS, SD1: S.SD1, R: S.R, Cd: S.Cd, I: 1, drift: S.dlim / 100}, npts: 150, cond: true};
 }
 
-// ------------------------------------------------------------ python bridge
-function call(name, obj) { return JSON.parse(api(name, JSON.stringify(obj || {}))); }
-function setStatus(t, c) { const s = $("status"); s.textContent = t; s.className = c; }
-function busy(fn) { setStatus("Computing…", "busy"); setTimeout(() => { try { fn(); setStatus("Ready", "ok"); } catch (e) { console.error(e); setStatus("Error: " + e.message, "err"); } }, 30); }
-async function boot() {
-  try {
-    const py = await loadPyodide();
-    setStatus("Loading numpy…", "busy");
-    await py.loadPackage("numpy");
-    py.runPython($("solver").textContent);
-    api = py.globals.get("api");
-    setStatus("Ready", "ok");
-    applyPreset("apartment"); runDetect();
-  } catch (e) { console.error(e); setStatus("Could not start Python: " + e.message, "err"); }
-}
+// ------------------------------------------------------------ 3 solver link
+// The worker handles one request at a time, in the order they were sent.
+const solver = (() => {
+  let worker = null, nextId = 1;
+  const waiting = new Map();   // request id -> {resolve, reject}
+  function failAll(err) { for (const w of waiting.values()) w.reject(err); waiting.clear(); }
+  function start(onProgress, onCrash) {
+    if (worker) { worker.terminate(); failAll(new Error("the solver was restarted")); }
+    const url = URL.createObjectURL(new Blob([$("worker").textContent], {type: "text/javascript"}));
+    worker = new Worker(url);
+    return new Promise((resolve, reject) => {
+      let up = false;
+      worker.onmessage = e => {
+        const m = e.data;
+        if (m.type === "progress") onProgress(m.text);
+        else if (m.type === "ready") { up = true; resolve(); }
+        else if (m.type === "failed") reject(new Error(m.text));
+        else if (m.type === "result") { const w = waiting.get(m.id); waiting.delete(m.id); if (w) w.resolve(JSON.parse(m.json)); }
+      };
+      worker.onerror = e => {
+        const err = new Error(e.message || "the solver thread stopped");
+        if (up) { failAll(err); onCrash(err); } else reject(err);
+      };
+      worker.postMessage({type: "start", source: $("solver").textContent});
+    });
+  }
+  // Returns whatever the Python function returned. Expected problems come back as {error: "..."}.
+  function call(name, args) {
+    return new Promise((resolve, reject) => {
+      const id = nextId++; waiting.set(id, {resolve, reject});
+      worker.postMessage({type: "call", id, name, payload: JSON.stringify(args || {})});
+    });
+  }
+  // For calls where an error is not an expected outcome: turn it into an exception.
+  async function must(name, args) { const r = await call(name, args); if (r && r.error) throw new Error(r.error); return r; }
+  return {start, call, must};
+})();
 
-// ------------------------------------------------------------ charts
+let solverReady = false, jobs = 0, lastFail = null;
+function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = cls; }
+// Runs one piece of work. The status pill shows "Computing…" until every running job has ended,
+// and the button that started it (if any) is locked meanwhile so it cannot be pressed twice.
+// An error stays in the pill until the next piece of work starts.
+async function job(fn, btn) {
+  if (!jobs) lastFail = null;
+  jobs++; setStatus("Computing…", "busy"); if (btn) btn.disabled = true;
+  try { await fn(); } catch (e) { console.error(e); lastFail = e; }
+  jobs--; if (btn) btn.disabled = !solverReady;
+  if (!solverReady) return;                      // the solver stopped meanwhile: leave its own message up
+  if (lastFail) setStatus("Error: " + lastFail.message, "err"); else if (!jobs) setStatus("Ready", "ok");
+}
+// A design takes a moment, and the sliders stay live meanwhile. snapshot() records the building a
+// request was made for; unchanged() says whether the sliders still describe that building when the
+// answer comes back. An answer for a building that has since changed is not applied.
+const structureKey = p => JSON.stringify([p.N, p.h, p.m, p.k, p.system, p.EI, p.brace, p.code]);   // what the static check, the design and the lab depend on
+const snapshot = (keyOf = JSON.stringify) => { const p = params(); return {p, keyOf, key: keyOf(p)}; };
+const unchanged = snap => snap.key === snap.keyOf(params());
+const CHANGED = "The building was changed while this was being worked out, so nothing was applied. Press the button again.";
+// For slider-driven work. While one run is in progress, further requests collapse into a single
+// re-run with the newest settings, so dragging a slider never queues up stale analyses.
+function latest(run) {
+  let running = false, again = false;
+  return () => {
+    if (!solverReady) return;
+    if (running) { again = true; return; }
+    running = true;
+    job(async () => {
+      let err;
+      do { again = false; err = null; try { await run(); } catch (e) { err = e; } } while (again);
+      if (err) throw err;
+    }).then(() => { running = false; });
+  };
+}
+const onClick = (id, fn) => $(id).addEventListener("click", e => job(() => fn(e), e.currentTarget));   // a button that needs the solver
+
+// ------------------------------------------------------------ 4 charts
+// A canvas's height in CSS pixels lives in its data-h attribute. (Reading it back from the height
+// attribute would be wrong: that attribute holds the bitmap height, which is data-h times the pixel ratio.)
 function prep(cv) {
-  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = +cv.getAttribute("height");
-  cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + "px";
-  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h); c.font = "11px system-ui,sans-serif";
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = +cv.dataset.h;
+  const bw = Math.max(1, Math.round(w * dpr)), bh = Math.max(1, Math.round(h * dpr));
+  if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
+  const c = cv.getContext("2d");
+  c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  c.globalAlpha = 1; c.lineWidth = 1; c.setLineDash([]); c.textAlign = "left"; c.font = "11px system-ui,sans-serif";
   return [c, w, h];
 }
-function ticks(a, b, n) { const st = Math.pow(10, Math.floor(Math.log10((b - a) / n))), e = (b - a) / n / st, s = st * (e > 5 ? 10 : e > 2 ? 5 : e > 1 ? 2 : 1), r = []; for (let v = Math.ceil(a / s) * s; v <= b + 1e-9; v += s) r.push(v); return r; }
-// series: [{x:[], y:[], color, dash, label, pts}]  opt: {xl, yl, logy, logx, bands:[[x0,x1,label]], vl:[[x,label,color]], ymin, ymax}
-function plot(cv, series, o = {}) {
-  const [c, W, H] = prep(cv), L = 52, Rm = 10, T = 18, B = 34, ink = css("--ink"), mut = css("--mut"), grid = css("--grid");
+// Every chart remembers how to draw itself, so it can be redrawn when its tab is shown,
+// the window is resized or the colour scheme changes. Nothing is drawn while the canvas is hidden.
+function retained(cv, draw) { cv._draw = draw; if (cv.clientWidth) draw(); }
+function redrawVisible() { for (const cv of document.querySelectorAll("canvas")) if (cv._draw && cv.clientWidth) cv._draw(); }
+function ticks(a, b, n) {
+  const st = Math.pow(10, Math.floor(Math.log10((b - a) / n))), e = (b - a) / n / st, s = st * (e > 5 ? 10 : e > 2 ? 5 : e > 1 ? 2 : 1), r = [];
+  for (let v = Math.ceil(a / s) * s; v <= b + 1e-9; v += s) r.push(v);
+  return r;
+}
+// series: [{x: [], y: [], color, dash, label, pts, w}]     colours may be CSS variable names such as "--acc"
+// opt: {xl, yl, logx, logy, ymin, ymax, ylim: [lo, hi], bands: [[x0, x1, label]], vl: [[x, label, color, dash]]}
+function plot(cv, series, opt = {}) { retained(cv, () => drawPlot(cv, series, opt)); }
+function drawPlot(cv, series, o) {
+  const [c, W, H] = prep(cv), L = 52, Rm = 10, T = 18, B = 34, ink = css("--ink"), mut = css("--mut");
   const tx = v => o.logx ? Math.log10(Math.max(v, 1e-300)) : v, ty = v => o.logy ? Math.log10(Math.max(v, 1e-300)) : v;
+  const usable = v => v != null && isFinite(v) && !(o.logy && v <= 0);
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-  for (const s of series) for (let i = 0; i < s.x.length; i++) { const yv = s.y[i]; if (yv == null || !isFinite(yv) || (o.logy && yv <= 0)) continue; x0 = Math.min(x0, tx(s.x[i])); x1 = Math.max(x1, tx(s.x[i])); y0 = Math.min(y0, ty(yv)); y1 = Math.max(y1, ty(yv)); }
+  for (const s of series) for (let i = 0; i < s.x.length; i++) {
+    if (!usable(s.y[i])) continue;
+    x0 = Math.min(x0, tx(s.x[i])); x1 = Math.max(x1, tx(s.x[i])); y0 = Math.min(y0, ty(s.y[i])); y1 = Math.max(y1, ty(s.y[i]));
+  }
   if (!isFinite(x0)) { c.fillStyle = mut; c.fillText("No data yet", L, H / 2); return; }
-  if (o.ymin != null) y0 = ty(o.ymin); if (o.ymax != null) y1 = Math.min(y1, ty(o.ymax));
-  if (y1 - y0 < 1e-12) { y1 += 1; y0 -= 1; } if (x1 - x0 < 1e-12) { x1 += 1; x0 -= 1; }
-  const py = (y1 - y0) * 0.06; y1 += py; if (!o.logy && o.ymin == null) y0 -= py;
+  if (o.ymin != null) y0 = ty(o.ymin);                                   // ymin: the axis starts exactly here
+  if (o.ymax != null) y1 = Math.min(y1, ty(o.ymax));                     // ymax: the axis never goes above this
+  if (o.ylim) { y0 = Math.max(y0, ty(o.ylim[0])); y1 = Math.min(y1, ty(o.ylim[1])); }   // ylim: the axis never goes outside this range
+  if (y1 - y0 < 1e-12) { y1 += 1; y0 -= 1; }
+  if (x1 - x0 < 1e-12) { x1 += 1; x0 -= 1; }
+  const pad = (y1 - y0) * 0.06; y1 += pad; if (!o.logy && o.ymin == null) y0 -= pad;
   const X = v => L + (tx(v) - x0) / (x1 - x0) * (W - L - Rm), Y = v => H - B - (ty(v) - y0) / (y1 - y0) * (H - T - B);
-  for (const b of o.bands || []) { c.fillStyle = css("--band"); c.globalAlpha = 0.16; const a = Math.max(L, X(b[0])), z = Math.min(W - Rm, X(b[1])); if (z > a) c.fillRect(a, T, z - a, H - T - B); c.globalAlpha = 1; if (z > a && b[2]) { c.fillStyle = mut; c.fillText(b[2], a + 2, T + 10); } }
-  c.strokeStyle = grid; c.fillStyle = mut; c.lineWidth = 1;
+  for (const b of o.bands || []) {                       // shaded ranges
+    const a = Math.max(L, X(b[0])), z = Math.min(W - Rm, X(b[1])); if (z <= a) continue;
+    c.fillStyle = css("--band"); c.globalAlpha = 0.16; c.fillRect(a, T, z - a, H - T - B); c.globalAlpha = 1;
+    if (b[2]) { c.fillStyle = mut; c.fillText(b[2], a + 2, T + 10); }
+  }
+  c.strokeStyle = css("--grid"); c.fillStyle = mut; c.lineWidth = 1;
   const yt = o.logy ? ticks(y0, y1, 5).filter(v => Math.abs(v - Math.round(v)) < 1e-9 || y1 - y0 < 2) : ticks(y0, y1, 5);
-  for (const v of yt) { const yy = H - B - (v - y0) / (y1 - y0) * (H - T - B); c.beginPath(); c.moveTo(L, yy); c.lineTo(W - Rm, yy); c.stroke(); c.textAlign = "right"; c.fillText(o.logy ? "1e" + fmt(v, 2) : fmt(v, 3), L - 5, yy + 3); }
-  for (const v of ticks(x0, x1, 6)) { const xx = L + (v - x0) / (x1 - x0) * (W - L - Rm); c.beginPath(); c.moveTo(xx, T); c.lineTo(xx, H - B); c.stroke(); c.textAlign = "center"; c.fillText(o.logx ? fmt(Math.pow(10, v), 2) : fmt(v, 3), xx, H - B + 13); }
-  c.fillStyle = mut; c.textAlign = "center"; if (o.xl) c.fillText(o.xl, (L + W - Rm) / 2, H - 5);
+  for (const v of yt) {                                  // grid lines and axis numbers
+    const yy = H - B - (v - y0) / (y1 - y0) * (H - T - B);
+    c.beginPath(); c.moveTo(L, yy); c.lineTo(W - Rm, yy); c.stroke();
+    c.textAlign = "right"; c.fillText(o.logy ? "1e" + fmt(v, 2) : fmt(v, 3), L - 5, yy + 3);
+  }
+  for (const v of ticks(x0, x1, 6)) {
+    const xx = L + (v - x0) / (x1 - x0) * (W - L - Rm);
+    c.beginPath(); c.moveTo(xx, T); c.lineTo(xx, H - B); c.stroke();
+    c.textAlign = "center"; c.fillText(o.logx ? fmt(Math.pow(10, v), 2) : fmt(v, 3), xx, H - B + 13);
+  }
+  c.fillStyle = mut; c.textAlign = "center";
+  if (o.xl) c.fillText(o.xl, (L + W - Rm) / 2, H - 5);
   if (o.yl) { c.save(); c.translate(11, (T + H - B) / 2); c.rotate(-Math.PI / 2); c.fillText(o.yl, 0, 0); c.restore(); }
   c.save(); c.beginPath(); c.rect(L, T, W - L - Rm, H - T - B); c.clip();
+  const lowest = o.logy ? Math.pow(10, y0) : y0, highest = o.logy ? Math.pow(10, y1) : y1;
   for (const s of series) {
-    c.strokeStyle = c.fillStyle = s.color || css("--acc"); c.lineWidth = s.w || 1.8; c.setLineDash(s.dash || []);
-    if (s.pts) { for (let i = 0; i < s.x.length; i++) { c.beginPath(); c.arc(X(s.x[i]), Y(s.y[i]), 3, 0, 7); c.fill(); } continue; }
+    c.strokeStyle = c.fillStyle = colour(s.color) || css("--acc"); c.lineWidth = s.w || 1.8; c.setLineDash(s.dash || []);
+    if (s.pts) { for (let i = 0; i < s.x.length; i++) if (usable(s.y[i])) { c.beginPath(); c.arc(X(s.x[i]), Y(s.y[i]), 3, 0, 7); c.fill(); } continue; }
     c.beginPath(); let pen = false;
-    for (let i = 0; i < s.x.length; i++) { const yv = s.y[i]; if (yv == null || !isFinite(yv) || (o.logy && yv <= 0)) { pen = false; continue; } const xx = X(s.x[i]), yy = Y(Math.min(Math.max(yv, o.logy ? Math.pow(10, y0) : y0), o.logy ? Math.pow(10, y1) : y1)); pen ? c.lineTo(xx, yy) : c.moveTo(xx, yy); pen = true; }
+    for (let i = 0; i < s.x.length; i++) {
+      if (!usable(s.y[i])) { pen = false; continue; }
+      const xx = X(s.x[i]), yy = Y(clamp(s.y[i], lowest, highest));
+      pen ? c.lineTo(xx, yy) : c.moveTo(xx, yy); pen = true;
+    }
     c.stroke();
   }
   c.setLineDash([]);
-  let vi = 0; for (const v of o.vl || []) { c.strokeStyle = v[2] || ink; c.lineWidth = 1.2; c.setLineDash(v[3] || []); c.beginPath(); c.moveTo(X(v[0]), T); c.lineTo(X(v[0]), H - B); c.stroke(); c.setLineDash([]); if (v[1]) { c.fillStyle = v[2] || ink; c.textAlign = "left"; c.fillText(v[1], X(v[0]) + 3, T + 22 + 12 * (vi++ % 3)); } }
+  let vi = 0;
+  for (const v of o.vl || []) {                          // vertical marker lines
+    const col = colour(v[2]) || ink;
+    c.strokeStyle = col; c.lineWidth = 1.2; c.setLineDash(v[3] || []); c.beginPath(); c.moveTo(X(v[0]), T); c.lineTo(X(v[0]), H - B); c.stroke(); c.setLineDash([]);
+    if (v[1]) { c.fillStyle = col; c.textAlign = "left"; c.fillText(v[1], X(v[0]) + 3, T + 22 + 12 * (vi++ % 3)); }
+  }
   c.restore();
   let lx = L + 6; c.textAlign = "left";
-  for (const s of series) if (s.label) { c.fillStyle = s.color || css("--acc"); c.fillRect(lx, 5, 10, 3); c.fillStyle = ink; c.fillText(s.label, lx + 14, 11); lx += c.measureText(s.label).width + 30; }
+  for (const s of series) if (s.label) {                 // legend
+    c.fillStyle = colour(s.color) || css("--acc"); c.fillRect(lx, 5, 10, 3);
+    c.fillStyle = ink; c.fillText(s.label, lx + 14, 11); lx += c.measureText(s.label).width + 30;
+  }
 }
 
-// ------------------------------------------------------------ building drawing
-// disp: sideways offset of every degree of freedom in "floor widths"; color: per-storey colour
+// ------------------------------------------------------------ 5 building drawing
+// disp: sideways offset of every degree of freedom in "floor widths"; colors: per-storey colour
 function drawBuilding(cv, disp, colors, opt = {}) {
-  const [c, W, H] = prep(cv); if (!R) return;
-  const N = R.N, ground = H - 34, top = 46, fh = Math.min(44, (ground - top) / (N + (R.base != null ? 0.6 : 0))), fw = Math.min(150, W * 0.36), cx = W / 2;
-  const off = R.base != null ? 1 : 0, ink = css("--ink"), mut = css("--mut"), line = css("--line");
-  const px = i => cx + (i < 0 ? 0 : disp[i]) * fw;                 // i = dof index, -1 = ground
-  const yFloor = j => ground - (R.base != null ? fh * 0.6 : 0) - (j + 1) * fh;   // j = floor 0..N-1
+  const [c, W, H] = prep(cv);
+  const N = R.N, iso = R.base != null, ground = H - 34, top = 46, fh = Math.min(44, (ground - top) / (N + (iso ? 0.6 : 0))), fw = Math.min(150, W * 0.36), cx = W / 2;
+  const off = iso ? 1 : 0, ink = css("--ink"), mut = css("--mut"), line = css("--line");
+  const px = i => cx + disp[i] * fw;                                   // i = index of a degree of freedom
+  const yFloor = j => ground - (iso ? fh * 0.6 : 0) - (j + 1) * fh;     // j = floor 0..N-1
   c.strokeStyle = mut; c.lineWidth = 1; c.beginPath(); c.moveTo(20, ground); c.lineTo(W - 20, ground); c.stroke();
   c.setLineDash([3, 4]); c.strokeStyle = line; c.beginPath(); c.moveTo(cx, top - 20); c.lineTo(cx, ground); c.stroke(); c.setLineDash([]);
   let prevX = cx, prevY = ground;
-  if (R.base != null) {   // isolators and base slab
+  if (iso) {                                                            // isolators and base slab
     const bx = px(0), by = ground - fh * 0.6; c.fillStyle = css("--acc2");
     for (const s of [-0.4, 0, 0.4]) { c.beginPath(); c.moveTo(cx + s * fw - 7, ground); c.lineTo(bx + s * fw - 7, by + 5); c.lineTo(bx + s * fw + 7, by + 5); c.lineTo(cx + s * fw + 7, ground); c.fill(); }
     c.fillStyle = mut; c.fillRect(bx - fw / 2 - 6, by, fw + 12, 5); prevX = bx; prevY = by;
   }
-  opt.hit = [];
+  const hit = [];
   for (let j = 0; j < N; j++) {
     const x = px(j + off), y = yFloor(j);
-    c.strokeStyle = colors ? colors[j] : mut; c.lineWidth = 3 * Math.max(0.5, Math.min(2, Math.sqrt(kMul[j] || 1)));
-    for (const s of [-0.46, 0.46]) { c.beginPath(); c.moveTo(prevX + s * fw, prevY); c.lineTo(x + s * fw, y + 5); c.stroke(); }
+    c.strokeStyle = colors ? colors[j] : mut; c.lineWidth = 3 * clamp(Math.sqrt(kMul[j] || 1), 0.5, 2);
+    for (const s of [-0.46, 0.46]) { c.beginPath(); c.moveTo(prevX + s * fw, prevY); c.lineTo(x + s * fw, y + 5); c.stroke(); }          // columns
     if (S.brace) { c.lineWidth = 1; c.strokeStyle = mut; c.beginPath(); c.moveTo(prevX - 0.46 * fw, prevY); c.lineTo(x + 0.46 * fw, y + 5); c.stroke(); }
-    if (S.system !== "frame") { c.fillStyle = line; c.beginPath(); c.moveTo(prevX - 8, prevY); c.lineTo(x - 8, y + 5); c.lineTo(x + 8, y + 5); c.lineTo(prevX + 8, prevY); c.fill(); }
+    if (S.system !== "frame") { c.fillStyle = line; c.beginPath(); c.moveTo(prevX - 8, prevY); c.lineTo(x - 8, y + 5); c.lineTo(x + 8, y + 5); c.lineTo(prevX + 8, prevY); c.fill(); }   // core
     if (S.visc) { c.strokeStyle = css("--acc2"); c.lineWidth = 2; c.beginPath(); c.moveTo(prevX + 0.2 * fw, prevY); c.lineTo(x + 0.36 * fw, y + 5); c.stroke(); }
-    const th = 5 * Math.max(0.7, Math.min(2.2, Math.sqrt(mMul[j] || 1)));
-    c.fillStyle = j === sel ? css("--acc") : ink; c.fillRect(x - fw / 2, y + 5 - th, fw, th);
-    opt.hit.push([y - fh * 0.2, y + fh * 0.8, j]);
+    const th = 5 * clamp(Math.sqrt(mMul[j] || 1), 0.7, 2.2);
+    c.fillStyle = j === sel ? css("--acc") : ink; c.fillRect(x - fw / 2, y + 5 - th, fw, th);                                           // floor slab
+    hit.push([y - fh * 0.2, y + fh * 0.8, j]);
     if (N <= 20 || (j + 1) % 5 === 0) { c.fillStyle = mut; c.textAlign = "right"; c.fillText(j + 1, cx - fw * 0.95, y + 6); }
     if (opt.labels) { c.fillStyle = colors ? colors[j] : mut; c.textAlign = "left"; c.fillText(opt.labels[j], cx + fw * 0.95, y + fh / 2 + 6); }
     prevX = x; prevY = y;
   }
-  if (R.tmd != null) {   // damper block on the roof
+  if (R.tmd != null) {                                                  // damper block on the roof
     const x = cx + disp[R.tmd] * fw, y = yFloor(N - 1) - 14; c.strokeStyle = mut; c.lineWidth = 1;
     c.beginPath(); c.moveTo(prevX, prevY); c.lineTo(x, y + 6); c.stroke(); c.fillStyle = css("--acc2"); c.beginPath(); c.arc(x, y, 9, 0, 7); c.fill();
   }
   if (opt.title) { c.fillStyle = ink; c.textAlign = "center"; c.font = "12px system-ui,sans-serif"; c.fillText(opt.title, cx, 16); }
-  cv._hit = opt.hit;
+  cv._hit = hit;                                                        // rows of [y from, y to, floor] for clicks
 }
 const driftColor = r => Math.abs(r) > 1 ? css("--bad") : Math.abs(r) > 0.7 ? css("--warn") : css("--ok");
+const tabOn = t => $("t-" + t).classList.contains("on");
 
-// ------------------------------------------------------------ analysis and rendering
-let timer = null;
-function refresh() { if (!api) return; clearTimeout(timer); timer = setTimeout(() => busy(() => { const r = call("analyse", params()); if (r.error) throw new Error(r.error); R = r; renderAll(); }), 180); }
-function renderAll() { renderBuild(); renderShake(); }
+// t = time in ms for the animation, or null for one still picture at full sway
+function drawBuildView(t) {
+  const off = R.base != null ? 1 : 0, d = new Array(R.ndof).fill(0), st = R.static;
+  if (view !== "static" && !R.modes[+view]) setView("static");
+  if (view === "static") {
+    const mx = Math.max(...st.u.map(Math.abs)) || 1, g = t == null ? 1 : 0.5 + 0.5 * Math.sin(t / 700);
+    for (let j = 0; j < R.N; j++) d[j + off] = st.u[j] / mx * 0.35 * g;
+    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), title: "Sway under the code earthquake load (exaggerated)"});
+  } else {
+    const mo = R.modes[+view], s = t == null ? 1 : Math.sin(t / 1000 * 2 * Math.PI / clamp(mo.T, 0.6, 3));
+    for (let i = 0; i < R.ndof; i++) d[i] = mo.shape[i] * 0.3 * s;
+    drawBuilding($("cvB"), d, null, {title: `Mode ${+view + 1}: period ${fmt(mo.T)} s, frequency ${fmt(mo.f)} Hz`});
+  }
+}
+function drawShakeView(t) {
+  const i = fIdx(), a = R.sweep.A[i], b = R.sweep.B[i], r = R.roof;
+  const ph = t == null ? Math.atan2(b[r], a[r]) : t / 1000 * 2 * Math.PI * 0.7;      // still picture: the moment of largest roof sway
+  const mx = Math.max(...a.map((v, k) => Math.hypot(v, b[k]))) || 1;
+  drawBuilding($("cvS"), a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * 0.32), null, {title: `${fmt(R.freqs[i])} Hz · roof sway ${fmt(R.sweep.amp[i] * 1000)} mm`});
+}
+// The two building drawings are animated. People who ask their system for reduced motion get a still picture.
+const stillOnly = matchMedia("(prefers-reduced-motion: reduce)");
+let frameQueued = false;
+function drawViews(t) {
+  if (!R) return;
+  try { if (tabOn("build")) drawBuildView(t); else if (tabOn("shake")) drawShakeView(t); } catch (e) { console.error(e); }
+}
+const drawNow = () => drawViews(stillOnly.matches ? null : performance.now());
+function frame(t) { frameQueued = false; drawViews(t); animate(); }
+function animate() { if (!frameQueued && !stillOnly.matches) { frameQueued = true; requestAnimationFrame(frame); } }
+
+// ------------------------------------------------------------ 6 building and shake tabs
+let Rkey = null;               // the building (as JSON) that R was computed for
+async function analyse() { const p = params(), key = JSON.stringify(p); R = await solver.must("analyse", p); Rkey = key; renderAll(); }
+// Makes sure R describes the sliders as they are now. A slider-driven analysis may still be on its way.
+async function freshAnalysis() { if (Rkey !== JSON.stringify(params())) await analyse(); }
+const requestAnalysis = latest(analyse);
+const refresh = debounce(requestAnalysis, 120);
+function renderAll() { renderBuild(); renderShake(); drawNow(); markLabStale(); }
 function renderBuild() {
-  const st = R.static, m = R.modes;
-  $("kvB").innerHTML = [["Height", fmt(R.H) + " m"], ["Period, mode 1", fmt(m[0].T) + " s"], ["Period, mode 2", m[1] ? fmt(m[1].T) + " s" : "–"], ["Period, mode 3", m[2] ? fmt(m[2].T) + " s" : "–"],
+  const st = R.static, m = R.modes, fails = !(st.max_ratio <= 1);
+  $("kvB").innerHTML = kvHtml([["Height", fmt(R.H) + " m"], ["Period, mode 1", fmt(m[0].T) + " s"], ["Period, mode 2", m[1] ? fmt(m[1].T) + " s" : "–"], ["Period, mode 3", m[2] ? fmt(m[2].T) + " s" : "–"],
     ["Inverse-iteration steps", m.map(v => v.iters).join(", ")], ["Building weight", fmt(st.W / 1000, 4) + " kN"], ["Code load factor Cs", fmt(st.Cs)], ["Total sideways force", fmt(st.V / 1000, 4) + " kN"],
-    ["Linear solver used", st.solver], ["Residual of K·u = F", fmt(st.resid, 2)], ["Condition number of K", fmt(R.condK, 3)],
-    ["Worst drift ÷ limit", `<span class="${st.max_ratio > 1 ? "fail" : "pass"}">${fmt(st.max_ratio)} ${st.max_ratio > 1 ? "FAIL" : "PASS"}</span>`]].map(r => `<span>${r[0]}</span><span>${r[1]}</span>`).join("");
-  $("warnB").innerHTML = R.warn.map(w => `<div class="warnbox">${w}</div>`).join("");
+    ["Linear solver used", esc(st.solver)], ["Residual of K·u = F", fmt(st.resid, 2)], ["Condition number of K", fmt(R.condK, 3)],
+    ["Worst drift ÷ limit", `<span class="${fails ? "fail" : "pass"}">${fmt(st.max_ratio)} ${fails ? "FAIL" : "PASS"}</span>`]]);
+  $("warnB").innerHTML = R.warn.map(w => `<div class="warnbox">${esc(w)}</div>`).join("");
   let h = `<tr><th>Storey</th><th class="n">Force (kN)</th><th class="n">Sway (mm)</th><th class="n">Drift (mm)</th><th class="n">Limit (mm)</th><th></th></tr>`;
-  for (let j = R.N - 1; j >= 0; j--) h += `<tr><td>${j + 1}</td><td class="n">${fmt(st.F[j] / 1000, 4)}</td><td class="n">${fmt(st.u[j] * 1000, 3)}</td><td class="n">${fmt(st.drift[j] * 1000, 3)}</td><td class="n">${fmt(st.limit_mm, 3)}</td><td class="${Math.abs(st.ratio[j]) > 1 ? "fail" : "pass"}">${Math.abs(st.ratio[j]) > 1 ? "fail" : "ok"}</td></tr>`;
+  for (let j = R.N - 1; j >= 0; j--) {
+    const bad = Math.abs(st.ratio[j]) > 1;
+    h += `<tr><td>${j + 1}</td><td class="n">${fmt(st.F[j] / 1000, 4)}</td><td class="n">${fmt(st.u[j] * 1000, 3)}</td><td class="n">${fmt(st.drift[j] * 1000, 3)}</td><td class="n">${fmt(st.limit_mm, 3)}</td><td class="${bad ? "fail" : "pass"}">${bad ? "fail" : "ok"}</td></tr>`;
+  }
   $("tbDrift").innerHTML = h;
   if (!tmeasUser) $("Tmeas").value = (R.T_fixed * 1.15).toFixed(2);
+  for (const b of $("viewBtns").children) if (b.dataset.v !== "static") b.disabled = !m[+b.dataset.v];   // a 1-storey building has one mode
 }
-function buildFrame(t) {
-  if (!R || !$("t-build").classList.contains("on")) return;
-  const off = R.base != null ? 1 : 0, n = R.ndof, d = new Array(n).fill(0), st = R.static, cols = st.ratio.map(driftColor);
-  if (view === "static") {
-    const mx = Math.max(...st.u.map(Math.abs)) || 1, g = 0.5 + 0.5 * Math.sin(t / 700);
-    for (let j = 0; j < R.N; j++) d[j + off] = st.u[j] / mx * 0.35 * g;
-    drawBuilding($("cvB"), d, cols, {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), title: "Sway under the code earthquake load (exaggerated)"});
-    $("viewNote").textContent = "Numbers on the right are each storey's drift as a share of the limit. Green is safe, amber is above 70%, red fails.";
-  } else {
-    const mo = R.modes[+view]; if (!mo) { view = "static"; return; }
-    const s = Math.sin(t / 1000 * 2 * Math.PI / Math.max(0.6, Math.min(3, mo.T)));
-    for (let i = 0; i < n; i++) d[i] = mo.shape[i] * 0.3 * s;
-    drawBuilding($("cvB"), d, null, {title: `Mode ${+view + 1}: period ${fmt(mo.T)} s, frequency ${fmt(mo.f)} Hz`});
-    $("viewNote").textContent = "A mode shape is an eigenvector of the system. The building sways in this shape when shaken at this frequency.";
-  }
+function setView(v) {
+  view = v;
+  for (const b of $("viewBtns").children) { const on = b.dataset.v === v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); }
+  $("viewNote").textContent = v === "static" ? "Numbers on the right are each storey's drift as a share of the limit. Green is safe, amber is above 70%, red fails."
+    : "A mode shape is an eigenvector of the system. The building sways in this shape when shaken at this frequency.";
 }
 function fIdx() { return Math.round(+$("freq").value / 100 * (R.freqs.length - 1)); }
 function renderShake() {
   const f = R.freqs, sw = R.sweep, i = fIdx(), mm = v => v == null ? null : v * 1000;
-  const ser = [{x: f, y: sw.und.map(mm), color: css("--mut"), dash: [4, 3], w: 1.2, label: "no damping"}, {x: f, y: sw.amp.map(mm), color: css("--acc"), label: "current"}];
-  if (pinned) ser.splice(1, 0, {x: pinned.f, y: pinned.y, color: css("--acc2"), label: "pinned"});
+  const ser = [{x: f, y: sw.und.map(mm), color: "--mut", dash: [4, 3], w: 1.2, label: "no damping"}, {x: f, y: sw.amp.map(mm), color: "--acc", label: "current"}];
+  if (pinned) ser.splice(1, 0, {x: pinned.f, y: pinned.y, color: "--acc2", label: "pinned"});
   const bands = BANDS.map((b, k) => [1 / b[1], 1 / b[0], k ? "" : "slow-shaking bands"]);
-  plot($("cvSweep"), ser, {xl: "shaking frequency (Hz)", yl: "roof sway (mm)", logy: true, bands, ymax: Math.max(...sw.amp) * 1000 * 30, vl: [[f[i], "", css("--ink")]]});
-  plot($("cvCond"), [{x: f, y: sw.cond, color: css("--acc2")}], {xl: "shaking frequency (Hz)", yl: "condition number", logy: true, vl: R.modes.map((m, k) => [m.f, "mode " + (k + 1), css("--mut"), [3, 3]])});
-  $("vfreq").textContent = fmt(f[i]) + " Hz";
   const pk = Math.max(...sw.amp), ip = sw.amp.indexOf(pk);
-  $("kvS").innerHTML = [["Period at this frequency", fmt(1 / f[i]) + " s"], ["Roof sway here", fmt(sw.amp[i] * 1000) + " mm"], ["Largest roof sway", fmt(pk * 1000) + " mm at " + fmt(f[ip]) + " Hz"],
-    ["Condition number here", fmt(sw.cond[i], 3)], ["Unknowns in the damped system", 2 * R.ndof]].map(r => `<span>${r[0]}</span><span>${r[1]}</span>`).join("");
+  plot($("cvSweep"), ser, {xl: "shaking frequency (Hz)", yl: "roof sway (mm)", logy: true, bands, ymax: pk * 1000 * 30, vl: [[f[i], "", "--ink"]]});
+  plot($("cvCond"), [{x: f, y: sw.cond, color: "--acc2"}], {xl: "shaking frequency (Hz)", yl: "condition number", logy: true, vl: R.modes.map((m, k) => [m.f, "mode " + (k + 1), "--mut", [3, 3]])});
+  $("vfreq").textContent = fmt(f[i]) + " Hz";
+  $("kvS").innerHTML = kvHtml([["Period at this frequency", fmt(1 / f[i]) + " s"], ["Roof sway here", fmt(sw.amp[i] * 1000) + " mm"], ["Largest roof sway", fmt(pk * 1000) + " mm at " + fmt(f[ip]) + " Hz"],
+    ["Condition number here", fmt(sw.cond[i], 3)], ["Unknowns in the damped system", 2 * R.ndof]]);
   const T1 = R.modes[0].T, hit = BANDS.find(b => T1 >= b[0] && T1 <= b[1]);
   $("bandOut").innerHTML = `<div class="warnbox">First period ${fmt(T1)} s is ${hit ? `<b class="fail">inside</b> the ${hit[0]}–${hit[1]} s band` : `<b class="pass">outside</b> the bands`} reported for slow shaking from distant earthquakes in the UAE.</div>`;
 }
-function shakeFrame(t) {
-  if (!R || !$("t-shake").classList.contains("on")) return;
-  const i = fIdx(), a = R.sweep.A[i], b = R.sweep.B[i], ph = t / 1000 * 2 * Math.PI * 0.7, mx = Math.max(...a.map((v, k) => Math.hypot(v, b[k]))) || 1;
-  const d = a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * 0.32);
-  drawBuilding($("cvS"), d, null, {title: `${fmt(R.freqs[i])} Hz · roof sway ${fmt(R.sweep.amp[i] * 1000)} mm`});
-}
-function loop(t) { buildFrame(t); shakeFrame(t); requestAnimationFrame(loop); }
 
-// ------------------------------------------------------------ controls
+// ---- controls
 const IDS = ["N", "h", "mass", "stiff", "EI", "braceA", "SDS", "SD1", "R", "Cd", "dlim", "zeta", "ag", "mu", "tf", "zd", "target", "kb", "Tiso", "vc", "mag", "noise", "thr", "delay"];
 const DETECT_IDS = ["mag", "noise", "thr", "delay"];
-function syncInputs() {
+const DESIGN_ONLY_IDS = ["target", "Tiso"];                 // inputs to a design button; they do not change the analysis
+const PRESET_IDS = ["N", "h", "mass", "stiff", "EI"];        // changing one of these means the preset no longer describes the building
+function syncInputs() {                                      // copy the state into every control
   for (const id of IDS) { $(id).value = S[id]; $("v" + id).textContent = S[id]; }
   for (const id of ["brace", "tmd", "iso", "visc", "iran"]) $(id).checked = S[id];
-  $("system").value = S.system; $("eiRow").style.display = S.system === "frame" ? "none" : ""; $("braceRow").style.display = S.brace ? "" : "none";
-  $("tmdRow").style.display = S.tmd ? "" : "none"; $("isoRow").style.display = S.iso ? "" : "none"; $("viscRow").style.display = S.visc ? "" : "none";
-  $("selName").textContent = sel < 0 ? "none" : "floor " + (sel + 1);
+  $("system").value = S.system; $("eiRow").hidden = S.system === "frame"; $("braceRow").hidden = !S.brace;
+  $("tmdRow").hidden = !S.tmd; $("isoRow").hidden = !S.iso; $("viscRow").hidden = !S.visc;
+  const fl = $("floorSel");
+  if (fl.options.length !== S.N + 1) fl.innerHTML = `<option value="-1">None</option>` + Array.from({length: S.N}, (_, j) => `<option value="${j}">Floor ${j + 1}</option>`).join("");
+  fl.value = sel;
   $("mMul").disabled = $("kMul").disabled = sel < 0;
-  if (sel >= 0) { $("mMul").value = mMul[sel]; $("kMul").value = kMul[sel]; $("vmMul").textContent = "×" + mMul[sel]; $("vkMul").textContent = "×" + kMul[sel]; } else { $("vmMul").textContent = $("vkMul").textContent = ""; }
+  if (sel >= 0) { $("mMul").value = mMul[sel]; $("kMul").value = kMul[sel]; $("vmMul").textContent = "×" + mMul[sel]; $("vkMul").textContent = "×" + kMul[sel]; }
+  else $("vmMul").textContent = $("vkMul").textContent = "";
+  $("eqLat").value = EQ.lat.toFixed(2); $("eqLon").value = EQ.lon.toFixed(2);
 }
+function selectFloor(j) { sel = j >= 0 && j < S.N ? j : -1; syncInputs(); drawNow(); }   // the drawing may still show a taller building
 function applyPreset(name) {
-  const p = PRESETS[name]; Object.assign(S, {EI: 3000, brace: false, tmd: false, iso: false, visc: false}, p); mMul = []; kMul = []; sel = -1; resize();
-  if (p.soft) kMul[0] = p.soft; pinned = null; $("designOut").textContent = ""; $("cvDesign").style.display = "none"; syncInputs(); refresh();
+  const p = PRESETS[name]; if (!p) return;
+  const {softStorey, ...values} = p;
+  Object.assign(S, {EI: 3000, brace: false, tmd: false, iso: false, visc: false}, values);
+  mMul = []; kMul = []; sel = -1; resize();
+  if (softStorey) kMul[0] = softStorey;
+  pinned = null; tmeasUser = false; $("kb").max = LIMITS.kb[1]; S.kb = Math.min(S.kb, LIMITS.kb[1]);
+  $("designOut").textContent = ""; $("cvDesign").hidden = true; $("preset").value = name;
+  syncInputs(); refresh();
 }
-for (const id of IDS) $(id).addEventListener("input", e => { S[id] = +e.target.value; syncInputs(); DETECT_IDS.includes(id) ? runDetect() : refresh(); });
+// Sets the column stiffness (and the core stiffness, if there is a core) from a design result.
+// Returns a sentence for the user when a slider limit got in the way.
+function setStiffness(stiff, EI) {
+  const s2 = clamp(stiff, ...LIMITS.stiff), e2 = clamp(EI, ...LIMITS.EI), core = S.system !== "frame";
+  S.stiff = s2; if (core) S.EI = e2;
+  $("preset").value = ""; syncInputs();
+  return s2 !== stiff || (core && e2 !== EI) ? " The value needed is outside the slider range, so it was capped and the result will not match exactly." : "";
+}
+for (const id of IDS) $(id).addEventListener("input", e => {
+  S[id] = +e.target.value;
+  if (id === "N") resize();
+  if (PRESET_IDS.includes(id)) $("preset").value = "";
+  syncInputs();
+  if (DETECT_IDS.includes(id)) refreshDetect(); else if (!DESIGN_ONLY_IDS.includes(id)) refresh();
+});
 for (const id of ["brace", "tmd", "iso", "visc"]) $(id).addEventListener("change", e => { S[id] = e.target.checked; syncInputs(); refresh(); });
-$("iran").addEventListener("change", e => { S.iran = e.target.checked; fillStations(); runDetect(); });
-$("system").addEventListener("change", e => { S.system = e.target.value; syncInputs(); refresh(); });
+$("system").addEventListener("change", e => { S.system = e.target.value; $("preset").value = ""; syncInputs(); refresh(); });
 $("preset").addEventListener("change", e => applyPreset(e.target.value));
+$("floorSel").addEventListener("change", e => selectFloor(+e.target.value));
 $("mMul").addEventListener("input", e => { if (sel >= 0) { mMul[sel] = +e.target.value; syncInputs(); refresh(); } });
 $("kMul").addEventListener("input", e => { if (sel >= 0) { kMul[sel] = +e.target.value; syncInputs(); refresh(); } });
-$("cvB").addEventListener("click", e => { const y = e.offsetY, h = ($("cvB")._hit || []).find(r => y >= r[0] && y <= r[1]); sel = h ? h[2] : -1; syncInputs(); });
-$("viewBtns").addEventListener("click", e => { const v = e.target.dataset.v; if (v == null) return; view = v; for (const b of $("viewBtns").children) b.classList.toggle("on", b === e.target); });
-$("freq").addEventListener("input", () => R && renderShake());
-$("nav").addEventListener("click", e => { const t = e.target.dataset.t; if (!t) return; for (const b of $("nav").children) b.classList.toggle("on", b === e.target); for (const s of document.querySelectorAll(".tab")) s.classList.toggle("on", s.id === "t-" + t); if (R) renderAll(); if (t === "detect" && DET) renderDetect(); });
-window.addEventListener("resize", () => { if (R) renderAll(); if (DET) renderDetect(); });
+$("cvB").addEventListener("click", e => { const y = e.offsetY, h = ($("cvB")._hit || []).find(r => y >= r[0] && y <= r[1]); selectFloor(h ? h[2] : -1); });
+$("viewBtns").addEventListener("click", e => { const v = e.target.dataset.v; if (v == null || e.target.disabled) return; setView(v); drawNow(); });
+$("freq").addEventListener("input", () => { if (R) { renderShake(); drawNow(); } });
 
-const HISTCOL = () => ({bisection: css("--acc"), false_position: css("--acc2"), fixed_point: css("--ok")});
-function histSeries(d) { const col = HISTCOL(); return Object.keys(col).filter(k => d[k] && d[k].hist).map(k => ({x: d[k].hist.map((_, i) => i + 1), y: d[k].hist, color: col[k], label: `${k.replace("_", " ")} (${d[k].it})`})); }
-$("btnDesign").addEventListener("click", () => busy(() => {
-  const d = call("design_stiffness", params());
-  if (d.error) { $("designOut").textContent = d.error; return; }
-  const s = d.bisection.s;
-  $("designOut").innerHTML = `Stiffness must be at least <b>×${fmt(s, 4)}</b> of the current value (${fmt(s * S.stiff, 4)} kN/mm per storey).<br>Iterations: bisection ${d.bisection.it}, false position ${d.false_position.it}, fixed-point ${d.fixed_point.it}. <button class="b" id="btnApply">Apply</button>`;
-  $("cvDesign").style.display = ""; plot($("cvDesign"), histSeries(d), {logy: true, xl: "iteration", yl: "approx. relative error"});
-  $("btnApply").onclick = () => { S.stiff = Math.min(2000, Math.max(20, Math.ceil(s * S.stiff / 10) * 10)); if (S.system !== "frame") S.EI = Math.min(10000, Math.max(100, Math.ceil(s * S.EI / 100) * 100)); syncInputs(); refresh(); };
-}));
-$("btnRule").addEventListener("click", () => { const mu = S.mu / 100; S.tf = +(1 / (1 + mu)).toFixed(3); S.zd = +(100 * Math.sqrt(3 * mu / (8 * (1 + mu)))).toFixed(1); syncInputs(); refresh(); });
-$("btnTmd").addEventListener("click", () => busy(() => {
-  const d = call("design_tmd", {p: params(), target: S.target / 100});
+const HIST_COLOURS = {bisection: "--acc", false_position: "--acc2", fixed_point: "--ok"};
+const histSeries = d => Object.keys(HIST_COLOURS).filter(k => d[k] && d[k].hist).map(k => ({x: d[k].hist.map((_, i) => i + 1), y: d[k].hist, color: HIST_COLOURS[k], label: `${k.replace("_", " ")} (${d[k].it})`}));
+onClick("btnDesign", async () => {
+  const snap = snapshot(structureKey), stiff0 = S.stiff, EI0 = S.EI;
+  const d = await solver.call("design_stiffness", snap.p);
+  if (!unchanged(snap)) { $("designOut").textContent = CHANGED; $("cvDesign").hidden = true; return; }
+  if (d.error) { $("designOut").textContent = d.error; $("cvDesign").hidden = true; return; }
+  const s = d.bisection.s, stiff = Math.ceil(s * stiff0 / 10) * 10, EI = Math.ceil(s * EI0 / 100) * 100;
+  $("designOut").innerHTML = `Stiffness must be at least <b>×${fmt(s, 4)}</b> of the current value (${fmt(s * stiff0, 4)} kN/mm per storey).<br>Iterations: bisection ${d.bisection.it}, false position ${d.false_position.it}, fixed-point ${d.fixed_point.it}. <button class="b" id="btnApply">Apply</button><span id="applyNote"></span>`;
+  $("cvDesign").hidden = false; plot($("cvDesign"), histSeries(d), {logy: true, xl: "iteration", yl: "approx. relative error"});
+  $("btnApply").onclick = () => {
+    $("btnApply").disabled = true;
+    if (!unchanged(snap)) { $("applyNote").textContent = " The building has changed since this was worked out. Press the design button again."; return; }
+    $("applyNote").textContent = " Applied." + setStiffness(stiff, EI); refresh();
+  };
+});
+onClick("btnRule", async () => {
+  const mu = S.mu, r = await solver.must("tmd_rule", {mu: mu / 100});
+  if (S.mu !== mu) return;
+  S.tf = +r.f.toFixed(3); S.zd = +(100 * r.zd).toFixed(1); syncInputs(); await analyse();
+});
+onClick("btnTmd", async () => {
+  const snap = snapshot(), d = await solver.call("design_tmd", {p: snap.p, target: S.target / 100});
+  if (!unchanged(snap)) { $("tmdOut").textContent = CHANGED; return; }
   if (d.error) { $("tmdOut").textContent = d.error; return; }
   S.mu = +(d.mu * 100).toFixed(1); S.tf = +d.f.toFixed(3); S.zd = +(d.zd * 100).toFixed(1); S.tmd = true; syncInputs();
-  $("tmdOut").innerHTML = `Damper mass ${fmt(d.mu * 100)}% of the moving mass cuts peak sway from ${fmt(d.peak0 * 1000)} to ${fmt(d.peak * 1000)} mm (${d.it} bisection steps). Applied.`;
-  R = call("analyse", params()); renderAll();
-}));
-$("btnIso").addEventListener("click", () => busy(() => {
-  const d = call("design_isolation", {p: params(), T: S.Tiso});
+  const cut = `cuts peak sway from ${fmt(d.peak0 * 1000)} to ${fmt(d.peak * 1000)} mm`;
+  $("tmdOut").textContent = d.smallest ? `The smallest damper the search allows, ${fmt(d.mu * 100)}% of the moving mass, already ${cut}, which is more than the target. Applied.`
+    : `Damper mass ${fmt(d.mu * 100)}% of the moving mass ${cut} (${d.it} bisection steps). Applied, rounded to the slider.`;
+  await analyse();
+});
+onClick("btnIso", async () => {
+  const snap = snapshot(), d = await solver.call("design_isolation", {p: snap.p, T: S.Tiso});
+  if (!unchanged(snap)) { $("isoOut").textContent = CHANGED; return; }
   if (d.error) { $("isoOut").textContent = d.error; return; }
-  S.kb = Math.max(1, +(d.kb / 1e6).toFixed(0)); $("kb").max = Math.max(400, Math.ceil(S.kb / 100) * 100); S.iso = true; syncInputs();
-  $("isoOut").innerHTML = `Isolator stiffness ${fmt(d.kb / 1e6, 4)} kN/mm gives a first period of ${fmt(d.T, 4)} s (${d.it} bisection steps). Applied, rounded to the slider.`;
-  R = call("analyse", params()); renderAll();
-}));
+  S.kb = Math.max(1, Math.round(d.kb / 1e6)); $("kb").max = Math.max(LIMITS.kb[1], Math.ceil(S.kb / 100) * 100); S.iso = true; syncInputs();
+  $("isoOut").textContent = `Isolator stiffness ${fmt(d.kb / 1e6, 4)} kN/mm gives a first period of ${fmt(d.T, 4)} s (${d.it} bisection steps)${S.tmd ? ", counted without the roof damper" : ""}. Applied, rounded to the slider.`;
+  await analyse();
+});
 $("btnPin").addEventListener("click", () => { if (R) { pinned = {f: R.freqs.slice(), y: R.sweep.amp.map(v => v * 1000)}; renderShake(); } });
 $("btnUnpin").addEventListener("click", () => { pinned = null; if (R) renderShake(); });
 
-// ------------------------------------------------------------ detection
+// ------------------------------------------------------------ 7 detection tab
 function stations() { const s = STATIONS.slice(); if (S.iran) s.push(["Bandar Abbas (hypothetical)", 27.19, 56.27]); return s; }
-function fillStations() { const cur = $("showSt").value; $("showSt").innerHTML = stations().map((s, i) => `<option value="${i}">${s[0]}</option>`).join(""); if (cur && +cur < stations().length) $("showSt").value = cur; }
-function runDetect() {
-  if (!api) return;
-  const q = {lat: EQ.lat, lon: EQ.lon, mag: S.mag, noise: S.noise, thr: S.thr, delay: S.delay, show: +$("showSt").value || 0,
-    stations: stations().map(s => ({name: s[0], lat: s[1], lon: s[2]})), cities: CITIES.map(s => ({name: s[0], lat: s[1], lon: s[2]}))};
-  DET = call("detect", q); renderDetect();
+function fillStations() {
+  const cur = $("showSt").value, st = stations();
+  $("showSt").innerHTML = st.map((s, i) => `<option value="${i}">${esc(s[0])}</option>`).join("");
+  if (cur && +cur < st.length) $("showSt").value = cur;
 }
-const MAPBOX = {lon0: 47, lon1: 60, lat0: 22, lat1: 31};
-function renderDetect() {
-  if (!DET || DET.error) { if (DET) setStatus(DET.error, "err"); return; }
-  const cv = $("cvMap"); if (!cv.clientWidth) return; const [c, W, H] = prep(cv), X = lon => 30 + (lon - MAPBOX.lon0) / (MAPBOX.lon1 - MAPBOX.lon0) * (W - 40), Y = lat => H - 20 - (lat - MAPBOX.lat0) / (MAPBOX.lat1 - MAPBOX.lat0) * (H - 30);
+async function detect() {
+  const st = stations(), show = Math.min(+$("showSt").value || 0, st.length - 1);
+  const d = await solver.must("detect", {lat: EQ.lat, lon: EQ.lon, mag: S.mag, noise: S.noise, thr: S.thr, delay: S.delay, show,
+    stations: st.map(s => ({name: s[0], lat: s[1], lon: s[2]})), cities: CITIES.map(s => ({name: s[0], lat: s[1], lon: s[2]}))});
+  DET = d; DET_ST = st; renderDetect(show);
+}
+const requestDetect = latest(detect);
+const refreshDetect = debounce(requestDetect, 120);
+function drawMap() {
+  const cv = $("cvMap"), [c, W, H] = prep(cv), st = DET_ST;
+  const X = lon => 30 + (lon - MAPBOX.lon0) / (MAPBOX.lon1 - MAPBOX.lon0) * (W - 40), Y = lat => H - 20 - (lat - MAPBOX.lat0) / (MAPBOX.lat1 - MAPBOX.lat0) * (H - 30);
   c.strokeStyle = css("--grid"); c.fillStyle = css("--mut");
   for (let lo = 48; lo <= 60; lo += 2) { c.beginPath(); c.moveTo(X(lo), 10); c.lineTo(X(lo), H - 20); c.stroke(); c.textAlign = "center"; c.fillText(lo + "°E", X(lo), H - 6); }
   for (let la = 22; la <= 31; la += 2) { c.beginPath(); c.moveTo(30, Y(la)); c.lineTo(W - 10, Y(la)); c.stroke(); c.textAlign = "right"; c.fillText(la + "°N", 27, Y(la) + 3); }
-  const kx = (X(55) - X(54)) / (111.32 * Math.cos(26 * Math.PI / 180)), ky = (Y(26) - Y(27)) / 110.57, st = stations();
-  DET.stations.forEach((r, i) => { if (r.est == null) return; c.strokeStyle = css("--acc"); c.globalAlpha = 0.45; c.beginPath(); c.ellipse(X(st[i][2]), Y(st[i][1]), Math.abs(r.est * kx), Math.abs(r.est * ky), 0, 0, 7); c.stroke(); c.globalAlpha = 1; });
+  const kx = (X(55) - X(54)) / (111.32 * Math.cos(26 * Math.PI / 180)), ky = (Y(26) - Y(27)) / 110.57;      // pixels per km
+  DET.stations.forEach((r, i) => {                                       // distance circles
+    if (r.est == null) return;
+    c.strokeStyle = css("--acc"); c.globalAlpha = 0.45; c.beginPath(); c.ellipse(X(st[i][2]), Y(st[i][1]), Math.abs(r.est * kx), Math.abs(r.est * ky), 0, 0, 7); c.stroke(); c.globalAlpha = 1;
+  });
   c.textAlign = "left";
   for (const s of CITIES) { c.fillStyle = css("--mut"); c.beginPath(); c.arc(X(s[2]), Y(s[1]), 2.5, 0, 7); c.fill(); c.fillText(s[0], X(s[2]) + 5, Y(s[1]) + 11); }
   st.forEach((s, i) => { const x = X(s[2]), y = Y(s[1]); c.fillStyle = DET.stations[i].est == null ? css("--mut") : css("--acc"); c.beginPath(); c.moveTo(x, y - 7); c.lineTo(x - 6, y + 5); c.lineTo(x + 6, y + 5); c.fill(); });
   c.fillStyle = css("--bad"); c.font = "18px system-ui"; c.textAlign = "center"; c.fillText("★", X(EQ.lon), Y(EQ.lat) + 6);
   if (DET.epi) { c.fillStyle = css("--ink"); c.fillText("✚", X(DET.epi.lon), Y(DET.epi.lat) + 6); }
-  cv._map = {X, Y, W, H};
+  cv._map = {W, H};
+}
+function renderDetect(show) {
+  retained($("cvMap"), drawMap);
   let h = `<tr><th>Station</th><th class="n">True distance (km)</th><th class="n">Estimated (km)</th><th class="n">P pick error (s)</th><th class="n">S pick error (s)</th><th class="n">Magnitude</th></tr>`;
-  for (const r of DET.stations) h += `<tr><td>${r.name}</td><td class="n">${fmt(r.true, 4)}</td><td class="n">${r.est == null ? "no pick" : fmt(r.est, 4)}</td><td class="n">${r.tP == null ? "–" : fmt(r.tP - r.tP_true, 2)}</td><td class="n">${r.tS == null ? "–" : fmt(r.tS - r.tS_true, 2)}</td><td class="n">${fmt(r.ml, 3)}</td></tr>`;
+  for (const r of DET.stations) h += `<tr><td>${esc(r.name)}</td><td class="n">${fmt(r.true, 4)}</td><td class="n">${r.est == null ? "no pick" : fmt(r.est, 4)}</td><td class="n">${r.tP == null ? "–" : fmt(r.tP - r.tP_true, 2)}</td><td class="n">${r.tS == null ? "–" : fmt(r.tS - r.tS_true, 2)}</td><td class="n">${fmt(r.ml, 3)}</td></tr>`;
   $("tbSt").innerHTML = h;
   const e = DET.epi;
-  $("kvD").innerHTML = (e ? [["Stations used", e.n], ["Epicentre error", fmt(e.err_km) + " km"], ["Condition number", fmt(e.cond, 3)], ["Distance misfit (rms)", fmt(e.rms) + " km"], ["Magnitude", fmt(e.ml_mean, 3) + " ± " + fmt(e.ml_std, 2)], ["Method", e.n > 3 ? "least squares" : "Gauss elimination"]]
-    : [["Epicentre", "needs 3 stations with both picks"]]).map(r => `<span>${r[0]}</span><span>${r[1]}</span>`).join("");
+  $("kvD").innerHTML = kvHtml(e ? [["Stations used", e.n], ["Epicentre error", fmt(e.err_km) + " km"], ["Condition number", fmt(e.cond, 3)], ["Distance misfit (rms)", fmt(e.rms) + " km"], ["Magnitude", fmt(e.ml_mean, 3) + " ± " + fmt(e.ml_std, 2)], ["Method", e.n > 3 ? "least squares" : "Gauss elimination"]]
+    : [["Epicentre", esc(DET.epi_note || "not found")]]);
   h = `<tr><th>City</th><th class="n">Distance (km)</th><th class="n">Strong shaking arrives (s)</th><th class="n">Warning (s)</th></tr>`;
-  for (const r of DET.cities) h += `<tr><td>${r.name}</td><td class="n">${fmt(r.dist, 4)}</td><td class="n">${fmt(r.s_arrival, 3)}</td><td class="n ${r.warn != null && r.warn > 0 ? "pass" : "fail"}">${r.warn == null ? "no alert" : r.warn > 0 ? fmt(r.warn, 3) : "none"}</td></tr>`;
+  for (const r of DET.cities) h += `<tr><td>${esc(r.name)}</td><td class="n">${fmt(r.dist, 4)}</td><td class="n">${fmt(r.s_arrival, 3)}</td><td class="n ${r.warn != null && r.warn > 0 ? "pass" : "fail"}">${r.warn == null ? "no alert" : r.warn > 0 ? fmt(r.warn, 3) : "none"}</td></tr>`;
   $("tbCity").innerHTML = h;
-  const row = DET.stations[+$("showSt").value || 0]; if (row && row.trace) drawTrace(row.trace, row, row.name);
+  const row = DET.stations[show]; if (row && row.trace) drawTrace(row.trace, row, row.name);
 }
 function drawTrace(tr, row, name) {
   const t = tr.x.map((_, i) => i * tr.dt), vl = [];
-  if (row.tP_true != null) vl.push([row.tP_true, "", css("--mut"), [3, 3]], [row.tS_true, "", css("--mut"), [3, 3]]);
-  if (row.tP != null) vl.push([row.tP, "P", css("--ok")]); if (row.tS != null) vl.push([row.tS, "S", css("--bad")]);
+  if (row.tP_true != null) vl.push([row.tP_true, "", "--mut", [3, 3]], [row.tS_true, "", "--mut", [3, 3]]);
+  if (row.tP != null) vl.push([row.tP, "P", "--ok"]);
+  if (row.tS != null) vl.push([row.tS, "S", "--bad"]);
   plot($("cvTrace"), [{x: t, y: tr.x, w: 1, label: name + ": recording"}], {xl: "time (s)", yl: "ground motion", vl});
-  plot($("cvRatio"), [{x: t, y: tr.ratio, color: css("--acc2"), w: 1.2, label: `short ÷ long average (quiet level ${fmt(tr.noise_mean, 2)} ± ${fmt(tr.noise_std, 2)})`}, {x: [t[0], t[t.length - 1]], y: [S.thr, S.thr], color: css("--mut"), dash: [4, 3], label: "threshold"}], {xl: "time (s)", yl: "ratio", vl, logy: true});
+  plot($("cvRatio"), [{x: t, y: tr.ratio, color: "--acc2", w: 1.2, label: `short ÷ long average (quiet level ${fmt(tr.noise_mean, 2)} ± ${fmt(tr.noise_std, 2)})`},
+    {x: [t[0], t[t.length - 1]], y: [S.thr, S.thr], color: "--mut", dash: [4, 3], label: "threshold"}], {xl: "time (s)", yl: "ratio", vl, logy: true});
 }
-$("cvMap").addEventListener("click", e => { const m = $("cvMap")._map; if (!m) return; EQ.lon = MAPBOX.lon0 + (e.offsetX - 30) / (m.W - 40) * (MAPBOX.lon1 - MAPBOX.lon0); EQ.lat = MAPBOX.lat0 + (m.H - 20 - e.offsetY) / (m.H - 30) * (MAPBOX.lat1 - MAPBOX.lat0); runDetect(); });
-$("showSt").addEventListener("change", runDetect);
+function moveQuake(lat, lon) {
+  EQ.lat = clamp(lat, MAPBOX.lat0, MAPBOX.lat1); EQ.lon = clamp(lon, MAPBOX.lon0, MAPBOX.lon1);
+  syncInputs(); refreshDetect();
+}
+$("cvMap").addEventListener("click", e => {
+  const m = $("cvMap")._map; if (!m) return;
+  moveQuake(MAPBOX.lat0 + (m.H - 20 - e.offsetY) / (m.H - 30) * (MAPBOX.lat1 - MAPBOX.lat0), MAPBOX.lon0 + (e.offsetX - 30) / (m.W - 40) * (MAPBOX.lon1 - MAPBOX.lon0));
+});
+for (const id of ["eqLat", "eqLon"]) $(id).addEventListener("change", () => { const la = parseFloat($("eqLat").value), lo = parseFloat($("eqLon").value); moveQuake(isFinite(la) ? la : EQ.lat, isFinite(lo) ? lo : EQ.lon); });
+$("iran").addEventListener("change", e => { S.iran = e.target.checked; fillStations(); requestDetect(); });
+$("showSt").addEventListener("change", requestDetect);
 $("Tmeas").addEventListener("input", () => { tmeasUser = true; });
+
 function showRecord(d, name) {
   if (d.error) { $("recOut").textContent = d.error; return; }
   drawTrace(d, {tP: d.tP, tS: d.tS}, name);
   $("recOut").textContent = d.tP == null ? "No trigger. The record needs at least 16 s of quiet before the event." : `Trigger at ${fmt(d.tP, 4)} s.` + (d.dist != null ? ` Second arrival at ${fmt(d.tS, 4)} s, so the source is about ${fmt(d.dist)} km away.` : " No second arrival found.");
 }
-$("csv").addEventListener("change", e => { const f = e.target.files[0]; if (!f || !api) return; f.text().then(txt => busy(() => {
-  const rows = txt.split(/\r?\n/).map(l => l.split(/[,;\t ]+/).filter(Boolean).map(Number)).filter(r => r.length && r.every(isFinite));
-  if (rows.length < 50) { $("recOut").textContent = "Could not read at least 50 numeric rows."; return; }
-  const two = rows[0].length >= 2, fs = +$("csvFs").value || 20;
-  showRecord(call("record", two ? {t: rows.map(r => r[0]), x: rows.map(r => r[1]), fs, thr: S.thr} : {x: rows.map(r => r[0]), fs, thr: S.thr}), f.name);
-})); });
-$("btnPhone").addEventListener("click", async () => {
-  if (typeof DeviceMotionEvent === "undefined") { $("recOut").textContent = "This device has no motion sensor available to the browser."; return; }
-  try { if (DeviceMotionEvent.requestPermission && await DeviceMotionEvent.requestPermission() !== "granted") { $("recOut").textContent = "Permission refused."; return; } } catch (e) { $("recOut").textContent = "Permission request failed."; return; }
-  const t = [], x = [], t0 = performance.now(), on = e => { const a = e.accelerationIncludingGravity; if (a && a.z != null) { t.push((performance.now() - t0) / 1000); x.push(a.z); } };
-  window.addEventListener("devicemotion", on); $("recOut").textContent = "Recording… keep the device still on a table for 18 s, then tap the table.";
-  setTimeout(() => { window.removeEventListener("devicemotion", on); if (x.length < 100) { $("recOut").textContent = "No sensor data received."; return; } busy(() => showRecord(call("record", {t, x, fs: 50, thr: S.thr}), "device sensor")); }, 25000);
+$("csv").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f || !solverReady) return;
+  job(async () => {
+    const rows = parseRows(await f.text());
+    if (rows.length < 50) { $("recOut").textContent = "Could not read at least 50 numeric rows."; return; }
+    if (rows.length > 500000) { $("recOut").textContent = "The file has more than 500,000 rows. Cut it down to the part around the event."; return; }
+    const two = rows[0].length >= 2, fs = +$("csvFs").value || 20, full = two ? rows.filter(r => r.length >= 2) : rows;   // skip rows with a missing value
+    showRecord(await solver.call("record", two ? {t: full.map(r => r[0]), x: full.map(r => r[1]), fs, thr: S.thr} : {x: full.map(r => r[0]), fs, thr: S.thr}), f.name);
+  });
 });
-$("btnDamage").addEventListener("click", () => busy(() => {
-  const d = call("damage", {p: params(), T: +$("Tmeas").value});
-  $("damageOut").innerHTML = d.error ? `${d.error} (healthy period ${fmt(d.T0)} s)` : `Healthy period ${fmt(d.T0)} s. The measured period means the building kept <b>${fmt(d.alpha * 100)}%</b> of its stiffness, a loss of ${fmt((1 - d.alpha) * 100)}% (${d.it} bisection steps; exact answer ${fmt(d.exact * 100)}%).`;
-}));
+$("btnPhone").addEventListener("click", async () => {
+  const out = $("recOut"), btn = $("btnPhone");
+  if (typeof DeviceMotionEvent === "undefined") { out.textContent = "This device has no motion sensor available to the browser."; return; }
+  try { if (DeviceMotionEvent.requestPermission && await DeviceMotionEvent.requestPermission() !== "granted") { out.textContent = "Permission refused."; return; } }
+  catch (e) { out.textContent = "Permission request failed."; return; }
+  const t = [], x = [], t0 = performance.now();
+  const onMotion = e => { const a = e.accelerationIncludingGravity; if (a && a.z != null) { t.push((performance.now() - t0) / 1000); x.push(a.z); } };
+  window.addEventListener("devicemotion", onMotion); btn.disabled = true;
+  out.textContent = "Recording… keep the device still on a table for 18 s, then tap the table.";
+  setTimeout(() => {
+    window.removeEventListener("devicemotion", onMotion); btn.disabled = !solverReady;
+    if (!solverReady) { out.textContent = "The solver is not running, so the recording was not analysed."; return; }
+    if (x.length < 100) { out.textContent = "No sensor data received."; return; }
+    job(async () => showRecord(await solver.call("record", {t, x, fs: 50, thr: S.thr}), "device sensor"));
+  }, 25000);
+});
+onClick("btnDamage", async () => {
+  const d = await solver.call("damage", {p: params(), T: +$("Tmeas").value});
+  $("damageOut").innerHTML = d.error ? esc(d.error) + (d.T0 != null ? ` (healthy period ${fmt(d.T0)} s)` : "")
+    : `Healthy period ${fmt(d.T0)} s. The measured period means the building kept <b>${fmt(d.alpha * 100)}%</b> of its stiffness, a loss of ${fmt((1 - d.alpha) * 100)}% (${d.it} bisection steps${d.exact != null ? `; exact answer ${fmt(d.exact * 100)}%` : "; bracing is not counted as damaged"}).`;
+});
 
-// ------------------------------------------------------------ numerics lab
-function regRows() { return $("regData").value.split(/\r?\n/).map(l => l.split(/[,;\t ]+/).filter(Boolean).map(Number)).filter(r => r.length >= 2 && r.every(v => isFinite(v) && v > 0)); }
-let REG = null;
-function runReg() {
-  const rows = regRows(); if (rows.length < 3) { $("regOut").textContent = "Need at least 3 rows."; return; }
-  REG = call("regression", {h: rows.map(r => r[0]), T: rows.map(r => r[1])}); if (REG.error) { $("regOut").textContent = REG.error; return; }
+// ------------------------------------------------------------ 8 numerics lab and verify tab
+const regRows = () => parseRows($("regData").value).filter(r => r.length >= 2 && r.every(v => v > 0));
+async function runReg() {
+  const rows = regRows(); REG = null;
+  if (rows.length < 3) { $("regOut").textContent = "Need at least 3 rows."; return; }
+  const d = await solver.call("regression", {h: rows.map(r => r[0]), T: rows.map(r => r[1])});
+  if (d.error) { $("regOut").textContent = d.error; return; }
+  REG = d;
   const hs = rows.map(r => r[0]), h0 = Math.min(...hs), h1 = Math.max(...hs), xs = Array.from({length: 60}, (_, i) => h0 + (h1 - h0) * i / 59);
-  const ser = [{x: hs, y: rows.map(r => r[1]), pts: true, color: css("--ink"), label: "data"}, {x: xs, y: xs.map(v => REG.C * Math.pow(v, REG.x)), label: "fit"}];
-  if (R) ser.push({x: [R.H], y: [R.T_fixed], pts: true, color: css("--bad"), label: "this model"});
+  const ser = [{x: hs, y: rows.map(r => r[1]), pts: true, color: "--ink", label: "data"}, {x: xs, y: xs.map(v => d.C * Math.pow(v, d.x)), label: "fit"}];
+  if (R) ser.push({x: [R.H], y: [R.T_fixed], pts: true, color: "--bad", label: "this model"});
   plot($("cvReg"), ser, {xl: "height (m)", yl: "period (s)"});
-  const ho = REG.holdout;
-  $("regOut").innerHTML = `T = <b>${fmt(REG.C, 4)}·h<sup>${fmt(REG.x, 4)}</sup></b>, r² = ${fmt(REG.r2, 4)}, condition number of the normal equations ${fmt(REG.cond, 3)}.` + (ho ? `<br>Hold-out test (fit on every other row, test on the rest): error ${fmt(ho.mean_err, 2)}% ± ${fmt(ho.std_err, 2)}% over ${ho.n} rows.` : "") + (R ? `<br>This model: ${fmt(R.T_fixed)} s at ${fmt(R.H)} m. The fitted curve gives ${fmt(REG.C * Math.pow(R.H, REG.x))} s.` : "");
+  const ho = d.holdout;
+  $("regOut").innerHTML = `T = <b>${fmt(d.C, 4)}·h<sup>${fmt(d.x, 4)}</sup></b>, r² = ${fmt(d.r2, 4)}, condition number of the normal equations ${fmt(d.cond, 3)}.`
+    + (ho ? `<br>Hold-out test (fit on every other row, test on the rest): error ${fmt(ho.mean_err, 2)}% ± ${fmt(ho.std_err, 2)}% over ${ho.n} rows.` : "")
+    + (R ? `<br>This model: ${fmt(R.T_fixed)} s at ${fmt(R.H)} m. The fitted curve gives ${fmt(d.C * Math.pow(R.H, d.x))} s.` : "");
 }
-$("btnReg").addEventListener("click", () => busy(runReg));
-$("btnCal").addEventListener("click", () => busy(() => {
-  runReg(); if (!REG || REG.error || !R) return;
-  const T = REG.C * Math.pow(R.H, REG.x), d = call("calibrate", {p: params(), T});
-  if (d.error) { $("regOut").innerHTML += "<br>" + d.error; return; }
-  S.stiff = Math.min(2000, Math.max(20, Math.round(d.scale * S.stiff / 10) * 10)); if (S.system !== "frame") S.EI = Math.min(10000, Math.max(100, Math.round(d.scale * S.EI / 100) * 100));
-  syncInputs(); R = call("analyse", params()); renderAll(); runReg();
-  $("regOut").innerHTML += `<br>Calibrated: stiffness ×${fmt(d.scale, 4)} in ${d.it} bisection steps (target ${fmt(T)} s). Applied, rounded to the sliders.`;
-}));
-$("btnLab").addEventListener("click", () => busy(() => {
-  const p = params(), n = R.ndof, cv = $("cvK"), [c, W, H] = prep(cv), sz = Math.min((W - 20) / n, (H - 10) / n);
-  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = R.K[i][j]; if (v === 0) { c.fillStyle = css("--grid"); c.globalAlpha = 0.5; } else { c.fillStyle = v > 0 ? css("--acc") : css("--acc2"); c.globalAlpha = 0.25 + 0.75 * Math.min(1, Math.pow(Math.abs(v), 0.35)); } c.fillRect(10 + j * sz, 5 + i * sz, sz - 1, sz - 1); }
+onClick("btnReg", runReg);
+onClick("btnCal", async () => {
+  await freshAnalysis();
+  const snap = snapshot(), H = snap.p.N * snap.p.h, stiff0 = S.stiff, EI0 = S.EI;
+  await runReg(); if (!REG) return;
+  const T = REG.C * Math.pow(H, REG.x), d = await solver.call("calibrate", {p: snap.p, T});
+  if (!unchanged(snap)) { $("regOut").innerHTML += "<br>" + CHANGED; return; }
+  if (d.error) { $("regOut").innerHTML += "<br>" + esc(d.error); return; }
+  const capped = setStiffness(Math.round(d.scale * stiff0 / 10) * 10, Math.round(d.scale * EI0 / 100) * 100);
+  await analyse(); await runReg();
+  $("regOut").innerHTML += `<br>Calibrated: stiffness ×${fmt(d.scale, 4)} in ${d.it} bisection steps (target ${fmt(T)} s). Applied, rounded to the sliders.${capped}`;
+});
+function markLabStale() { $("labStale").hidden = !(labStamp && labStamp !== structureKey(params())); }
+function drawK(K, n) {
+  const cv = $("cvK"), [c, W, H] = prep(cv), sz = Math.min((W - 20) / n, (H - 10) / n);
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const v = K[i][j];
+    if (v === 0) { c.fillStyle = css("--grid"); c.globalAlpha = 0.5; }
+    else { c.fillStyle = v > 0 ? css("--acc") : css("--acc2"); c.globalAlpha = 0.25 + 0.75 * Math.min(1, Math.pow(Math.abs(v), 0.35)); }
+    c.fillRect(10 + j * sz, 5 + i * sz, sz - 1, sz - 1);
+  }
   c.globalAlpha = 1;
-  $("kNote").innerHTML = `${n} × ${n}. Blue is positive, orange is negative, grey is zero. ${R.tri ? "Only three diagonals are filled, so the Thomas algorithm applies." : "The matrix is full or has extra rows, so Cholesky or Gauss elimination is used."} Condition number of the structure's K: ${fmt(R.condK, 3)}.`;
-  const race = call("race", p);
-  $("tbRace").innerHTML = `<tr><th>Method</th><th class="n">Iterations</th><th class="n">Work (multiplications, approx.)</th><th class="n">Residual</th><th class="n">Difference from Gauss</th></tr>` + race.rows.map(r => `<tr><td>${r.name}</td><td class="n">${r.it == null ? "direct" : (r.bad || r.resid == null || r.resid > 100) ? r.it + " (diverged)" : r.it + (r.it >= race.cap ? " (stopped at cap)" : "")}</td><td class="n">${r.ops.toLocaleString()}</td><td class="n">${fmt(r.resid, 2)}</td><td class="n">${fmt(r.diff, 2)}</td></tr>`).join("");
-  if (race.rows.some(r => r.bad || (r.it != null && r.it >= race.cap))) $("tbRace").insertAdjacentHTML("beforeend", `<tr><td colspan="5" class="note">Iterative methods were stopped at ${race.cap} iterations. They converge slowly when the condition number is high (here ${fmt(race.cond, 3)}), and Jacobi can diverge when the matrix is not diagonally dominant.</td></tr>`);
-  const cols = {Jacobi: css("--mut"), "Gauss-Seidel": css("--acc"), SOR: css("--acc2")};
-  plot($("cvIter"), Object.keys(race.hists).map(k => { const h = race.hists[k], it = race.rows.find(r => r.name.startsWith(k)).it; return {x: h.map((_, i) => 1 + i * Math.max(1, Math.floor(it / 200))).filter((_, i) => h[i] != null), y: h, color: cols[k], label: k}; }), {logy: true, xl: "iteration", yl: "approx. relative error"});
-  plot($("cvSor"), [{x: race.scan.map(r => r[0]), y: race.scan.map(r => r[1])}, {x: race.scan.map(r => r[0]), y: race.scan.map(r => r[1]), pts: true}], {xl: "relaxation factor ω (1 = Gauss–Seidel)", yl: "iterations", ymin: 0});
-  const det = call("det", p);
-  plot($("cvDet"), [{x: det.grid, y: det.vals, label: "det (scaled)"}, {x: [det.grid[0], det.grid[det.grid.length - 1]], y: [0, 0], color: css("--mut"), dash: [3, 3]}], {xl: "λ = ω² (rad²/s²)", yl: "determinant", vl: det.roots.map((r, i) => [r.lam, "root " + (i + 1), css("--bad")])});
-  $("detOut").innerHTML = det.roots.map((r, i) => `Root ${i + 1}: bisection ${fmt(r.lam, 8)} (${r.it} steps), inverse iteration ${fmt(det.inverse_iteration[i], 8)}`).join("<br>");
-  const ds = call("design_stiffness", p);
-  if (ds.error) $("rootOut").textContent = ds.error; else { plot($("cvRoot"), histSeries(ds), {logy: true, xl: "iteration", yl: "approx. relative error"}); $("rootOut").innerHTML = `All three find the stiffness multiplier ${fmt(ds.bisection.s, 6)}, starting from the bracket ${fmt(ds.bracket[0], 3)} to ${fmt(ds.bracket[1], 3)}. Steps needed: bisection ${ds.bisection.it}, false position ${ds.false_position.it}, fixed-point ${ds.fixed_point.it}. Bisection halves the bracket every step. False position keeps one end fixed on a curved function, so its speed depends on the bracket. Fixed-point works here because each update shrinks the error.`; }
-  const eu = call("euler", p), ec = [css("--bad"), css("--acc2"), css("--ok")];
-  plot($("cvEuler"), eu.runs.map((r, i) => ({x: r.t, y: r.energy, color: ec[i], label: `step = period ÷ ${Math.round(1 / r.frac)}`})), {logy: true, xl: "time (s)", yl: "energy ÷ starting energy"});
-  plot($("cvEuler2"), [{x: eu.exact_t, y: eu.exact, color: css("--mut"), dash: [4, 3], label: "exact"}, {x: eu.runs[2].t, y: eu.runs[2].roof, color: ec[2], label: `Euler, period ÷ ${Math.round(1 / eu.runs[2].frac)}`}], {xl: "time (s)", yl: "roof position (m)"});
-  $("eulerOut").innerHTML = `With no damping the energy should stay at 1. Euler multiplies it by (1 + ω²h²) every step. The smallest step ends at ${fmt(eu.runs[2].energy.at(-1), 4)}, and the formula for the first mode alone predicts ${fmt(eu.runs[2].predicted, 4)}. The larger steps grow far faster than that formula, because the starting shape is only approximately mode 1: small errors from the eigenvalue iteration and round-off leave a trace of the highest mode (${fmt(eu.w_max, 4)} rad/s, found by power iteration in ${eu.power_iters} steps) in it, and Euler amplifies that mode most.`;
-  runReg();
-}));
-
-// ------------------------------------------------------------ verify
-$("btnVerify").addEventListener("click", () => busy(() => {
-  const v = call("verify"); if (v.error) { $("verSum").textContent = v.error; return; }
-  const bad = v.filter(r => !r.ok).length;
+}
+onClick("btnLab", async () => {
+  await freshAnalysis();                    // the picture of K below must be of the same building as the rest
+  const p = params(), stamp = structureKey(p), {K, ndof: n, tri, condK} = R;
+  // 1. the same static problem by every linear solver
+  const race = await solver.must("race", p);
+  retained($("cvK"), () => drawK(K, n));
+  $("kNote").textContent = `${n} × ${n}. Blue is positive, orange is negative, grey is zero. ${tri ? "Only three diagonals are filled, so the Thomas algorithm applies." : "The matrix is full or has extra rows, so Cholesky or Gauss elimination is used."} Condition number of the structure's K: ${fmt(condK, 3)}.`;
+  const itText = r => r.it == null ? "direct" : (r.bad || r.resid == null || r.resid > 100) ? r.it + " (diverged)" : r.it + (r.it >= race.cap ? " (stopped at cap)" : "");
+  $("tbRace").innerHTML = `<tr><th>Method</th><th class="n">Iterations</th><th class="n">Work (multiplications, approx.)</th><th class="n">Residual</th><th class="n">Difference from Gauss</th></tr>`
+    + race.rows.map(r => `<tr><td>${esc(r.name)}</td><td class="n">${itText(r)}</td><td class="n">${r.ops.toLocaleString()}</td><td class="n">${fmt(r.resid, 2)}</td><td class="n">${fmt(r.diff, 2)}</td></tr>`).join("")
+    + (race.rows.some(r => r.bad || (r.it != null && r.it >= race.cap)) ? `<tr><td colspan="5" class="note">Iterative methods were stopped at ${race.cap} iterations. They converge slowly when the condition number is high (here ${fmt(race.cond, 3)}), and Jacobi can diverge when the matrix is not diagonally dominant.</td></tr>` : "");
+  const iterColours = {Jacobi: "--mut", "Gauss-Seidel": "--acc", SOR: "--acc2"};
+  plot($("cvIter"), Object.keys(race.hists).map(k => {
+    const h = race.hists[k], stride = Math.max(1, Math.floor(race.rows.find(r => r.name.startsWith(k)).it / 200));     // the solver keeps every stride-th value
+    return {x: h.map((_, i) => 1 + i * stride), y: h, color: iterColours[k], label: k};
+  }), {logy: true, xl: "iteration", yl: "approx. relative error"});
+  const w = race.scan.map(r => r[0]), its = race.scan.map(r => r[1]);
+  plot($("cvSor"), [{x: w, y: its}, {x: w, y: its, pts: true}], {xl: "relaxation factor ω (1 = Gauss–Seidel)", yl: "iterations", ymin: 0});
+  // 2. natural frequencies as roots of the determinant
+  const det = await solver.must("det", p);
+  plot($("cvDet"), [{x: det.grid, y: det.vals, label: "det (scaled)"}, {x: [det.grid[0], det.grid[det.grid.length - 1]], y: [0, 0], color: "--mut", dash: [3, 3]}],
+    {xl: "λ = ω² (rad²/s²)", yl: "determinant", vl: det.roots.map((r, i) => [r.lam, "root " + (i + 1), "--bad"])});
+  $("detOut").innerHTML = det.roots.map((r, i) => `Root ${i + 1}: bisection ${fmt(r.lam, 7)} (${r.it} steps), inverse iteration ${fmt(det.inverse_iteration[i], 7)}`).join("<br>");
+  // 3. three root finders on the design problem
+  const ds = await solver.call("design_stiffness", p);
+  if (ds.error) { $("rootOut").textContent = ds.error; retained($("cvRoot"), () => prep($("cvRoot"))); }
+  else {
+    plot($("cvRoot"), histSeries(ds), {logy: true, xl: "iteration", yl: "approx. relative error"});
+    $("rootOut").textContent = `All three find the stiffness multiplier ${fmt(ds.bisection.s, 6)}, starting from the bracket ${fmt(ds.bracket[0], 3)} to ${fmt(ds.bracket[1], 3)}. Steps needed: bisection ${ds.bisection.it}, false position ${ds.false_position.it}, fixed-point ${ds.fixed_point.it}. Bisection halves the bracket every step. False position keeps one end fixed on a curved function, so its speed depends on the bracket. Fixed-point works here because each update shrinks the error.`;
+  }
+  // 4. Euler's method
+  const eu = await solver.must("euler", p), eulerColours = ["--bad", "--acc2", "--ok"], fine = eu.runs[2], perT = r => `period ÷ ${Math.round(1 / r.frac)}`;
+  plot($("cvEuler"), eu.runs.map((r, i) => ({x: r.t, y: r.energy, color: eulerColours[i], label: "step = " + perT(r)})), {logy: true, xl: "time (s)", yl: "energy ÷ starting energy"});
+  plot($("cvEuler2"), [{x: eu.exact_t, y: eu.exact, color: "--mut", dash: [4, 3], label: "exact"}, {x: fine.t, y: fine.roof, color: eulerColours[2], label: "Euler, " + perT(fine)}],
+    {xl: "time (s)", yl: "roof position (m)", ylim: [-0.15, 0.15]});      // the start is 0.05 m; a run that blows up is cut off at three times that
+  $("eulerOut").textContent = `With no damping the energy should stay at 1. Euler multiplies it by (1 + ω²h²) every step. The smallest step ${fine.stopped != null ? `was stopped at ${fmt(fine.stopped)} s with its energy at` : "ends at"} ${fmt(fine.energy.at(-1), 4)}, and the formula for the first mode alone predicts ${fmt(fine.predicted, 4)} at the end. The larger steps grow far faster than that formula, because the starting shape is only approximately mode 1: small errors from the eigenvalue iteration and round-off leave a trace of the highest mode (${fmt(eu.w_max, 4)} rad/s, found by power iteration in ${eu.power_iters} steps) in it, and Euler amplifies that mode most.`
+    + (eu.runs.some(r => r.stopped != null) ? ` A run is stopped once its energy has grown by a factor of ${eu.stop.toExponential(0)}.` : "");
+  await runReg();
+  labStamp = stamp; markLabStale();
+});
+onClick("btnVerify", async () => {
+  const v = await solver.must("verify"), bad = v.filter(r => !r.ok).length;
   $("verSum").innerHTML = `<b class="${bad ? "fail" : "pass"}">${v.length - bad} of ${v.length} checks passed</b>`;
-  $("tbVer").innerHTML = `<tr><th></th><th>Check</th><th class="n">Solver</th><th class="n">Expected</th><th class="n">Error</th><th class="n">Allowed</th><th>Against</th></tr>` + v.map(r => `<tr><td class="${r.ok ? "pass" : "fail"}">${r.ok ? "pass" : "FAIL"}</td><td>${r.name}</td><td class="n">${fmt(r.got, 8)}</td><td class="n">${fmt(r.expected, 8)}</td><td class="n">${fmt(r.err, 2)}</td><td class="n">${fmt(r.tol, 2)}</td><td>${r.note}</td></tr>`).join("");
-}));
+  $("tbVer").innerHTML = `<tr><th></th><th>Check</th><th class="n">Solver</th><th class="n">Expected</th><th class="n">Error</th><th class="n">Allowed</th><th>Against</th></tr>`
+    + v.map(r => `<tr><td class="${r.ok ? "pass" : "fail"}">${r.ok ? "pass" : "FAIL"}</td><td>${esc(r.name)}</td><td class="n">${fmt(r.got, 7)}</td><td class="n">${fmt(r.expected, 7)}</td><td class="n">${fmt(r.err, 2)}</td><td class="n">${fmt(r.tol, 2)}</td><td>${esc(r.note)}</td></tr>`).join("");
+});
 
-fillStations(); syncInputs(); requestAnimationFrame(loop); boot();
+// ------------------------------------------------------------ 9 tabs and start-up
+const TABS = ["build", "shake", "detect", "lab", "verify", "about"];
+function showTab(t, opt = {}) {
+  if (!TABS.includes(t)) t = "build";
+  for (const b of $("nav").children) {
+    const on = b.dataset.t === t;
+    b.classList.toggle("on", on); b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1;
+    if (on && opt.focus) b.focus();
+  }
+  for (const s of document.querySelectorAll(".tab")) s.classList.toggle("on", s.id === "t-" + t);
+  if (opt.link && location.hash !== "#" + t) history.replaceState(null, "", "#" + t);       // so the address bar can be shared
+  redrawVisible(); drawNow(); markLabStale();
+}
+$("nav").addEventListener("click", e => { const t = e.target.dataset.t; if (t) showTab(t, {link: true}); });
+$("nav").addEventListener("keydown", e => {                 // arrow keys move between tabs
+  const i = TABS.indexOf(e.target.dataset.t), n = TABS.length; if (i < 0) return;
+  const j = e.key === "ArrowRight" ? (i + 1) % n : e.key === "ArrowLeft" ? (i + n - 1) % n : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : -1;
+  if (j >= 0) { e.preventDefault(); showTab(TABS[j], {link: true, focus: true}); }
+});
+window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
+window.addEventListener("resize", debounce(() => { redrawVisible(); drawNow(); }, 100));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { themeCache = {}; redrawVisible(); drawNow(); });
+stillOnly.addEventListener("change", () => { drawNow(); animate(); });
+
+function lockSolverControls(locked) { for (const el of document.querySelectorAll("button.b, #csv")) el.disabled = locked; }
+function bootNote(html) { $("bootNote").hidden = html == null; $("bootNote").innerHTML = html || ""; }
+function solverFailed(err) {
+  console.error(err); solverReady = false; lockSolverControls(true);
+  setStatus("Python is not running", "err");
+  bootNote(`<b>The Python solver could not start.</b> ${esc(err.message)}<br>It is downloaded from cdn.jsdelivr.net (about 9 MB, kept by the browser afterwards), so the first visit needs an internet connection. <button class="b" id="btnRetry">Try again</button>`);
+  $("btnRetry").onclick = boot;
+}
+async function boot() {
+  solverReady = false; lockSolverControls(true);
+  setStatus("Loading Python…", "busy");
+  bootNote("Loading the Python solver. The first visit downloads about 9 MB; after that the browser keeps it.");
+  try { await solver.start(text => setStatus(text, "busy"), solverFailed); }
+  catch (e) { solverFailed(e); return; }
+  solverReady = true; bootNote(null); lockSolverControls(false); setStatus("Ready", "ok");
+  requestAnalysis(); requestDetect();
+}
+
+for (const cv of document.querySelectorAll("canvas")) cv.style.height = cv.dataset.h + "px";
+lockSolverControls(true); fillStations(); setView("static"); applyPreset("apartment");
+showTab(location.hash.slice(1));
+animate(); boot();
 </script>
 </body>
 </html>
