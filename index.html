@@ -6,76 +6,175 @@
 <title>QuakeSafe</title>
 <meta name="description" content="QuakeSafe: building sway, earthquake protection and earthquake detection, solved in the browser with hand-written numerical methods.">
 <meta name="color-scheme" content="light dark">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b6bcb'/%3E%3Cpath d='M4 21h4l3-11 4 17 4-13 3 7h6' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23e8dcc3'/%3E%3Cpath d='M4 21h5l3-11 4 17 4-13 3 7h5' fill='none' stroke='%23b9482a' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- The three typefaces. If they cannot be fetched the page falls back to the system fonts named in the style sheet. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
 <style>
-:root{--bg:#f4f6f8;--card:#fff;--ink:#17212b;--mut:#5d6b7a;--line:#d8dee5;--acc:#0b6bcb;--acc2:#c2410c;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--band:#f59e0b;--grid:#e6eaee}
-@media (prefers-color-scheme:dark){:root{--bg:#10151b;--card:#1a222b;--ink:#e6edf3;--mut:#9aa7b4;--line:#2d3742;--acc:#58a6ff;--acc2:#fb923c;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--band:#fbbf24;--grid:#263039}}
+/* "Seismic Atlas" look: warm mineral colours, an editorial serif for headlines, a mono face for labels and numbers. */
+:root{
+  --bg:#f3ebdb;--card:#faf5ea;--stage:#e9dfc9;--tile:#efe6d2;--bar:#e8dcc3;--pill:#d8c8a7;
+  --ink:#22302b;--mut:#6d6657;--line:#dfd3bb;--rail:#cdbfa2;--win:#cdbfa3;
+  --acc:#d4603b;--acc-strong:#b9482a;--on-acc:#fff;--acc2:#2b6c7b;
+  --ok:#2f6b46;--okbg:#dcead3;--warn:#99600c;--bad:#a3262a;--badbg:#f3d8d2;--band:#c98f2b;--grid:#e2d8c3;
+  --dot:rgba(110,92,58,.2);
+  --serif:"Newsreader","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"DM Mono",ui-monospace,"SF Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#1b1712;--card:#25201a;--stage:#2d271f;--tile:#2e2820;--bar:#221d17;--pill:#3d3528;
+  --ink:#efe7d8;--mut:#aba290;--line:#3a3227;--rail:#4a4033;--win:#4b4133;
+  --acc:#e7744c;--acc-strong:#e7744c;--on-acc:#1b1712;--acc2:#73b6c2;
+  --ok:#86c9a0;--okbg:#1f3226;--warn:#e0a84c;--bad:#f08a7c;--badbg:#3b2220;--band:#e0a84c;--grid:#342d23;
+  --dot:rgba(239,231,216,.07);
+}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card)}
-h1{font-size:18px;margin:0}h1 small{font-weight:400;color:var(--mut);font-size:13px;margin-left:8px}
-h2{font-size:15px;margin:0 0 8px}h3{font-size:13px;margin:12px 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
-#status{margin-left:auto;font-size:12px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
-#status.ok{color:var(--ok);border-color:var(--ok)}#status.busy{color:var(--warn);border-color:var(--warn)}#status.err{color:var(--bad);border-color:var(--bad)}
-nav{display:flex;gap:4px;padding:8px 16px 0;flex-wrap:wrap;background:var(--card);border-bottom:1px solid var(--line)}
-nav button{border:0;background:none;color:var(--mut);padding:8px 12px;font:inherit;cursor:pointer;border-bottom:2px solid transparent}
-nav button.on{color:var(--acc);border-color:var(--acc);font-weight:600}
-:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-main{padding:16px;max-width:1280px;margin:0 auto}
+body{margin:0;color:var(--ink);font:14px/1.5 var(--sans);background:var(--bg) radial-gradient(var(--dot) 1px,transparent 1.4px) 0 0/22px 22px}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+a{color:var(--acc-strong)}
+[hidden]{display:none!important}
+
+/* header: wordmark, tabs, solver status */
+header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px 16px;padding:11px 22px;background:var(--bar);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px;margin:0;font:600 22px/1 var(--serif);letter-spacing:-.01em}
+.brand svg{width:22px;height:22px;stroke:var(--ink)}
+.brand small{font:500 10px var(--mono);letter-spacing:.14em;color:var(--mut);margin-left:2px}
+nav{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}
+nav button{border:0;background:none;color:var(--mut);padding:7px 13px;border-radius:8px;font:500 13px var(--sans);cursor:pointer}
+nav button:hover{color:var(--ink)}
+nav button.on{background:var(--pill);color:var(--ink);font-weight:600}
+#status{justify-self:end;display:flex;align-items:center;gap:7px;max-width:340px;font:500 10.5px var(--mono);letter-spacing:.1em;color:var(--mut)}
+#status::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:currentColor}
+#status.ok,#status.busy{text-transform:uppercase}
+#status.ok{color:var(--ink)}#status.ok::before{background:var(--ok)}
+#status.busy{color:var(--warn)}
+#status.err{color:var(--bad);letter-spacing:0;font-size:12px}
+@media (max-width:900px){header{grid-template-columns:1fr auto}nav{grid-column:1/-1;grid-row:2;justify-content:flex-start;margin:0 -8px}}
+
+main{padding:22px;max-width:1240px;margin:0 auto}
 .tab{display:none}.tab.on{display:block}
-.grid{display:grid;gap:14px;grid-template-columns:300px minmax(0,1fr) minmax(0,1fr)}
+
+/* the headline and main action of each tab */
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:14px 24px;flex-wrap:wrap;margin:4px 0 18px}
+.eyebrow{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 6px;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.eyebrow svg{width:14px;height:14px;stroke:var(--mut);fill:none;stroke-width:1.5;stroke-linecap:round}
+.display{margin:0;font:500 clamp(25px,3.3vw,35px)/1.1 var(--serif);letter-spacing:-.015em}
+.cta{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:9px;background:var(--acc-strong);color:var(--on-acc);padding:11px 18px;font:600 13px var(--sans);cursor:pointer}
+.cta:hover:not(:disabled){filter:brightness(1.1)}.cta:disabled{opacity:.5;cursor:not-allowed}
+.cta svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linejoin:round}
+
+/* layout */
+.grid{display:grid;gap:14px;grid-template-columns:290px minmax(0,1fr) minmax(0,1fr);align-items:start}
+.grid.answer{grid-template-columns:290px minmax(0,1fr) 280px}
 .grid2{display:grid;gap:14px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-/* medium screens: controls stay beside the first drawing, the third card drops below */
-@media (max-width:980px){.grid{grid-template-columns:minmax(230px,300px) minmax(0,1fr)}.grid>.card:nth-child(3){grid-column:1/-1}.grid2{grid-template-columns:minmax(0,1fr)}}
-@media (max-width:640px){.grid{grid-template-columns:minmax(0,1fr)}main{padding:10px}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}
-label{display:block;margin:8px 0 2px;color:var(--mut);font-size:12px}
-label b{color:var(--ink);font-weight:600;float:right}
-input[type=range]{width:100%}select,input[type=number],input[type=text],textarea{width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);font:inherit}
-textarea{font-family:ui-monospace,Consolas,monospace;font-size:12px;height:150px}
-button.b{border:1px solid var(--acc);background:none;color:var(--acc);padding:6px 10px;border-radius:5px;font:inherit;cursor:pointer;margin:4px 4px 4px 0}
-button.b:hover:not(:disabled){background:var(--acc);color:#fff}button.b.on{background:var(--acc);color:#fff}
+.explain{display:grid;gap:14px;grid-template-columns:repeat(3,minmax(0,1fr))}
+/* medium screens: controls stay beside the first drawing, the third panel drops below */
+@media (max-width:980px){.grid,.grid.answer{grid-template-columns:minmax(230px,290px) minmax(0,1fr)}.grid>:nth-child(3){grid-column:1/-1}.grid2,.explain{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.grid,.grid.answer{grid-template-columns:minmax(0,1fr)}main{padding:12px}header{padding:10px 12px}}
+
+/* cards and the darker "stage" panel that holds a building drawing */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.stage{background:var(--stage);border-radius:12px;padding:14px 16px;min-width:0}
+.cap{display:flex;justify-content:space-between;gap:10px;font:500 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.cap b{color:var(--acc2);font-weight:500}
+h3{margin:0 0 6px;font:600 15px/1.3 var(--sans)}
+h4{margin:18px 0 6px;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.lede{margin:0 0 10px;color:var(--mut);font-size:12.5px}
+.note{color:var(--mut);font-size:12.5px}
+a.card{display:block;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s}
+a.card:hover{border-color:var(--acc);transform:translateY(-1px)}
+a.card p:last-of-type{margin:0;color:var(--mut);font-size:12.5px}
+.spark{display:block;width:100%;height:26px;margin-top:10px;stroke:var(--acc);fill:none;stroke-width:1.4;stroke-linejoin:round}
+
+/* controls */
+label{display:block;position:relative;margin:11px 0 2px;padding-right:58px;font:500 11.5px/1.4 var(--mono);color:var(--ink)}
+label b{position:absolute;right:0;top:0;font-weight:500}      /* the value stays at the top right when the label wraps */
+.chk{display:flex;align-items:center;gap:7px;margin:12px 0 2px;padding-right:0}
+.chk input{width:auto;accent-color:var(--acc)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row2 label{padding-right:0}
+select,input[type=number],input[type=text],textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:13px var(--sans)}
+textarea{font:12px/1.5 var(--mono);height:150px}
+input[type=file]{max-width:100%;font:12px var(--sans);color:var(--mut)}
+/* sliders: a thin rail, filled up to the thumb. --p is set by the page script. */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;margin:1px 0 5px;background:none;--p:50%}
+input[type=range]::-webkit-slider-runnable-track{height:2px;border-radius:2px;background:linear-gradient(to right,var(--acc) var(--p),var(--rail) var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;box-sizing:border-box;width:13px;height:13px;margin-top:-5.5px;border-radius:50%;background:var(--acc);border:2px solid var(--card);box-shadow:0 0 0 1px var(--acc)}
+input[type=range]::-moz-range-track{height:2px;border-radius:2px;background:var(--rail)}
+input[type=range]::-moz-range-progress{height:2px;border-radius:2px;background:var(--acc)}
+input[type=range]::-moz-range-thumb{box-sizing:border-box;width:13px;height:13px;border-radius:50%;background:var(--acc);border:2px solid var(--card);box-shadow:0 0 0 1px var(--acc)}
+input[type=range]:disabled{opacity:.4}
+button.b{border:1px solid var(--acc-strong);background:none;color:var(--acc-strong);padding:7px 11px;border-radius:8px;font:600 12.5px var(--sans);cursor:pointer;margin:4px 4px 4px 0}
+button.b:hover:not(:disabled){background:var(--acc-strong);color:var(--on-acc)}
 button.b:disabled{opacity:.45;cursor:not-allowed}
-.chk{display:flex;align-items:center;gap:6px;margin:8px 0 2px;font-weight:600}
-.chk input{width:auto}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.views{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0 0}
+.views button.b{margin:0;padding:4px 10px;border-color:transparent;color:var(--mut);font:500 11px var(--mono)}
+.views button.b.on{background:var(--ink);color:var(--card)}
+details{margin-top:10px}summary{cursor:pointer;color:var(--mut);font-size:12.5px}
+
+/* results */
 canvas{width:100%;display:block;border-radius:6px}
 #cvB,#cvMap{cursor:pointer}
-table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
-th{color:var(--mut);font-weight:600}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
-.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
-.pass{color:var(--ok)}.fail{color:var(--bad)}.note{color:var(--mut);font-size:12.5px}
-.warnbox{border-left:3px solid var(--warn);padding:6px 10px;margin:8px 0;background:var(--bg);font-size:13px}
+.stats{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.stat{background:var(--tile);border-radius:9px;padding:10px 12px}
+.stat span{display:block;font-size:11.5px;color:var(--mut)}
+.stat strong{font:500 25px/1.25 var(--mono);letter-spacing:-.02em}
+.stat em{margin-left:4px;font:500 11px var(--mono);color:var(--mut)}
+.verdict{margin:10px 0 0;border-radius:9px;padding:10px 12px;font-size:12.5px;background:var(--tile);color:var(--mut)}
+.verdict b{display:block;margin-bottom:3px;font:500 10px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.verdict.pass{background:var(--okbg);color:var(--ok)}.verdict.fail{background:var(--badbg);color:var(--bad)}
+.pass{color:var(--ok)}.fail{color:var(--bad)}
+.warnbox{border-left:3px solid var(--warn);border-radius:0 8px 8px 0;padding:7px 10px;margin:8px 0;background:var(--tile);font-size:12.5px}
 #bootNote{background:var(--card);margin:0 0 14px}
-.kv{display:grid;grid-template-columns:auto auto;gap:2px 12px;font-size:13px}.kv span:nth-child(odd){color:var(--mut)}.kv span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.kv{display:grid;grid-template-columns:auto auto;gap:3px 12px;font-size:12.5px}
+.kv span:nth-child(odd){color:var(--mut)}.kv span:nth-child(even){text-align:right;font:500 12px var(--mono)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabular-nums}
 .scroll{overflow-x:auto}
-details{margin-top:8px}summary{cursor:pointer;color:var(--mut);font-size:12.5px}
-a{color:var(--acc)}
-[hidden]{display:none!important}
+/* the fold-out bar with the working behind the answer */
+.trail{margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.trail summary{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:11px 16px;list-style:none;font:600 12.5px var(--sans);color:var(--ink)}
+.trail summary::-webkit-details-marker{display:none}
+.trail summary .sub{font:500 11px var(--mono)}
+.trail:not([open]) .when-open,.trail[open] .when-closed{display:none}
+.trail summary i{justify-self:end;font:400 20px/1 var(--mono);font-style:normal;color:var(--acc2);transition:transform .15s}
+.trail[open] summary i{transform:rotate(45deg)}
+.trail .body{display:grid;gap:8px 24px;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);padding:0 16px 16px}
+@media (max-width:760px){.trail summary{grid-template-columns:1fr auto}.trail summary .sub{display:none}.trail .body{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <header>
-  <h1>QuakeSafe<small>building sway, protection and earthquake detection</small></h1>
+  <h1 class="brand"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 13h4l2.5-7 4 13 3-9 1.5 3H22"/></svg>QuakeSafe<small>/ ATLAS</small></h1>
+  <nav id="nav" role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-build" aria-controls="t-build" aria-selected="true" data-t="build" class="on">Building</button>
+    <button role="tab" id="tab-shake" aria-controls="t-shake" aria-selected="false" tabindex="-1" data-t="shake">Shake</button>
+    <button role="tab" id="tab-detect" aria-controls="t-detect" aria-selected="false" tabindex="-1" data-t="detect">Detect</button>
+    <button role="tab" id="tab-lab" aria-controls="t-lab" aria-selected="false" tabindex="-1" data-t="lab">Lab</button>
+    <button role="tab" id="tab-verify" aria-controls="t-verify" aria-selected="false" tabindex="-1" data-t="verify">Verify</button>
+    <button role="tab" id="tab-about" aria-controls="t-about" aria-selected="false" tabindex="-1" data-t="about">Limits</button>
+  </nav>
   <span id="status" class="busy" role="status" aria-live="polite">Loading Python…</span>
 </header>
-<nav id="nav" role="tablist" aria-label="Sections">
-  <button role="tab" id="tab-build" aria-controls="t-build" aria-selected="true" data-t="build" class="on">1 · Building</button>
-  <button role="tab" id="tab-shake" aria-controls="t-shake" aria-selected="false" tabindex="-1" data-t="shake">2 · Shake test</button>
-  <button role="tab" id="tab-detect" aria-controls="t-detect" aria-selected="false" tabindex="-1" data-t="detect">3 · Detect</button>
-  <button role="tab" id="tab-lab" aria-controls="t-lab" aria-selected="false" tabindex="-1" data-t="lab">4 · Numerics lab</button>
-  <button role="tab" id="tab-verify" aria-controls="t-verify" aria-selected="false" tabindex="-1" data-t="verify">5 · Verify</button>
-  <button role="tab" id="tab-about" aria-controls="t-about" aria-selected="false" tabindex="-1" data-t="about">6 · Limits and sources</button>
-</nav>
 <main>
 <noscript><div class="warnbox">QuakeSafe needs JavaScript: the solver is Python running inside this page.</div></noscript>
 <div id="bootNote" class="warnbox" hidden></div>
 
-<!-- ============================ 1 BUILDING ============================ -->
+<!-- ============================ BUILDING ============================ -->
 <section class="tab on" id="t-build" role="tabpanel" aria-labelledby="tab-build">
-<div class="grid">
+<div class="hero">
+  <div><p class="eyebrow">Field study / 01</p><h2 class="display">Read the ground. Understand the building.</h2></div>
+  <button class="cta" id="goShake"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Run the shake test</button>
+</div>
+<div class="grid answer">
   <div class="card">
-    <h2>Building</h2>
+    <p class="eyebrow">01 / Set the scene<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h7M12 4h2M2 8h2M7 8h7M2 12h8M13 12h1"/><circle cx="10.5" cy="4" r="1.5"/><circle cx="5.5" cy="8" r="1.5"/><circle cx="11.5" cy="12" r="1.5"/></svg></p>
+    <h3>Shape the structure</h3>
+    <p class="lede">Adjust the building and watch the sway, the periods and the drift check follow.</p>
     <label for="preset">Preset (illustrative values)</label>
     <select id="preset">
       <option value="" hidden>Custom</option>
@@ -98,11 +197,12 @@ a{color:var(--acc)}
     <div id="eiRow"><label for="EI">Core bending stiffness EI (GN·m²) <b id="vEI"></b></label><input type="range" id="EI" min="100" max="10000" step="100"></div>
     <label class="chk"><input type="checkbox" id="brace"> Steel bracing in every storey</label>
     <div id="braceRow"><label for="braceA">Brace area (cm²) <b id="vbraceA"></b></label><input type="range" id="braceA" min="5" max="200" step="5"></div>
-    <h3>Edit one floor</h3>
-    <label for="floorSel">Floor (pick it here or click it in the drawing)</label>
-    <select id="floorSel"><option value="-1">None</option></select>
-    <label for="mMul">Mass multiplier <b id="vmMul"></b></label><input type="range" id="mMul" min="0.2" max="4" step="0.1" disabled>
-    <label for="kMul">Stiffness multiplier of the storey below it <b id="vkMul"></b></label><input type="range" id="kMul" min="0.1" max="3" step="0.05" disabled>
+    <details id="floorBox"><summary>Edit one floor (soft storey, heavy floor)</summary>
+      <label for="floorSel">Floor (pick it here or click it in the drawing)</label>
+      <select id="floorSel"><option value="-1">None</option></select>
+      <label for="mMul">Mass multiplier <b id="vmMul"></b></label><input type="range" id="mMul" min="0.2" max="4" step="0.1" disabled>
+      <label for="kMul">Stiffness multiplier of the storey below it <b id="vkMul"></b></label><input type="range" id="kMul" min="0.1" max="3" step="0.05" disabled>
+    </details>
     <details><summary>Earthquake load settings (example values, take yours from the local code)</summary>
       <label for="SDS">S<sub>DS</sub> short-period design value (g) <b id="vSDS"></b></label><input type="range" id="SDS" min="0.1" max="1.5" step="0.05">
       <label for="SD1">S<sub>D1</sub> one-second design value (g) <b id="vSD1"></b></label><input type="range" id="SD1" min="0.05" max="1" step="0.05">
@@ -111,36 +211,76 @@ a{color:var(--acc)}
       <label for="dlim">Drift limit (% of storey height) <b id="vdlim"></b></label><input type="range" id="dlim" min="0.5" max="2.5" step="0.1">
     </details>
   </div>
-  <div class="card">
-    <h2>Sway</h2>
-    <div id="viewBtns">
+  <div class="stage">
+    <div class="cap"><span id="capB1">Building</span><span id="capB2">Sway exaggerated</span></div>
+    <div id="viewBtns" class="views">
       <button class="b on" data-v="static" aria-pressed="true">Code load</button>
       <button class="b" data-v="0" aria-pressed="false">Mode 1</button>
       <button class="b" data-v="1" aria-pressed="false">Mode 2</button>
       <button class="b" data-v="2" aria-pressed="false">Mode 3</button>
     </div>
-    <canvas id="cvB" data-h="520" role="img" aria-label="Drawing of the building swaying. The same numbers are in the results and the drift table."></canvas>
-    <p class="note" id="viewNote"></p>
+    <canvas id="cvB" data-h="470" role="img" aria-label="Drawing of the building swaying. The same numbers are in the answer panel and the calculation trail."></canvas>
+    <div class="cap"><span>Ground / fixed base</span><span id="capB4">○ Waiting for Python</span></div>
+    <p class="note" id="viewNote" style="margin:10px 0 0"></p>
   </div>
   <div class="card">
-    <h2>Results</h2>
-    <div class="kv" id="kvB"></div>
+    <p class="eyebrow">02 / The answer<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14h12M4 11V7M8 11V3M12 11V8"/></svg></p>
+    <div class="stats">
+      <div class="stat"><span>Natural period</span><strong id="statT">–</strong><em>s</em></div>
+      <div class="stat"><span>Peak storey drift (share of storey height)</span><strong id="statDrift">–</strong><em>%</em></div>
+      <div class="stat"><span>Roof sway (code load)</span><strong id="statRoof">–</strong><em>mm</em></div>
+    </div>
+    <div class="verdict" id="verdict" role="status"><b>Waiting</b>The answer appears here once Python has loaded.</div>
     <div id="warnB"></div>
-    <h3>Drift check per storey</h3>
-    <div class="scroll" style="max-height:230px;overflow-y:auto"><table id="tbDrift"></table></div>
-    <h3>Design</h3>
+    <h4>Design</h4>
     <button class="b" id="btnDesign">Find the minimum stiffness that passes</button>
     <div id="designOut" class="note"></div>
-    <canvas id="cvDesign" data-h="170" hidden role="img" aria-label="Chart: error per iteration for bisection, false position and fixed-point iteration."></canvas>
   </div>
+</div>
+<details class="trail" id="trail">
+  <summary><b><span class="when-closed">Open</span><span class="when-open">Close</span> the calculation trail</b><span class="sub">Mode shapes · drift checks · solver steps</span><i aria-hidden="true">+</i></summary>
+  <div class="body">
+    <div>
+      <h4>Model and solver</h4>
+      <div class="kv" id="kvB"></div>
+      <canvas id="cvDesign" data-h="170" style="margin-top:16px" hidden role="img" aria-label="Chart: error per iteration for bisection, false position and fixed-point iteration."></canvas>
+    </div>
+    <div>
+      <h4>Drift check per storey</h4>
+      <div class="scroll" style="max-height:300px;overflow-y:auto"><table id="tbDrift"></table></div>
+    </div>
+  </div>
+</details>
+<div class="explain">
+  <a class="card" href="#shake">
+    <p class="eyebrow">03 / Explore the method</p>
+    <h3>From force to movement</h3>
+    <p>See the response to shaking at every frequency, and how a tuned roof damper or base isolation changes the answer.</p>
+    <svg class="spark" viewBox="0 0 300 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14h60l6-3 5 6 6-9 6 11 7-5 8 2h34l5-4 5 9 6-16 6 19 5-10 6 5 8-2h46l6-3 6 5 6-2h46"/></svg>
+  </a>
+  <a class="card" href="#detect">
+    <p class="eyebrow">Seismic input</p>
+    <h3>Five stations, one event</h3>
+    <p>Arrival-time gaps become distances; least squares reconciles the noisy station estimates into one epicentre.</p>
+  </a>
+  <a class="card" href="#lab">
+    <p class="eyebrow">Numerical engine</p>
+    <h3>Transparent by design</h3>
+    <p>Hand-written Python runs inside the browser. No server, no hidden calculation, no black box.</p>
+  </a>
 </div>
 </section>
 
-<!-- ============================ 2 SHAKE ============================ -->
+<!-- ============================ SHAKE ============================ -->
 <section class="tab" id="t-shake" role="tabpanel" aria-labelledby="tab-shake">
+<div class="hero">
+  <div><p class="eyebrow">Field study / 02</p><h2 class="display">Shake it at every frequency. See what protects it.</h2></div>
+  <button class="cta" id="goDetect"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Detect the earthquake</button>
+</div>
 <div class="grid">
   <div class="card">
-    <h2>Shaking and protection</h2>
+    <p class="eyebrow">01 / Shaking and protection</p>
+    <h3>Tune the response</h3>
     <label for="zeta">Structural damping (%) <b id="vzeta"></b></label><input type="range" id="zeta" min="0.5" max="10" step="0.5">
     <label for="ag">Ground shaking strength (g) <b id="vag"></b></label><input type="range" id="ag" min="0.005" max="0.2" step="0.005">
     <label class="chk"><input type="checkbox" id="tmd"> Tuned mass damper on the roof</label>
@@ -162,33 +302,41 @@ a{color:var(--acc)}
     </div>
     <label class="chk"><input type="checkbox" id="visc"> Shock-absorber dampers between floors</label>
     <div id="viscRow"><label for="vc">Damper size per storey (MN·s/m) <b id="vvc"></b></label><input type="range" id="vc" min="0.5" max="60" step="0.5"></div>
+    <h4>Compare</h4>
     <button class="b" id="btnPin">Pin this curve for comparison</button>
     <button class="b" id="btnUnpin">Clear pinned</button>
   </div>
   <div class="card">
-    <h2>Roof sway against shaking frequency</h2>
+    <p class="eyebrow">02 / The response</p>
+    <h3>Roof sway against shaking frequency</h3>
     <canvas id="cvSweep" data-h="300" role="img" aria-label="Chart: roof sway against shaking frequency. The peak and the value at the chosen frequency are listed below it."></canvas>
     <label for="freq">Shaking frequency <b id="vfreq"></b></label><input type="range" id="freq" min="0" max="100" step="1" value="20">
     <div class="kv" id="kvS"></div>
     <div id="bandOut"></div>
-    <h3>Condition number of the undamped system</h3>
+    <h4>Condition number of the undamped system</h4>
     <canvas id="cvCond" data-h="170" role="img" aria-label="Chart: condition number of the undamped system against shaking frequency, with a spike at each natural frequency."></canvas>
     <p class="note">The spikes sit exactly on the natural frequencies: there the undamped matrix K − Ω²M is singular.</p>
   </div>
-  <div class="card">
-    <h2>Motion at this frequency</h2>
-    <canvas id="cvS" data-h="520" role="img" aria-label="Drawing of the building moving at the chosen shaking frequency."></canvas>
-    <p class="note">Steady shaking at one frequency. This is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies. Sway is exaggerated in the drawing.</p>
+  <div class="stage">
+    <div class="cap"><span id="capS1">Motion at this frequency</span><span>Sway exaggerated</span></div>
+    <canvas id="cvS" data-h="470" role="img" aria-label="Drawing of the building moving at the chosen shaking frequency."></canvas>
+    <div class="cap"><span>Ground / steady shaking</span><span id="capS2"></span></div>
+    <p class="note" style="margin:10px 0 0">Steady shaking at one frequency. This is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies.</p>
   </div>
 </div>
 </section>
 
-<!-- ============================ 3 DETECT ============================ -->
+<!-- ============================ DETECT ============================ -->
 <section class="tab" id="t-detect" role="tabpanel" aria-labelledby="tab-detect">
+<div class="hero">
+  <div><p class="eyebrow">Field study / 03</p><h2 class="display">Hear the earthquake before it arrives.</h2></div>
+  <button class="cta" id="goLab"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Open the numerics lab</button>
+</div>
 <div class="grid">
   <div class="card">
-    <h2>Earthquake</h2>
-    <p class="note" style="margin-top:0">Click the map to move the earthquake, or type its position. Recordings are synthetic, so the true answer is known.</p>
+    <p class="eyebrow">01 / The event</p>
+    <h3>Place the earthquake</h3>
+    <p class="lede">Click the map to move it, or type its position. Recordings are synthetic, so the true answer is known.</p>
     <div class="row2">
       <div><label for="eqLat">Latitude (°N)</label><input type="number" id="eqLat" min="22" max="31" step="0.1"></div>
       <div><label for="eqLon">Longitude (°E)</label><input type="number" id="eqLon" min="47" max="60" step="0.1"></div>
@@ -199,9 +347,9 @@ a{color:var(--acc)}
     <label for="delay">Processing delay before the alert (s) <b id="vdelay"></b></label><input type="range" id="delay" min="0" max="20" step="1">
     <label class="chk"><input type="checkbox" id="iran"> Add a station on the Iranian side (hypothetical)</label>
     <label for="showSt">Show the recording from</label><select id="showSt"></select>
-    <h3>Result</h3>
+    <h4>Result</h4>
     <div class="kv" id="kvD"></div>
-    <h3>Your own recording</h3>
+    <h4>Your own recording</h4>
     <label for="csv">CSV file: one column of samples, or two columns (time in s, value)</label>
     <input type="file" id="csv" accept=".csv,.txt">
     <label for="csvFs">Samples per second (two-column files are resampled to this rate)</label><input type="number" id="csvFs" value="20" min="1" step="1">
@@ -209,18 +357,20 @@ a{color:var(--acc)}
     <div id="recOut" class="note"></div>
   </div>
   <div class="card">
-    <h2>Stations and epicentre</h2>
+    <p class="eyebrow">02 / The network</p>
+    <h3>Stations and epicentre</h3>
     <canvas id="cvMap" data-h="380" role="img" aria-label="Schematic map of stations, cities, the true earthquake and the estimated epicentre. The table below lists the same distances."></canvas>
     <p class="note">Schematic map: positions only, no coastline. ▲ station · ● city · ★ true earthquake · ✚ estimate. Circles are the estimated distances.</p>
     <div class="scroll"><table id="tbSt"></table></div>
   </div>
   <div class="card">
-    <h2>Recording and trigger</h2>
+    <p class="eyebrow">03 / The record</p>
+    <h3>Recording and trigger</h3>
     <canvas id="cvTrace" data-h="190" role="img" aria-label="Chart: the recording, with the P and S picks marked."></canvas>
     <canvas id="cvRatio" data-h="190" role="img" aria-label="Chart: short-term over long-term average, with the trigger threshold."></canvas>
-    <h3>Warning time</h3>
+    <h4>Warning time</h4>
     <div class="scroll"><table id="tbCity"></table></div>
-    <h3>Damage check after a quake</h3>
+    <h4>Damage check after a quake</h4>
     <label for="Tmeas">Measured first period after the quake (s)</label><input type="number" id="Tmeas" step="0.01" min="0">
     <button class="b" id="btnDamage">Estimate stiffness loss (bisection)</button>
     <div id="damageOut" class="note"></div>
@@ -228,21 +378,26 @@ a{color:var(--acc)}
 </div>
 </section>
 
-<!-- ============================ 4 LAB ============================ -->
+<!-- ============================ LAB ============================ -->
 <section class="tab" id="t-lab" role="tabpanel" aria-labelledby="tab-lab">
-<p class="note">Everything here uses the building from tab 1. <button class="b" id="btnLab">Run all</button> <b id="labStale" class="fail" hidden>The building has changed since this run. Run all again to update.</b></p>
+<div class="hero">
+  <div><p class="eyebrow">Field study / 04</p><h2 class="display">One building, every method.</h2></div>
+  <button class="cta" id="btnLab"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Run all</button>
+</div>
+<p class="note">Everything here uses the building from the Building tab. <b id="labStale" class="fail" hidden>The building has changed since this run. Run all again to update.</b></p>
 <div class="grid2">
-  <div class="card"><h2>Stiffness matrix K</h2><canvas id="cvK" data-h="260" role="img" aria-label="Picture of the stiffness matrix: which entries are positive, negative or zero."></canvas><div id="kNote" class="note"></div></div>
-  <div class="card"><h2>One problem, every linear solver</h2><p class="note">Solving K·u = F for the code load.</p><div class="scroll"><table id="tbRace"></table></div></div>
-  <div class="card"><h2>Iterative solvers: error per iteration</h2><canvas id="cvIter" data-h="240" role="img" aria-label="Chart: error per iteration for Jacobi, Gauss-Seidel and SOR."></canvas></div>
-  <div class="card"><h2>SOR: iterations against the relaxation factor ω</h2><canvas id="cvSor" data-h="240" role="img" aria-label="Chart: SOR iterations needed against the relaxation factor."></canvas></div>
-  <div class="card"><h2>Natural frequencies as roots of det(K − λM) = 0</h2><canvas id="cvDet" data-h="240" role="img" aria-label="Chart: the determinant against lambda, with its roots marked. The roots are listed below."></canvas><div id="detOut" class="note"></div></div>
-  <div class="card"><h2>Root finding: three methods on the design problem</h2><canvas id="cvRoot" data-h="240" role="img" aria-label="Chart: error per iteration for the three root-finding methods."></canvas><div id="rootOut" class="note"></div></div>
-  <div class="card"><h2>Euler's method: energy that should stay constant</h2><canvas id="cvEuler" data-h="240" role="img" aria-label="Chart: energy against time for three Euler step sizes."></canvas><div id="eulerOut" class="note"></div></div>
-  <div class="card"><h2>Euler's method: roof motion against the exact answer</h2><canvas id="cvEuler2" data-h="240" role="img" aria-label="Chart: roof position from Euler's method against the exact answer."></canvas></div>
+  <div class="card"><p class="eyebrow">Linear systems</p><h3>Stiffness matrix K</h3><canvas id="cvK" data-h="260" role="img" aria-label="Picture of the stiffness matrix: which entries are positive, negative or zero."></canvas><div id="kNote" class="note"></div></div>
+  <div class="card"><p class="eyebrow">Linear systems</p><h3>One problem, every linear solver</h3><p class="lede">Solving K·u = F for the code load.</p><div class="scroll"><table id="tbRace"></table></div></div>
+  <div class="card"><p class="eyebrow">Iterative methods</p><h3>Iterative solvers: error per iteration</h3><canvas id="cvIter" data-h="240" role="img" aria-label="Chart: error per iteration for Jacobi, Gauss-Seidel and SOR."></canvas></div>
+  <div class="card"><p class="eyebrow">Iterative methods</p><h3>SOR: iterations against the relaxation factor ω</h3><canvas id="cvSor" data-h="240" role="img" aria-label="Chart: SOR iterations needed against the relaxation factor."></canvas></div>
+  <div class="card"><p class="eyebrow">Eigenvalues</p><h3>Natural frequencies as roots of det(K − λM) = 0</h3><canvas id="cvDet" data-h="240" role="img" aria-label="Chart: the determinant against lambda, with its roots marked. The roots are listed below."></canvas><div id="detOut" class="note"></div></div>
+  <div class="card"><p class="eyebrow">Roots of equations</p><h3>Root finding: three methods on the design problem</h3><canvas id="cvRoot" data-h="240" role="img" aria-label="Chart: error per iteration for the three root-finding methods."></canvas><div id="rootOut" class="note"></div></div>
+  <div class="card"><p class="eyebrow">Error growth</p><h3>Euler's method: energy that should stay constant</h3><canvas id="cvEuler" data-h="240" role="img" aria-label="Chart: energy against time for three Euler step sizes."></canvas><div id="eulerOut" class="note"></div></div>
+  <div class="card"><p class="eyebrow">Error growth</p><h3>Euler's method: roof motion against the exact answer</h3><canvas id="cvEuler2" data-h="240" role="img" aria-label="Chart: roof position from Euler's method against the exact answer."></canvas></div>
   <div class="card">
-    <h2>Regression: period against height</h2>
-    <p class="note" id="regHelp">Rows are height (m), period (s). The sample rows are <b>synthetic</b>: made from the ASCE 7 concrete-frame formula T = 0.0466·h<sup>0.9</sup> with scatter added. Replace them with measured data, such as the tables in Goel and Chopra (1997).</p>
+    <p class="eyebrow">Regression</p>
+    <h3>Period against height</h3>
+    <p class="lede" id="regHelp">Rows are height (m), period (s). The sample rows are <b>synthetic</b>: made from the ASCE 7 concrete-frame formula T = 0.0466·h<sup>0.9</sup> with scatter added. Replace them with measured data, such as the tables in Goel and Chopra (1997).</p>
     <textarea id="regData" aria-label="Height and period rows" aria-describedby="regHelp">9.6, 0.35
 12.8, 0.43
 16, 0.58
@@ -259,25 +414,33 @@ a{color:var(--acc)}
     <button class="b" id="btnCal">Calibrate the model's stiffness to this curve (bisection)</button>
     <div id="regOut" class="note"></div>
   </div>
-  <div class="card"><h2>Fit</h2><canvas id="cvReg" data-h="300" role="img" aria-label="Chart: measured periods against height with the fitted curve."></canvas></div>
+  <div class="card"><p class="eyebrow">Regression</p><h3>Fit</h3><canvas id="cvReg" data-h="300" role="img" aria-label="Chart: measured periods against height with the fitted curve."></canvas></div>
 </div>
 </section>
 
-<!-- ============================ 5 VERIFY ============================ -->
+<!-- ============================ VERIFY ============================ -->
 <section class="tab" id="t-verify" role="tabpanel" aria-labelledby="tab-verify">
+<div class="hero">
+  <div><p class="eyebrow">Field study / 05</p><h2 class="display">Check the solver against exact answers.</h2></div>
+  <button class="cta" id="btnVerify"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Run all checks</button>
+</div>
 <div class="card">
-  <h2>Verification</h2>
-  <p class="note">Each row compares the solver with an exact formula, a hand calculation or a second method. The same checks run in the test script in the repository.</p>
-  <button class="b" id="btnVerify">Run all checks</button> <span id="verSum" role="status"></span>
+  <p class="eyebrow">Verification</p>
+  <p class="lede">Each row compares the solver with an exact formula, a hand calculation or a second method. The same checks run in the test script in the repository.</p>
+  <p id="verSum" role="status" style="margin:0 0 8px"></p>
   <div class="scroll"><table id="tbVer"></table></div>
 </div>
 </section>
 
-<!-- ============================ 6 ABOUT ============================ -->
+<!-- ============================ LIMITS ============================ -->
 <section class="tab" id="t-about" role="tabpanel" aria-labelledby="tab-about">
+<div class="hero">
+  <div><p class="eyebrow">Field notes</p><h2 class="display">Know what this model is, and what it is not.</h2></div>
+</div>
 <div class="grid2">
 <div class="card">
-  <h2>What the model is</h2>
+  <p class="eyebrow">The model</p>
+  <h3>What the model is</h3>
   <ul>
     <li><b>Frame:</b> each floor is a mass and each storey is a spring. The stiffness matrix is tridiagonal.</li>
     <li><b>Wall or core:</b> a cantilever beam. Its flexibility matrix comes from the beam deflection formula, and the stiffness matrix is its inverse.</li>
@@ -285,7 +448,7 @@ a{color:var(--acc)}
     <li><b>Shake test:</b> steady shaking at one frequency with damping proportional to stiffness.</li>
     <li><b>Detection:</b> a short-term over long-term average trigger, the P-to-S time gap for distance, and circle equations for the epicentre.</li>
   </ul>
-  <h2>Limits</h2>
+  <h3>Limits</h3>
   <ul>
     <li>The static check is only valid for regular low and mid-rise buildings. The page warns above about 48 m.</li>
     <li>The frame model is poor for tall towers. Use the wall or frame + core option, and treat results as a period comparison.</li>
@@ -294,11 +457,13 @@ a{color:var(--acc)}
     <li>The damper tuning rule is exact only for a one-storey building with no damping and a force on the main mass.</li>
     <li>Epicentre: flat map, fixed depth, constant wave speeds (6.0 and 3.5 km/s by default).</li>
     <li>The damage check fits one overall stiffness factor. It cannot say which storey is damaged.</li>
-    <li>For wall and frame + core buildings the stiffness matrix is the inverse of a flexibility matrix, which is badly conditioned for many storeys. The residual shown on tab 1 can then rise to around 10<sup>−5</sup>, against 10<sup>−13</sup> for a frame.</li>
+    <li>For wall and frame + core buildings the stiffness matrix is the inverse of a flexibility matrix, which is badly conditioned for many storeys. The residual shown in the calculation trail can then rise to around 10<sup>−5</sup>, against 10<sup>−13</sup> for a frame.</li>
+    <li>The drawings are sketches. The windows and the trace along the ground in the Building tab are decoration; only the sway, the colours and the numbers come from the solver.</li>
   </ul>
 </div>
 <div class="card">
-  <h2>What is synthetic or assumed</h2>
+  <p class="eyebrow">The data</p>
+  <h3>What is synthetic or assumed</h3>
   <ul>
     <li><b>Building presets</b> are illustrative, not real buildings.</li>
     <li><b>Earthquake load values</b> (S<sub>DS</sub>, S<sub>D1</sub>, R, C<sub>d</sub>) are examples.</li>
@@ -309,7 +474,7 @@ a{color:var(--acc)}
     <li><b>Slow-shaking bands</b> (1.0–1.75 s and 2.9–4.0 s) are from a summary of a study of the 2005 Qeshm earthquake recorded in the UAE. Check the paper before quoting them.</li>
     <li>The phone motion-sensor recording has not been tested on a phone.</li>
   </ul>
-  <h2>Sources</h2>
+  <h3>Sources</h3>
   <ul>
     <li>Chapra and Canale, <i>Numerical Methods for Engineers</i>, case study 12.4 (spring–mass systems)</li>
     <li>ASCE 7, equivalent lateral force procedure</li>
@@ -1494,6 +1659,7 @@ function debounce(fn, ms) { let t = null; return () => { clearTimeout(t); t = se
 let themeCache = {};
 const css = name => themeCache[name] || (themeCache[name] = getComputedStyle(document.documentElement).getPropertyValue(name).trim());
 const colour = c => c && c.startsWith("--") ? css(c) : c;        // "--acc" means "look it up at drawing time"
+const FONT = px => `${px}px "DM Mono", ui-monospace, Consolas, monospace`;      // the face used for text drawn on a canvas
 
 // ------------------------------------------------------------ 2 state
 const S = {N: 8, h: 3.2, mass: 300, stiff: 400, system: "frame", EI: 3000, brace: false, braceA: 40,
@@ -1620,7 +1786,7 @@ function prep(cv) {
   if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
   const c = cv.getContext("2d");
   c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-  c.globalAlpha = 1; c.lineWidth = 1; c.setLineDash([]); c.textAlign = "left"; c.font = "11px system-ui,sans-serif";
+  c.globalAlpha = 1; c.lineWidth = 1; c.setLineDash([]); c.textAlign = "left"; c.font = FONT(11);
   return [c, w, h];
 }
 // Every chart remembers how to draw itself, so it can be redrawn when its tab is shown,
@@ -1701,41 +1867,75 @@ function drawPlot(cv, series, o) {
 }
 
 // ------------------------------------------------------------ 5 building drawing
-// disp: sideways offset of every degree of freedom in "floor widths"; colors: per-storey colour
+function quad(c, x1, y1, x2, y2, x3, y3, x4, y4) { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.lineTo(x3, y3); c.lineTo(x4, y4); c.closePath(); }
+// The ground: a line with hatching under it and a seismogram-style trace along it.
+// wave = undefined draws a fixed trace (decoration only); a number is the phase of a travelling wave (steady shaking).
+function drawGround(c, W, y, cx, wave) {
+  c.strokeStyle = css("--mut"); c.lineWidth = 1; c.beginPath();
+  for (let x = 24; x < W - 12; x += 14) { c.moveTo(x, y + 3); c.lineTo(x - 7, y + 11); }
+  c.stroke();
+  c.strokeStyle = css("--acc"); c.lineWidth = 1.2; c.beginPath();
+  for (let x = 14; x <= W - 14; x += 2) {
+    const u = (x - cx) / (W / 2);
+    const v = wave == null ? (Math.sin(x * 0.21) * 0.5 + Math.sin(x * 0.53 + 1.3) + Math.sin(x * 0.97 + 0.4) * 0.6) * 7 * Math.exp(-u * u * 9) : Math.sin(x * 0.09 - wave) * 4;
+    x === 14 ? c.moveTo(x, y - 12 - v) : c.lineTo(x, y - 12 - v);
+  }
+  c.stroke();
+  c.strokeStyle = css("--ink"); c.lineWidth = 1.3; c.beginPath(); c.moveTo(14, y); c.lineTo(W - 14, y); c.stroke();
+}
+// disp: sideways offset of every degree of freedom in "floor widths"; colors: per-storey colour, or null
+// opt: {labels: text beside each storey, note: [small line, value line] beside the roof, wave: phase of the ground wave}
 function drawBuilding(cv, disp, colors, opt = {}) {
   const [c, W, H] = prep(cv);
-  const N = R.N, iso = R.base != null, ground = H - 34, top = 46, fh = Math.min(44, (ground - top) / (N + (iso ? 0.6 : 0))), fw = Math.min(150, W * 0.36), cx = W / 2;
-  const off = iso ? 1 : 0, ink = css("--ink"), mut = css("--mut"), line = css("--line");
-  const px = i => cx + disp[i] * fw;                                   // i = index of a degree of freedom
-  const yFloor = j => ground - (iso ? fh * 0.6 : 0) - (j + 1) * fh;     // j = floor 0..N-1
-  c.strokeStyle = mut; c.lineWidth = 1; c.beginPath(); c.moveTo(20, ground); c.lineTo(W - 20, ground); c.stroke();
-  c.setLineDash([3, 4]); c.strokeStyle = line; c.beginPath(); c.moveTo(cx, top - 20); c.lineTo(cx, ground); c.stroke(); c.setLineDash([]);
-  let prevX = cx, prevY = ground;
+  const N = R.N, iso = R.base != null, ground = H - 26, top = 40, slab = 4;
+  const fh = Math.min(46, (ground - top) / (N + (iso ? 0.6 : 0))), fw = Math.min(150, W * 0.34), cx = W / 2, half = 0.46 * fw;
+  const off = iso ? 1 : 0, ink = css("--ink"), mut = css("--mut"), line = css("--line"), paper = css("--card"), acc = css("--acc"), acc2 = css("--acc2");
+  drawGround(c, W, ground, cx, opt.wave);
+  c.setLineDash([3, 4]); c.strokeStyle = mut; c.globalAlpha = 0.45; c.beginPath(); c.moveTo(cx, top - 16); c.lineTo(cx, ground); c.stroke(); c.setLineDash([]); c.globalAlpha = 1;   // plumb line
+  let baseX = cx, baseY = ground;
   if (iso) {                                                            // isolators and base slab
-    const bx = px(0), by = ground - fh * 0.6; c.fillStyle = css("--acc2");
-    for (const s of [-0.4, 0, 0.4]) { c.beginPath(); c.moveTo(cx + s * fw - 7, ground); c.lineTo(bx + s * fw - 7, by + 5); c.lineTo(bx + s * fw + 7, by + 5); c.lineTo(cx + s * fw + 7, ground); c.fill(); }
-    c.fillStyle = mut; c.fillRect(bx - fw / 2 - 6, by, fw + 12, 5); prevX = bx; prevY = by;
+    const bx = cx + disp[0] * fw, by = ground - fh * 0.6; c.fillStyle = acc2;
+    for (const s of [-0.38, 0, 0.38]) { quad(c, cx + s * fw - 7, ground, bx + s * fw - 7, by + 5, bx + s * fw + 7, by + 5, cx + s * fw + 7, ground); c.fill(); }
+    c.fillStyle = ink; c.fillRect(bx - half - 6, by, 2 * half + 12, 5); baseX = bx; baseY = by;
+  }
+  // where each floor is: X = sideways position, Y = level. Storey j runs from floor j-1 (or the base) up to floor j.
+  const X = [], Y = [];
+  for (let j = 0; j < N; j++) { X.push(cx + disp[j + off] * fw); Y.push(ground - (iso ? fh * 0.6 : 0) - (j + 1) * fh); }
+  const lowX = j => j ? X[j - 1] : baseX, lowY = j => j ? Y[j - 1] : baseY;
+  for (let j = 0; j < N; j++) {                                         // pass 1: the facade, the core and the windows
+    const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab;
+    quad(c, x0 - half, y0, x1 - half, y1, x1 + half, y1, x0 + half, y0); c.fillStyle = paper; c.fill();
+    if (S.system !== "frame") { quad(c, x0 - 8, y0, x1 - 8, y1, x1 + 8, y1, x0 + 8, y0); c.fillStyle = line; c.fill(); }
+    if (fh >= 13) {                                                     // two windows, leaning with the storey
+      const xa = x0 + (x1 - x0) * 0.3, ya = y0 + (y1 - y0) * 0.3, xb = x0 + (x1 - x0) * 0.74, yb = y0 + (y1 - y0) * 0.74, ww = fw * 0.07;
+      c.fillStyle = css("--win");
+      for (const s of [-0.24, 0.24]) { quad(c, xa + s * fw - ww, ya, xb + s * fw - ww, yb, xb + s * fw + ww, yb, xa + s * fw + ww, ya); c.fill(); }
+    }
   }
   const hit = [];
-  for (let j = 0; j < N; j++) {
-    const x = px(j + off), y = yFloor(j);
-    c.strokeStyle = colors ? colors[j] : mut; c.lineWidth = 3 * clamp(Math.sqrt(kMul[j] || 1), 0.5, 2);
-    for (const s of [-0.46, 0.46]) { c.beginPath(); c.moveTo(prevX + s * fw, prevY); c.lineTo(x + s * fw, y + 5); c.stroke(); }          // columns
-    if (S.brace) { c.lineWidth = 1; c.strokeStyle = mut; c.beginPath(); c.moveTo(prevX - 0.46 * fw, prevY); c.lineTo(x + 0.46 * fw, y + 5); c.stroke(); }
-    if (S.system !== "frame") { c.fillStyle = line; c.beginPath(); c.moveTo(prevX - 8, prevY); c.lineTo(x - 8, y + 5); c.lineTo(x + 8, y + 5); c.lineTo(prevX + 8, prevY); c.fill(); }   // core
-    if (S.visc) { c.strokeStyle = css("--acc2"); c.lineWidth = 2; c.beginPath(); c.moveTo(prevX + 0.2 * fw, prevY); c.lineTo(x + 0.36 * fw, y + 5); c.stroke(); }
-    const th = 5 * clamp(Math.sqrt(mMul[j] || 1), 0.7, 2.2);
-    c.fillStyle = j === sel ? css("--acc") : ink; c.fillRect(x - fw / 2, y + 5 - th, fw, th);                                           // floor slab
-    hit.push([y - fh * 0.2, y + fh * 0.8, j]);
-    if (N <= 20 || (j + 1) % 5 === 0) { c.fillStyle = mut; c.textAlign = "right"; c.fillText(j + 1, cx - fw * 0.95, y + 6); }
-    if (opt.labels) { c.fillStyle = colors ? colors[j] : mut; c.textAlign = "left"; c.fillText(opt.labels[j], cx + fw * 0.95, y + fh / 2 + 6); }
-    prevX = x; prevY = y;
+  c.font = FONT(11);
+  for (let j = 0; j < N; j++) {                                         // pass 2: columns, bracing, dampers, floor slabs, labels
+    const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab, roof = j === N - 1;
+    if (S.brace) { c.lineWidth = 1; c.strokeStyle = mut; c.beginPath(); c.moveTo(x0 - half, y0); c.lineTo(x1 + half, y1); c.stroke(); }
+    if (S.visc) { c.strokeStyle = acc2; c.lineWidth = 2; c.beginPath(); c.moveTo(x0 + 0.2 * fw, y0); c.lineTo(x1 + 0.36 * fw, y1); c.stroke(); }
+    c.strokeStyle = colors ? colors[j] : ink; c.lineWidth = 2 * clamp(Math.sqrt(kMul[j] || 1), 0.6, 2);                         // thicker = stiffer storey
+    for (const s of [-1, 1]) { c.beginPath(); c.moveTo(x0 + s * half, y0); c.lineTo(x1 + s * half, y1); c.stroke(); }
+    const th = (roof ? 6 : 3.5) * clamp(Math.sqrt(mMul[j] || 1), 0.7, 2.2), over = roof ? 7 : 3;                               // thicker = heavier floor
+    c.fillStyle = j === sel ? acc2 : roof ? acc : ink; c.fillRect(x1 - half - over, y1 - th, 2 * (half + over), th);
+    hit.push([Y[j] - fh * 0.2, Y[j] + fh * 0.8, j]);
+    if (N <= 20 || (j + 1) % 5 === 0) { c.fillStyle = mut; c.textAlign = "right"; c.fillText(j + 1, cx - fw * 0.95, Y[j] + 6); }
+    if (opt.labels) { c.fillStyle = colors ? colors[j] : mut; c.textAlign = "left"; c.fillText(opt.labels[j], cx + fw * 0.95, Y[j] + fh / 2 + 6); }
   }
-  if (R.tmd != null) {                                                  // damper block on the roof
-    const x = cx + disp[R.tmd] * fw, y = yFloor(N - 1) - 14; c.strokeStyle = mut; c.lineWidth = 1;
-    c.beginPath(); c.moveTo(prevX, prevY); c.lineTo(x, y + 6); c.stroke(); c.fillStyle = css("--acc2"); c.beginPath(); c.arc(x, y, 9, 0, 7); c.fill();
+  if (R.tmd != null) {                                                  // damper block riding on the roof
+    const x = cx + disp[R.tmd] * fw, y = Y[N - 1] - 13;
+    c.strokeStyle = mut; c.lineWidth = 1; c.beginPath(); c.moveTo(X[N - 1], Y[N - 1] - 2); c.lineTo(x, y + 4); c.stroke();
+    c.beginPath(); c.roundRect ? c.roundRect(x - 15, y - 5, 30, 9, 3) : c.rect(x - 15, y - 5, 30, 9);
+    c.fillStyle = paper; c.fill(); c.strokeStyle = acc; c.lineWidth = 1.6; c.stroke();
   }
-  if (opt.title) { c.fillStyle = ink; c.textAlign = "center"; c.font = "12px system-ui,sans-serif"; c.fillText(opt.title, cx, 16); }
+  if (opt.note) {                                                       // two lines beside the roof, kept inside the canvas
+    const yr = Y[N - 1], put = (text, size, colour, y) => { c.font = FONT(size); c.fillStyle = colour; c.textAlign = "left"; c.fillText(text, Math.min(cx + fw * 0.95, W - 6 - c.measureText(text).width), y); };
+    put(opt.note[0], 9.5, mut, yr - 15); put(opt.note[1], 11.5, ink, yr - 2);
+  }
   cv._hit = hit;                                                        // rows of [y from, y to, floor] for clicks
 }
 const driftColor = r => Math.abs(r) > 1 ? css("--bad") : Math.abs(r) > 0.7 ? css("--warn") : css("--ok");
@@ -1748,18 +1948,18 @@ function drawBuildView(t) {
   if (view === "static") {
     const mx = Math.max(...st.u.map(Math.abs)) || 1, g = t == null ? 1 : 0.5 + 0.5 * Math.sin(t / 700);
     for (let j = 0; j < R.N; j++) d[j + off] = st.u[j] / mx * 0.35 * g;
-    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), title: "Sway under the code earthquake load (exaggerated)"});
+    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), note: ["ROOF ↗", fmt(Math.abs(st.u[R.N - 1]) * 1000) + " mm"]});
   } else {
     const mo = R.modes[+view], s = t == null ? 1 : Math.sin(t / 1000 * 2 * Math.PI / clamp(mo.T, 0.6, 3));
     for (let i = 0; i < R.ndof; i++) d[i] = mo.shape[i] * 0.3 * s;
-    drawBuilding($("cvB"), d, null, {title: `Mode ${+view + 1}: period ${fmt(mo.T)} s, frequency ${fmt(mo.f)} Hz`});
+    drawBuilding($("cvB"), d, null, {note: ["MODE SHAPE", `φ${+view + 1}(z)`]});
   }
 }
 function drawShakeView(t) {
   const i = fIdx(), a = R.sweep.A[i], b = R.sweep.B[i], r = R.roof;
   const ph = t == null ? Math.atan2(b[r], a[r]) : t / 1000 * 2 * Math.PI * 0.7;      // still picture: the moment of largest roof sway
   const mx = Math.max(...a.map((v, k) => Math.hypot(v, b[k]))) || 1;
-  drawBuilding($("cvS"), a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * 0.32), null, {title: `${fmt(R.freqs[i])} Hz · roof sway ${fmt(R.sweep.amp[i] * 1000)} mm`});
+  drawBuilding($("cvS"), a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * 0.32), null, {wave: ph, note: ["ROOF ↗", fmt(R.sweep.amp[i] * 1000) + " mm"]});
 }
 // The two building drawings are animated. People who ask their system for reduced motion get a still picture.
 const stillOnly = matchMedia("(prefers-reduced-motion: reduce)");
@@ -1774,25 +1974,49 @@ function animate() { if (!frameQueued && !stillOnly.matches) { frameQueued = tru
 
 // ------------------------------------------------------------ 6 building and shake tabs
 let Rkey = null;               // the building (as JSON) that R was computed for
-async function analyse() { const p = params(), key = JSON.stringify(p); R = await solver.must("analyse", p); Rkey = key; renderAll(); }
+const stageState = text => { $("capB4").textContent = text; };          // the small line under the building drawing
+async function analyse() {
+  const p = params(), key = JSON.stringify(p);
+  try { R = await solver.must("analyse", p); } catch (e) { stageState("○ Analysis failed, last result shown"); throw e; }
+  Rkey = key; renderAll();
+}
 // Makes sure R describes the sliders as they are now. A slider-driven analysis may still be on its way.
 async function freshAnalysis() { if (Rkey !== JSON.stringify(params())) await analyse(); }
 const requestAnalysis = latest(analyse);
-const refresh = debounce(requestAnalysis, 120);
-function renderAll() { renderBuild(); renderShake(); drawNow(); markLabStale(); }
+const settle = debounce(requestAnalysis, 120);
+function refresh() { if (solverReady) stageState("○ Computing…"); settle(); }
+function renderAll() { renderBuild(); renderShake(); drawNow(); markLabStale(); stageState("● Response computed"); }
+const SYSTEM_NAMES = {frame: "frame", wall: "wall", dual: "frame + core"};
+function stageCaptions() {                                              // the lines above the two building drawings
+  if (!R) return;
+  const what = `${R.N}-storey ${SYSTEM_NAMES[S.system]}`, mo = view === "static" ? null : R.modes[+view];
+  $("capB1").innerHTML = `${what} / <b>${mo ? "mode 0" + (+view + 1) : "code load"}</b>`;
+  $("capB2").textContent = mo ? `Period ${fmt(mo.T)} s · ${fmt(mo.f)} Hz` : "Sway exaggerated";
+  $("capS1").innerHTML = `${what} / <b>${fmt(R.freqs[fIdx()])} Hz</b>`;
+  $("capS2").textContent = `Roof sway ${fmt(R.sweep.amp[fIdx()] * 1000)} mm`;
+}
 function renderBuild() {
-  const st = R.static, m = R.modes, fails = !(st.max_ratio <= 1);
+  const st = R.static, m = R.modes, fails = !(st.max_ratio <= 1), h = R.H / R.N;
+  // the three headline numbers and the verdict
+  const peak = Math.max(...st.drift.map(Math.abs)) / h * 100, limit = st.limit_mm / (h * 1000) * 100;      // both in % of the storey height
+  const worst = st.ratio.reduce((best, r, j) => Math.abs(r) > Math.abs(st.ratio[best]) ? j : best, 0) + 1;
+  $("statT").textContent = fmt(m[0].T); $("statDrift").textContent = fmt(peak); $("statRoof").textContent = fmt(Math.abs(st.u[R.N - 1]) * 1000);
+  $("verdict").className = "verdict " + (fails ? "fail" : "pass");
+  $("verdict").innerHTML = fails
+    ? `<b>✕ Fail / over the limit</b>Storey ${worst} drifts ${fmt(peak)}% of its height. That is <strong>${fmt(st.max_ratio)} times the ${fmt(limit)}% limit</strong>.`
+    : `<b>✓ Pass / within limit</b>The worst storey (storey ${worst}) uses <strong>${fmt(st.max_ratio * 100)}% of the ${fmt(limit)}% drift limit</strong>.`;
+  $("warnB").innerHTML = R.warn.map(w => `<div class="warnbox">${esc(w)}</div>`).join("");
+  // the calculation trail
   $("kvB").innerHTML = kvHtml([["Height", fmt(R.H) + " m"], ["Period, mode 1", fmt(m[0].T) + " s"], ["Period, mode 2", m[1] ? fmt(m[1].T) + " s" : "–"], ["Period, mode 3", m[2] ? fmt(m[2].T) + " s" : "–"],
     ["Inverse-iteration steps", m.map(v => v.iters).join(", ")], ["Building weight", fmt(st.W / 1000, 4) + " kN"], ["Code load factor Cs", fmt(st.Cs)], ["Total sideways force", fmt(st.V / 1000, 4) + " kN"],
     ["Linear solver used", esc(st.solver)], ["Residual of K·u = F", fmt(st.resid, 2)], ["Condition number of K", fmt(R.condK, 3)],
     ["Worst drift ÷ limit", `<span class="${fails ? "fail" : "pass"}">${fmt(st.max_ratio)} ${fails ? "FAIL" : "PASS"}</span>`]]);
-  $("warnB").innerHTML = R.warn.map(w => `<div class="warnbox">${esc(w)}</div>`).join("");
-  let h = `<tr><th>Storey</th><th class="n">Force (kN)</th><th class="n">Sway (mm)</th><th class="n">Drift (mm)</th><th class="n">Limit (mm)</th><th></th></tr>`;
+  let rows = `<tr><th>Storey</th><th class="n">Force (kN)</th><th class="n">Sway, elastic (mm)</th><th class="n">Design drift (mm)</th><th class="n">Limit (mm)</th><th></th></tr>`;
   for (let j = R.N - 1; j >= 0; j--) {
     const bad = Math.abs(st.ratio[j]) > 1;
-    h += `<tr><td>${j + 1}</td><td class="n">${fmt(st.F[j] / 1000, 4)}</td><td class="n">${fmt(st.u[j] * 1000, 3)}</td><td class="n">${fmt(st.drift[j] * 1000, 3)}</td><td class="n">${fmt(st.limit_mm, 3)}</td><td class="${bad ? "fail" : "pass"}">${bad ? "fail" : "ok"}</td></tr>`;
+    rows += `<tr><td>${j + 1}</td><td class="n">${fmt(st.F[j] / 1000, 4)}</td><td class="n">${fmt(st.u[j] * 1000, 3)}</td><td class="n">${fmt(st.drift[j] * 1000, 3)}</td><td class="n">${fmt(st.limit_mm, 3)}</td><td class="${bad ? "fail" : "pass"}">${bad ? "fail" : "ok"}</td></tr>`;
   }
-  $("tbDrift").innerHTML = h;
+  $("tbDrift").innerHTML = rows;
   if (!tmeasUser) $("Tmeas").value = (R.T_fixed * 1.15).toFixed(2);
   for (const b of $("viewBtns").children) if (b.dataset.v !== "static") b.disabled = !m[+b.dataset.v];   // a 1-storey building has one mode
 }
@@ -1801,6 +2025,7 @@ function setView(v) {
   for (const b of $("viewBtns").children) { const on = b.dataset.v === v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); }
   $("viewNote").textContent = v === "static" ? "Numbers on the right are each storey's drift as a share of the limit. Green is safe, amber is above 70%, red fails."
     : "A mode shape is an eigenvector of the system. The building sways in this shape when shaken at this frequency.";
+  stageCaptions();
 }
 function fIdx() { return Math.round(+$("freq").value / 100 * (R.freqs.length - 1)); }
 function renderShake() {
@@ -1816,6 +2041,7 @@ function renderShake() {
     ["Condition number here", fmt(sw.cond[i], 3)], ["Unknowns in the damped system", 2 * R.ndof]]);
   const T1 = R.modes[0].T, hit = BANDS.find(b => T1 >= b[0] && T1 <= b[1]);
   $("bandOut").innerHTML = `<div class="warnbox">First period ${fmt(T1)} s is ${hit ? `<b class="fail">inside</b> the ${hit[0]}–${hit[1]} s band` : `<b class="pass">outside</b> the bands`} reported for slow shaking from distant earthquakes in the UAE.</div>`;
+  stageCaptions();
 }
 
 // ---- controls
@@ -1823,6 +2049,9 @@ const IDS = ["N", "h", "mass", "stiff", "EI", "braceA", "SDS", "SD1", "R", "Cd",
 const DETECT_IDS = ["mag", "noise", "thr", "delay"];
 const DESIGN_ONLY_IDS = ["target", "Tiso"];                 // inputs to a design button; they do not change the analysis
 const PRESET_IDS = ["N", "h", "mass", "stiff", "EI"];        // changing one of these means the preset no longer describes the building
+// The filled part of a slider's rail is drawn by CSS from --p, the thumb's position in percent.
+function paintSlider(el) { const lo = +el.min || 0, hi = el.max === "" ? 100 : +el.max; el.style.setProperty("--p", (hi > lo ? (+el.value - lo) / (hi - lo) * 100 : 0) + "%"); }
+document.addEventListener("input", e => { if (e.target.type === "range") paintSlider(e.target); });
 function syncInputs() {                                      // copy the state into every control
   for (const id of IDS) { $(id).value = S[id]; $("v" + id).textContent = S[id]; }
   for (const id of ["brace", "tmd", "iso", "visc", "iran"]) $(id).checked = S[id];
@@ -1835,8 +2064,9 @@ function syncInputs() {                                      // copy the state i
   if (sel >= 0) { $("mMul").value = mMul[sel]; $("kMul").value = kMul[sel]; $("vmMul").textContent = "×" + mMul[sel]; $("vkMul").textContent = "×" + kMul[sel]; }
   else $("vmMul").textContent = $("vkMul").textContent = "";
   $("eqLat").value = EQ.lat.toFixed(2); $("eqLon").value = EQ.lon.toFixed(2);
+  for (const el of document.querySelectorAll("input[type=range]")) paintSlider(el);
 }
-function selectFloor(j) { sel = j >= 0 && j < S.N ? j : -1; syncInputs(); drawNow(); }   // the drawing may still show a taller building
+function selectFloor(j) { sel = j >= 0 && j < S.N ? j : -1; if (sel >= 0) $("floorBox").open = true; syncInputs(); drawNow(); }   // the drawing may still show a taller building
 function applyPreset(name) {
   const p = PRESETS[name]; if (!p) return;
   const {softStorey, ...values} = p;
@@ -1880,8 +2110,8 @@ onClick("btnDesign", async () => {
   if (!unchanged(snap)) { $("designOut").textContent = CHANGED; $("cvDesign").hidden = true; return; }
   if (d.error) { $("designOut").textContent = d.error; $("cvDesign").hidden = true; return; }
   const s = d.bisection.s, stiff = Math.ceil(s * stiff0 / 10) * 10, EI = Math.ceil(s * EI0 / 100) * 100;
-  $("designOut").innerHTML = `Stiffness must be at least <b>×${fmt(s, 4)}</b> of the current value (${fmt(s * stiff0, 4)} kN/mm per storey).<br>Iterations: bisection ${d.bisection.it}, false position ${d.false_position.it}, fixed-point ${d.fixed_point.it}. <button class="b" id="btnApply">Apply</button><span id="applyNote"></span>`;
-  $("cvDesign").hidden = false; plot($("cvDesign"), histSeries(d), {logy: true, xl: "iteration", yl: "approx. relative error"});
+  $("designOut").innerHTML = `Stiffness must be at least <b>×${fmt(s, 4)}</b> of the current value (${fmt(s * stiff0, 4)} kN/mm per storey).<br>Iterations: bisection ${d.bisection.it}, false position ${d.false_position.it}, fixed-point ${d.fixed_point.it}. Their convergence is charted in the calculation trail. <button class="b" id="btnApply">Apply</button><span id="applyNote"></span>`;
+  $("cvDesign").hidden = false; $("trail").open = true; plot($("cvDesign"), histSeries(d), {logy: true, xl: "iteration", yl: "approx. relative error"});
   $("btnApply").onclick = () => {
     $("btnApply").disabled = true;
     if (!unchanged(snap)) { $("applyNote").textContent = " The building has changed since this was worked out. Press the design button again."; return; }
@@ -2065,7 +2295,7 @@ onClick("btnLab", async () => {
   // 1. the same static problem by every linear solver
   const race = await solver.must("race", p);
   retained($("cvK"), () => drawK(K, n));
-  $("kNote").textContent = `${n} × ${n}. Blue is positive, orange is negative, grey is zero. ${tri ? "Only three diagonals are filled, so the Thomas algorithm applies." : "The matrix is full or has extra rows, so Cholesky or Gauss elimination is used."} Condition number of the structure's K: ${fmt(condK, 3)}.`;
+  $("kNote").textContent = `${n} × ${n}. Terracotta is positive, teal is negative, pale squares are zero. ${tri ? "Only three diagonals are filled, so the Thomas algorithm applies." : "The matrix is full or has extra rows, so Cholesky or Gauss elimination is used."} Condition number of the structure's K: ${fmt(condK, 3)}.`;
   const itText = r => r.it == null ? "direct" : (r.bad || r.resid == null || r.resid > 100) ? r.it + " (diverged)" : r.it + (r.it >= race.cap ? " (stopped at cap)" : "");
   $("tbRace").innerHTML = `<tr><th>Method</th><th class="n">Iterations</th><th class="n">Work (multiplications, approx.)</th><th class="n">Residual</th><th class="n">Difference from Gauss</th></tr>`
     + race.rows.map(r => `<tr><td>${esc(r.name)}</td><td class="n">${itText(r)}</td><td class="n">${r.ops.toLocaleString()}</td><td class="n">${fmt(r.resid, 2)}</td><td class="n">${fmt(r.diff, 2)}</td></tr>`).join("")
@@ -2125,12 +2355,15 @@ $("nav").addEventListener("keydown", e => {                 // arrow keys move b
   const j = e.key === "ArrowRight" ? (i + 1) % n : e.key === "ArrowLeft" ? (i + n - 1) % n : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : -1;
   if (j >= 0) { e.preventDefault(); showTab(TABS[j], {link: true, focus: true}); }
 });
-window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
+window.addEventListener("hashchange", () => { showTab(location.hash.slice(1)); window.scrollTo(0, 0); });
+for (const [id, t] of [["goShake", "shake"], ["goDetect", "detect"], ["goLab", "lab"]]) $(id).addEventListener("click", () => { showTab(t, {link: true}); window.scrollTo(0, 0); });
+$("trail").addEventListener("toggle", redrawVisible);                 // a chart inside a closed fold has no width, so it is drawn when the fold opens
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { redrawVisible(); drawNow(); });   // redraw once the web fonts have arrived
 window.addEventListener("resize", debounce(() => { redrawVisible(); drawNow(); }, 100));
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { themeCache = {}; redrawVisible(); drawNow(); });
 stillOnly.addEventListener("change", () => { drawNow(); animate(); });
 
-function lockSolverControls(locked) { for (const el of document.querySelectorAll("button.b, #csv")) el.disabled = locked; }
+function lockSolverControls(locked) { for (const el of document.querySelectorAll("button.b, #btnLab, #btnVerify, #csv")) el.disabled = locked; }
 function bootNote(html) { $("bootNote").hidden = html == null; $("bootNote").innerHTML = html || ""; }
 function solverFailed(err) {
   console.error(err); solverReady = false; lockSolverControls(true);

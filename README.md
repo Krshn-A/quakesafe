@@ -10,12 +10,12 @@ The whole app is `index.html`. The numerical solver is Python, embedded in that 
 
 | Tab | Contents |
 |---|---|
-| 1 · Building | Frame, wall/core or frame + core buildings; soft storeys, uneven mass, bracing; natural periods and mode shapes; code-style static drift check; minimum-stiffness design |
-| 2 · Shake test | Damped response to steady shaking across frequencies; tuned mass damper, base isolation and inter-storey dampers; condition number of the undamped system |
-| 3 · Detect | Trigger on synthetic recordings; distance from the P-to-S gap; epicentre from station distances; magnitude; warning time per city; damage check from a period change |
-| 4 · Numerics lab | Every linear solver on one problem; iterative convergence; SOR relaxation scan; determinant roots; root-finding comparison; Euler error growth; regression |
-| 5 · Verify | 50 checks against exact formulas, hand calculations and second methods |
-| 6 · Limits and sources | Assumptions, what is synthetic, references |
+| Building | Frame, wall/core or frame + core buildings; soft storeys, uneven mass, bracing; natural periods and mode shapes; code-style static drift check; minimum-stiffness design |
+| Shake | Damped response to steady shaking across frequencies; tuned mass damper, base isolation and inter-storey dampers; condition number of the undamped system |
+| Detect | Trigger on synthetic recordings; distance from the P-to-S gap; epicentre from station distances; magnitude; warning time per city; damage check from a period change |
+| Lab | Every linear solver on one problem; iterative convergence; SOR relaxation scan; determinant roots; root-finding comparison; Euler error growth; regression |
+| Verify | 50 checks against exact formulas, hand calculations and second methods |
+| Limits | Assumptions, what is synthetic, references |
 
 A tab can be linked directly: add `#shake`, `#detect`, `#lab`, `#verify` or `#about` to the address.
 
@@ -46,7 +46,7 @@ Serve the folder with any web server. Python has one built in:
 python -m http.server 8000
 ```
 
-Then open http://localhost:8000. The first load takes several seconds while the browser downloads Python (about 9 MB from cdn.jsdelivr.net); after that the browser keeps it.
+Then open http://localhost:8000. The first load takes several seconds while the browser downloads Python (about 9 MB from cdn.jsdelivr.net); after that the browser keeps it. The three typefaces come from Google Fonts; without them the page falls back to system fonts.
 
 There is nothing to install and nothing to build. To change the app, edit `index.html` and reload. (Opening the file by double-clicking it has not been tested; use the server.)
 
@@ -92,7 +92,7 @@ The solver runs in a background thread (a web worker), so the page does not free
 - The regression sample rows are synthetic and should be replaced with measured data.
 - The slow-shaking period bands come from a summary of a published study and should be checked against the paper.
 
-See tab 6 in the app for the full list of limits.
+See the Limits tab in the app for the full list.
 
 ## Files
 

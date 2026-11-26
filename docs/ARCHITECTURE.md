@@ -86,7 +86,7 @@ api(name: str, payload: str) -> str      # JSON in, JSON out
 ```
 
 - A problem the user can cause comes back as `{"error": "plain words"}` and the page shows the words.
-- An exception inside the solver is caught in `api` and comes back as `{"error": "ValueError: ..."}`. The page shows it in the status pill. The tests treat any such message as a bug.
+- An exception inside the solver is caught in `api` and comes back as `{"error": "ValueError: ..."}`. The page shows it in the status line of the header. The tests treat any such message as a bug.
 - NaN and infinity cannot travel in JSON. `_clean` turns them into `null`, and rounds every number to 7 significant figures.
 
 **The building, `p`** (all SI units):
@@ -105,20 +105,20 @@ api(name: str, payload: str) -> str      # JSON in, JSON out
 
 | Call | Argument | Returns | Used by |
 |---|---|---|---|
-| `analyse` | `p` | modes, static check, frequency sweep, warnings, scaled `K` | tabs 1 and 2, on every change |
-| `design_stiffness` | `p` | stiffness multiplier by bisection, false position, fixed point | tab 1 button, lab |
-| `design_tmd` | `{p, target}` | damper mass ratio, tuning, `smallest` flag | tab 2 button |
-| `design_isolation` | `{p, T}` | isolator stiffness | tab 2 button |
-| `tmd_rule` | `{mu}` | textbook tuning and damping | tab 2 button |
-| `detect` | quake, stations, cities, settings | picks, distances, epicentre or `epi_note`, warning times | tab 3, on every change |
-| `record` | `{x, fs, t?, thr?}` | picks on the user's own recording | tab 3 upload and sensor |
-| `damage` | `{p, T}` | stiffness kept | tab 3 button |
+| `analyse` | `p` | modes, static check, frequency sweep, warnings, scaled `K` | Building and Shake tabs, on every change |
+| `design_stiffness` | `p` | stiffness multiplier by bisection, false position, fixed point | Building tab button, lab |
+| `design_tmd` | `{p, target}` | damper mass ratio, tuning, `smallest` flag | Shake tab button |
+| `design_isolation` | `{p, T}` | isolator stiffness | Shake tab button |
+| `tmd_rule` | `{mu}` | textbook tuning and damping | Shake tab button |
+| `detect` | quake, stations, cities, settings | picks, distances, epicentre or `epi_note`, warning times | Detect tab, on every change |
+| `record` | `{x, fs, t?, thr?}` | picks on the user's own recording | Detect tab upload and sensor |
+| `damage` | `{p, T}` | stiffness kept | Detect tab button |
 | `race` | `p` | every linear solver on the static problem | lab |
 | `det` | `p` | determinant curve and its roots | lab |
 | `euler` | `p` | energy and roof motion for three step sizes | lab |
 | `regression` | `{h[], T[]}` | power-law fit and hold-out error | lab |
 | `calibrate` | `{p, T}` | stiffness multiplier that gives period `T` | lab button |
-| `verify` | none | the list of self-checks | tab 5, test script |
+| `verify` | none | the list of self-checks | Verify tab, test script |
 | `seismometer` | `{f0, zeta, freqs}` | response of a mass-on-spring sensor | verification only |
 
 To add a feature: write the Python function, add one line to `api`, call it from the page script with `solver.call` (errors are an expected answer) or `solver.must` (an error is a bug). `test_solver.py` fails if the page calls a name that `api` does not have.
@@ -129,6 +129,8 @@ To add a feature: write the Python function, add one line to `api`, call it from
 - A canvas states its height in CSS pixels as `data-h`. `prep()` sets the bitmap to that size times the screen's pixel ratio. The height must not be read back from the `height` attribute, which holds the bitmap size; doing that made every chart grow on each redraw on high-resolution screens.
 - Each chart remembers how to draw itself (`retained`). `redrawVisible()` replays the visible ones when a tab is opened, the window is resized or the colour scheme changes. Nothing is drawn into a hidden canvas.
 - Colours are CSS variables. A series colour such as `"--acc"` is looked up at drawing time, so charts follow light and dark mode.
+- The look ("Seismic Atlas") is set by the variables at the top of the style sheet: warm paper colours, terracotta `--acc` for the main series and controls, teal `--acc2` for the second series. Headlines use the serif Newsreader, labels and numbers DM Mono, body text DM Sans, all from Google Fonts with system fonts as fall-back. Text on a canvas uses `FONT(px)`. Charts drawn before the fonts arrive are redrawn when they do.
+- The building drawing is a sketch: storeys are drawn as leaning panels with windows, the roof slab is terracotta, and a trace runs along the hatched ground. The windows and the trace on the Building tab are decoration. The sway, the storey colours, the slab and column thicknesses (mass and stiffness multipliers) and the labels come from the solver.
 - The two building drawings are animated. They become still pictures when the system asks for reduced motion.
 
 ## 6. How long things take
@@ -154,7 +156,7 @@ Because the solver is in a worker, these times do not block the page. Dragging t
 | Pyodide cannot be downloaded (offline, CDN blocked) | A box at the top with the reason and a **Try again** button; solver buttons stay locked |
 | The worker stops | The same box; waiting calls are cancelled |
 | A design target cannot be met | The reason in plain words under the button |
-| An exception inside the solver | `Error: ...` in the status pill; the previous result stays on screen |
+| An exception inside the solver | `Error: ...` in the status line; the previous result stays on screen |
 | NaN or infinity in a result | Shown as "–"; charts skip the point |
 | A drawing function throws | Logged to the console; the animation keeps running |
 | A bad recording file | A message under the upload button |

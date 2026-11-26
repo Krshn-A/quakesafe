@@ -27,13 +27,14 @@ Priority = (Impact + Risk) × (6 − Effort). A higher number means do it sooner
 | 11 | `drawBuilding` and `drawMap` are long functions with many statements per line. They work, but they are slow to read and change. | Code | 2 | 1 | 2 | 12 |
 | 12 | One analysis of a 40-storey building takes about 1.8 s (several times more on a phone). The page no longer freezes, but the result lags the slider. | Speed | 2 | 1 | 3 | 9 |
 | 13 | If the browser itself kills the worker (for example when memory runs out), no event reaches the page: the status stays on "Computing…" and no retry is offered until the page is reloaded. | Code | 1 | 2 | 2 | 12 |
-| 14 | City labels overlap on the map (Dubai and Sharjah). | Design | 1 | 1 | 2 | 8 |
+| 14 | The three typefaces are fetched from Google Fonts on every first visit: one more outside service, and a request that tells Google the page was opened. Keeping the font files beside the page would end both, but the app would no longer be one file. | Dependency | 1 | 2 | 2 | 12 |
+| 15 | City labels overlap on the map (Dubai and Sharjah). | Design | 1 | 1 | 2 | 8 |
 
 ## Suggested order
 
 **Now (an hour or two in total)**
 
-- Item 1: open the live page on a phone, go through the checklist in [TESTING.md](TESTING.md), and try the motion-sensor button. Then remove the "has not been tested on a phone" line from tab 6, or fix what breaks.
+- Item 1: open the live page on a phone, go through the checklist in [TESTING.md](TESTING.md), and try the motion-sensor button. Then remove the "has not been tested on a phone" line from the Limits tab, or fix what breaks.
 - Item 4: choose a licence and add the file.
 - Item 6: make checking the Pyodide version a once-a-term job.
 
@@ -46,7 +47,7 @@ Priority = (Impact + Risk) × (6 − Effort). A higher number means do it sooner
 
 - Items 7 and 11 together: move the page script into its own file, split the two long drawing functions, add unit tests for `fmt`, `ticks`, `parseRows` and `latest`. This ends the one-file rule, so update ADR-0001 first.
 - Item 5: keep a copy of Pyodide beside the page, or add a service worker.
-- Items 8, 9, 10, 12, 13 and 14 as time allows.
+- Items 8, 9, 10, 12, 13, 14 and 15 as time allows.
 
 ## Fixed in the November 2026 review
 

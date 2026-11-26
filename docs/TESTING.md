@@ -4,7 +4,7 @@
 
 | Layer | What it protects | How | Runs |
 |---|---|---|---|
-| Numerical methods | Each solver gives the right answer | 50 checks inside the solver (`verify()`), against exact formulas, hand cases and second methods | In the page (tab 5) and in `test_solver.py` |
+| Numerical methods | Each solver gives the right answer | 50 checks inside the solver (`verify()`), against exact formulas, hand cases and second methods | In the page (Verify tab) and in `test_solver.py` |
 | Referee | The hand-written methods agree with a trusted library | `numpy.linalg` on random matrices and on a full building model | `test_solver.py` |
 | Page calls | Every call the page can make returns an answer, for every kind of building | Each call through `api`, on 8 building types | `test_solver.py` |
 | Fixed bugs | Bugs that were found do not come back | One test per bug | `test_solver.py` |
@@ -57,38 +57,38 @@ Do this in a browser at 100% zoom, and once more on a phone or with the browser'
 
 **Start-up**
 
-- [ ] The status pill goes from "Loading Python…" to "Ready", and the building appears.
+- [ ] The status line at the top right goes from "Loading Python…" to "Ready", and the building appears with its three headline numbers and a pass or fail box.
 - [ ] The browser console shows no errors.
 
-**Tab 1 · Building**
+**Building**
 
 - [ ] Drag *Storeys* from end to end. The page stays smooth and the drawing follows.
-- [ ] Leave the page on tab 1 for ten seconds. The drawing keeps its size. (On a high-resolution screen it used to grow.)
+- [ ] Leave the page on this tab for ten seconds. The drawing keeps its size. (On a high-resolution screen it used to grow.)
 - [ ] Pick a floor in *Edit one floor*, change its mass, then reduce *Storeys* below that floor. The floor list goes back to *None*.
 - [ ] *Find the minimum stiffness that passes*, then *Apply*. *Worst drift ÷ limit* is just under 1.
 - [ ] With *Storeys* at 1, *Mode 2* and *Mode 3* are greyed out.
 
-**Tab 2 · Shake test**
+**Shake**
 
 - [ ] Tick the damper, press *Design the damper mass*. A message appears and the peak of the curve drops.
 - [ ] Set damping to 1% and press it again. The message says the smallest damper already beats the target.
 - [ ] Tick base isolation and press *Design the isolator*. The first period is close to the target.
 - [ ] *Pin this curve*, change something, and both curves are drawn.
 
-**Tab 3 · Detect**
+**Detect**
 
 - [ ] Click the map. The star moves and the latitude and longitude boxes follow.
 - [ ] Set magnitude to 3. The result says it needs 3 stations with both picks.
 - [ ] Upload a small CSV. A trace is drawn, or a clear message appears.
 - [ ] *Estimate stiffness loss* with a period of 60 gives a sentence, not a Python error.
 
-**Tab 4 · Numerics lab**
+**Lab**
 
 - [ ] *Run all* fills all eight charts and the table.
-- [ ] Go to tab 1, change the mass, come back. A red note says the building has changed.
+- [ ] Go to the Building tab, change the mass, come back. A red note says the building has changed.
 - [ ] Resize the window. The charts are redrawn sharp, not stretched.
 
-**Tab 5 · Verify**
+**Verify**
 
 - [ ] *Run all checks* reports that every check passed.
 
@@ -96,7 +96,7 @@ Do this in a browser at 100% zoom, and once more on a phone or with the browser'
 
 - [ ] Switch the system between light and dark. Charts change colour with the page.
 - [ ] Use Tab and the arrow keys only. Every tab and control can be reached.
-- [ ] Reload with `#lab` at the end of the address. Tab 4 opens.
+- [ ] Reload with `#lab` at the end of the address. The Lab tab opens.
 - [ ] Turn the network off and reload with an empty cache. A box explains that Python could not load and offers *Try again*.
 
 ## What is not tested

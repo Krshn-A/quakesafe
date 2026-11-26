@@ -10,7 +10,7 @@ QuakeSafe is a course project that is handed in as a link and as source. It is h
 
 ## Decision
 
-Keep the whole app in `index.html`: markup, styles, the Python solver, the worker source and the page script. No bundler, no package manager, no generated files. The only thing fetched at run time is Pyodide, from a CDN, at a pinned version.
+Keep the whole app in `index.html`: markup, styles, the Python solver, the worker source and the page script. No bundler, no package manager, no generated files. The only code fetched at run time is Pyodide, from a CDN, at a pinned version. Three typefaces are also fetched, from Google Fonts; the page works without them.
 
 ## Options considered
 

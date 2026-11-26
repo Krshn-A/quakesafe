@@ -2,7 +2,7 @@
 Run:  python test_solver.py      (needs numpy; numpy.linalg is used here only as a referee)
 
 Sections
-  1  the built-in verification suite (the same one tab 5 of the page runs)
+  1  the built-in verification suite (the same one the Verify tab of the page runs)
   2  referee checks against numpy.linalg
   3  the damper tuning rule, checked by brute force
   4  every page call returns valid JSON without an error
@@ -195,7 +195,7 @@ canvases = re.findall(r"<canvas\b[^>]*>", html)
 report(len(canvases) >= 15 and all('data-h="' in c and " height=" not in c and "aria-label=" in c for c in canvases),
        "every canvas gives its height as data-h and has a text description", "%d canvases" % len(canvases))
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
-claimed = re.search(r"\| 5 · Verify \| (\d+) checks", readme)
+claimed = re.search(r"\| Verify \| (\d+) checks", readme)
 report(bool(claimed) and int(claimed.group(1)) == len(checks), "README states the real number of verification checks",
        "README says %s, the solver runs %d" % (claimed.group(1) if claimed else "nothing", len(checks)))
 
