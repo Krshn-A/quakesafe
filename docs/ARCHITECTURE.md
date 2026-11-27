@@ -88,6 +88,7 @@ api(name: str, payload: str) -> str      # JSON in, JSON out
 - A problem the user can cause comes back as `{"error": "plain words"}` and the page shows the words.
 - An exception inside the solver is caught in `api` and comes back as `{"error": "ValueError: ..."}`. The page shows it in the status line of the header. The tests treat any such message as a bug.
 - NaN and infinity cannot travel in JSON. `_clean` turns them into `null`, and rounds every number to 7 significant figures.
+- An iteration that was cut off at its cap says so with a `capped` flag (mode search, the three root finders in the stiffness design, power iteration). The page prints it beside the step count.
 
 **The building, `p`** (all SI units):
 
@@ -105,12 +106,12 @@ api(name: str, payload: str) -> str      # JSON in, JSON out
 
 | Call | Argument | Returns | Used by |
 |---|---|---|---|
-| `analyse` | `p` | modes, static check, frequency sweep, warnings, scaled `K` | Building and Shake tabs, on every change |
-| `design_stiffness` | `p` | stiffness multiplier by bisection, false position, fixed point | Building tab button, lab |
+| `analyse` | `p` | modes, static check, frequency sweep, warnings, the structure's own `K` scaled to 1 | Building and Shake tabs, on every change |
+| `design_stiffness` | `p` | stiffness multiplier by bisection, false position, fixed point, each with `capped` | Building tab button, lab |
 | `design_tmd` | `{p, target}` | damper mass ratio, tuning, `smallest` flag | Shake tab button |
 | `design_isolation` | `{p, T}` | isolator stiffness | Shake tab button |
 | `tmd_rule` | `{mu}` | textbook tuning and damping | Shake tab button |
-| `detect` | quake, stations, cities, settings | picks, distances, epicentre or `epi_note`, warning times | Detect tab, on every change |
+| `detect` | quake, stations, cities, settings | picks, distances, epicentre or `epi_note`, warning times; per station `too_close` and `false_trigger`; `false_alarm` | Detect tab, on every change |
 | `record` | `{x, fs, t?, thr?}` | picks on the user's own recording | Detect tab upload and sensor |
 | `damage` | `{p, T}` | stiffness kept | Detect tab button |
 | `race` | `p` | every linear solver on the static problem | lab |
@@ -159,6 +160,9 @@ Because the solver is in a worker, these times do not block the page. Dragging t
 | An exception inside the solver | `Error: ...` in the status line; the previous result stays on screen |
 | NaN or infinity in a result | Shown as "–"; charts skip the point |
 | A drawing function throws | Logged to the console; the animation keeps running |
+| The worker dies without a word (browsers can kill one) | After five minutes with no answer, the same box as for a stopped worker |
+| A design answer arrives after the sliders moved | Nothing is applied; a sentence says so |
+| A result sentence no longer matches the sliders | It is cleared at the next analysis |
 | A bad recording file | A message under the upload button |
 
 ## 8. Choices and their costs
@@ -168,6 +172,9 @@ The reasons are written up one decision at a time in [adr/](adr/):
 1. [One file, no build step](adr/0001-one-file-no-build-step.md)
 2. [The solver runs in a web worker](adr/0002-solver-in-a-web-worker.md)
 3. [One JSON door between the page and the solver](adr/0003-one-json-door.md)
+4. [Accuracy is measured against outside references, in a script of its own](adr/0004-accuracy-is-measured-against-outside-references.md)
+
+How accurate the numbers are, method by method, is in [ACCURACY.md](ACCURACY.md).
 
 ## 9. What to look at again if the app grows
 

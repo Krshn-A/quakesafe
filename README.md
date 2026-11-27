@@ -14,7 +14,7 @@ The whole app is `index.html`. The numerical solver is Python, embedded in that 
 | Shake | Damped response to steady shaking across frequencies; tuned mass damper, base isolation and inter-storey dampers; condition number of the undamped system |
 | Detect | Trigger on synthetic recordings; distance from the P-to-S gap; epicentre from station distances; magnitude; warning time per city; damage check from a period change |
 | Lab | Every linear solver on one problem; iterative convergence; SOR relaxation scan; determinant roots; root-finding comparison; Euler error growth; regression |
-| Verify | 50 checks against exact formulas, hand calculations and second methods |
+| Verify | 87 checks against exact formulas, hand calculations and second methods |
 | Limits | Assumptions, what is synthetic, references |
 
 A tab can be linked directly: add `#shake`, `#detect`, `#lab`, `#verify` or `#about` to the address.
@@ -57,9 +57,19 @@ pip install numpy
 python test_solver.py
 ```
 
-The script extracts the solver from `index.html`, so it tests exactly what the page runs. It uses `numpy.linalg` only as a referee. It also checks that the page and its script agree (for example, that every element the script looks up exists). The same script runs on GitHub for every push and pull request (`.github/workflows/tests.yml`).
+The script extracts the solver from `index.html`, so it tests exactly what the page runs. It uses `numpy.linalg` only as a referee. It also checks that the page and its script agree (for example, that every element the script looks up exists).
 
-What is tested, what is not, and the list of checks to do by hand in a browser are in [docs/TESTING.md](docs/TESTING.md).
+Two more scripts go further:
+
+```
+python test_accuracy.py     # how many digits are right, method by method, against LAPACK and closed forms
+python test_mutants.py      # would the built-in checks notice a wrong solver? 56 deliberate mistakes
+```
+
+All three run on GitHub for every push and pull request (`.github/workflows/tests.yml`).
+
+- [docs/ACCURACY.md](docs/ACCURACY.md) gives the measured accuracy of every method and the limits that are not rounding.
+- [docs/TESTING.md](docs/TESTING.md) says what is tested, what is not, and lists the checks to do by hand in a browser.
 
 ## How it is put together
 
@@ -74,8 +84,9 @@ What is tested, what is not, and the list of checks to do by hand in a browser a
 The solver runs in a background thread (a web worker), so the page does not freeze while it computes. The page script and the solver talk through one function, `api(name, json)`.
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the design, the list of solver calls and the known failure cases.
-- [docs/adr/](docs/adr/) records the three main design decisions and why they were made.
+- [docs/adr/](docs/adr/) records the four main design decisions and why they were made.
 - [docs/TECH_DEBT.md](docs/TECH_DEBT.md) lists what is still weak, in order of priority.
+- [docs/DEPLOY.md](docs/DEPLOY.md) is the checklist for putting a new version live.
 
 ## Host it with GitHub Pages
 
@@ -98,11 +109,15 @@ See the Limits tab in the app for the full list.
 
 ```
 index.html                    the whole app: page, Python solver, page script
-test_solver.py                tests for the solver and for the page's wiring
+test_solver.py                does every call work, and do fixed bugs stay fixed
+test_accuracy.py              how accurate each method is, against outside references
+test_mutants.py               do the built-in checks catch a wrong solver
 README.md                     this file
 docs/ARCHITECTURE.md          how the app is designed
+docs/ACCURACY.md              measured accuracy, method by method
 docs/TESTING.md               test plan and the manual browser checklist
+docs/DEPLOY.md                checklist for putting a new version live
 docs/TECH_DEBT.md             known weak points, in priority order
 docs/adr/                     design decisions and the reasons for them
-.github/workflows/tests.yml   runs test_solver.py on GitHub
+.github/workflows/tests.yml   runs the three test scripts on GitHub
 ```

@@ -7,17 +7,18 @@
 <meta name="description" content="QuakeSafe: building sway, earthquake protection and earthquake detection, solved in the browser with hand-written numerical methods.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23e8dcc3'/%3E%3Cpath d='M4 21h5l3-11 4 17 4-13 3 7h5' fill='none' stroke='%23b9482a' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
-<!-- The three typefaces. If they cannot be fetched the page falls back to the system fonts named in the style sheet. -->
+<!-- The three typefaces. They are fetched without holding the page up (the style sheet is switched on once it has arrived);
+     if they cannot be fetched the page uses the system fonts named in the style sheet. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
 <style>
 /* "Seismic Atlas" look: warm mineral colours, an editorial serif for headlines, a mono face for labels and numbers. */
 :root{
   --bg:#f3ebdb;--card:#faf5ea;--stage:#e9dfc9;--tile:#efe6d2;--bar:#e8dcc3;--pill:#d8c8a7;
-  --ink:#22302b;--mut:#6d6657;--line:#dfd3bb;--rail:#cdbfa2;--win:#cdbfa3;
-  --acc:#d4603b;--acc-strong:#b9482a;--on-acc:#fff;--acc2:#2b6c7b;
-  --ok:#2f6b46;--okbg:#dcead3;--warn:#99600c;--bad:#a3262a;--badbg:#f3d8d2;--band:#c98f2b;--grid:#e2d8c3;
+  --ink:#22302b;--mut:#625b4d;--line:#dfd3bb;--edge:#877c67;--win:#cdbfa3;
+  --acc:#d4603b;--acc-strong:#a84024;--acc-deep:#8f3419;--on-acc:#fff;--acc2:#276473;
+  --ok:#2f6b46;--okbg:#dcead3;--warn:#855208;--bad:#a3262a;--badbg:#f3d8d2;--band:#c98f2b;--grid:#e2d8c3;
   --dot:rgba(110,92,58,.2);
   --serif:"Newsreader","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
   --sans:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -25,8 +26,8 @@
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#1b1712;--card:#25201a;--stage:#2d271f;--tile:#2e2820;--bar:#221d17;--pill:#3d3528;
-  --ink:#efe7d8;--mut:#aba290;--line:#3a3227;--rail:#4a4033;--win:#4b4133;
-  --acc:#e7744c;--acc-strong:#e7744c;--on-acc:#1b1712;--acc2:#73b6c2;
+  --ink:#efe7d8;--mut:#aba290;--line:#3a3227;--edge:#857966;--win:#4b4133;
+  --acc:#e7744c;--acc-strong:#e7744c;--acc-deep:#f08660;--on-acc:#1b1712;--acc2:#73b6c2;
   --ok:#86c9a0;--okbg:#1f3226;--warn:#e0a84c;--bad:#f08a7c;--badbg:#3b2220;--band:#e0a84c;--grid:#342d23;
   --dot:rgba(239,231,216,.07);
 }}
@@ -35,6 +36,7 @@ body{margin:0;color:var(--ink);font:14px/1.5 var(--sans);background:var(--bg) ra
 :focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
 a{color:var(--acc-strong)}
 [hidden]{display:none!important}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}      /* for screen readers only */
 
 /* header: wordmark, tabs, solver status */
 header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px 16px;padding:11px 22px;background:var(--bar);border-bottom:1px solid var(--line)}
@@ -62,7 +64,7 @@ main{padding:22px;max-width:1240px;margin:0 auto}
 .eyebrow svg{width:14px;height:14px;stroke:var(--mut);fill:none;stroke-width:1.5;stroke-linecap:round}
 .display{margin:0;font:500 clamp(25px,3.3vw,35px)/1.1 var(--serif);letter-spacing:-.015em}
 .cta{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:9px;background:var(--acc-strong);color:var(--on-acc);padding:11px 18px;font:600 13px var(--sans);cursor:pointer}
-.cta:hover:not(:disabled){filter:brightness(1.1)}.cta:disabled{opacity:.5;cursor:not-allowed}
+.cta:hover:not(:disabled){background:var(--acc-deep)}.cta:disabled{opacity:.5;cursor:not-allowed}
 .cta svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linejoin:round}
 
 /* layout */
@@ -94,14 +96,14 @@ label b{position:absolute;right:0;top:0;font-weight:500}      /* the value stays
 .chk{display:flex;align-items:center;gap:7px;margin:12px 0 2px;padding-right:0}
 .chk input{width:auto;accent-color:var(--acc)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row2 label{padding-right:0}
-select,input[type=number],input[type=text],textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:13px var(--sans)}
+select,input[type=number],input[type=text],textarea{width:100%;padding:7px 9px;border:1px solid var(--edge);border-radius:8px;background:var(--bg);color:var(--ink);font:13px var(--sans)}
 textarea{font:12px/1.5 var(--mono);height:150px}
 input[type=file]{max-width:100%;font:12px var(--sans);color:var(--mut)}
 /* sliders: a thin rail, filled up to the thumb. --p is set by the page script. */
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;margin:1px 0 5px;background:none;--p:50%}
-input[type=range]::-webkit-slider-runnable-track{height:2px;border-radius:2px;background:linear-gradient(to right,var(--acc) var(--p),var(--rail) var(--p))}
+input[type=range]::-webkit-slider-runnable-track{height:2px;border-radius:2px;background:linear-gradient(to right,var(--acc) var(--p),var(--edge) var(--p))}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;box-sizing:border-box;width:13px;height:13px;margin-top:-5.5px;border-radius:50%;background:var(--acc);border:2px solid var(--card);box-shadow:0 0 0 1px var(--acc)}
-input[type=range]::-moz-range-track{height:2px;border-radius:2px;background:var(--rail)}
+input[type=range]::-moz-range-track{height:2px;border-radius:2px;background:var(--edge)}
 input[type=range]::-moz-range-progress{height:2px;border-radius:2px;background:var(--acc)}
 input[type=range]::-moz-range-thumb{box-sizing:border-box;width:13px;height:13px;border-radius:50%;background:var(--acc);border:2px solid var(--card);box-shadow:0 0 0 1px var(--acc)}
 input[type=range]:disabled{opacity:.4}
@@ -128,7 +130,7 @@ canvas{width:100%;display:block;border-radius:6px}
 .warnbox{border-left:3px solid var(--warn);border-radius:0 8px 8px 0;padding:7px 10px;margin:8px 0;background:var(--tile);font-size:12.5px}
 #bootNote{background:var(--card);margin:0 0 14px}
 .kv{display:grid;grid-template-columns:auto auto;gap:3px 12px;font-size:12.5px}
-.kv span:nth-child(odd){color:var(--mut)}.kv span:nth-child(even){text-align:right;font:500 12px var(--mono)}
+.kv>span:nth-child(odd){color:var(--mut)}.kv>span:nth-child(even){text-align:right;font:500 12px var(--mono)}
 table{border-collapse:collapse;width:100%;font-size:12.5px}
 th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font:500 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
@@ -194,6 +196,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
       <option value="wall">Wall or core (bends like a flagpole)</option>
       <option value="dual">Frame + core</option>
     </select>
+    <p class="note" id="wallNote" hidden>A wall-only building has no columns or braces in this model. Its stiffness is the core's EI, so the column, bracing and storey-stiffness controls are switched off.</p>
     <div id="eiRow"><label for="EI">Core bending stiffness EI (GN·m²) <b id="vEI"></b></label><input type="range" id="EI" min="100" max="10000" step="100"></div>
     <label class="chk"><input type="checkbox" id="brace"> Steel bracing in every storey</label>
     <div id="braceRow"><label for="braceA">Brace area (cm²) <b id="vbraceA"></b></label><input type="range" id="braceA" min="5" max="200" step="5"></div>
@@ -213,17 +216,18 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
   </div>
   <div class="stage">
     <div class="cap"><span id="capB1">Building</span><span id="capB2">Sway exaggerated</span></div>
-    <div id="viewBtns" class="views">
+    <div id="viewBtns" class="views" role="group" aria-label="What the drawing shows">
       <button class="b on" data-v="static" aria-pressed="true">Code load</button>
       <button class="b" data-v="0" aria-pressed="false">Mode 1</button>
       <button class="b" data-v="1" aria-pressed="false">Mode 2</button>
       <button class="b" data-v="2" aria-pressed="false">Mode 3</button>
     </div>
     <canvas id="cvB" data-h="470" role="img" aria-label="Drawing of the building swaying. The same numbers are in the answer panel and the calculation trail."></canvas>
-    <div class="cap"><span>Ground / fixed base</span><span id="capB4">○ Waiting for Python</span></div>
+    <div class="cap"><span id="capB3">Ground / fixed base</span><span id="capB4">○ Waiting for Python</span></div>
     <p class="note" id="viewNote" style="margin:10px 0 0"></p>
   </div>
   <div class="card">
+    <h3 class="vh">The answer</h3>
     <p class="eyebrow">02 / The answer<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14h12M4 11V7M8 11V3M12 11V8"/></svg></p>
     <div class="stats">
       <div class="stat"><span>Natural period</span><strong id="statT">–</strong><em>s</em></div>
@@ -234,11 +238,11 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <div id="warnB"></div>
     <h4>Design</h4>
     <button class="b" id="btnDesign">Find the minimum stiffness that passes</button>
-    <div id="designOut" class="note"></div>
+    <div id="designOut" class="note" role="status"></div>
   </div>
 </div>
 <details class="trail" id="trail">
-  <summary><b><span class="when-closed">Open</span><span class="when-open">Close</span> the calculation trail</b><span class="sub">Mode shapes · drift checks · solver steps</span><i aria-hidden="true">+</i></summary>
+  <summary><b><span class="when-closed">Open</span><span class="when-open">Close</span> the calculation trail</b><span class="sub">Periods · drift checks · solver steps</span><i aria-hidden="true">+</i></summary>
   <div class="body">
     <div>
       <h4>Model and solver</h4>
@@ -247,7 +251,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     </div>
     <div>
       <h4>Drift check per storey</h4>
-      <div class="scroll" style="max-height:300px;overflow-y:auto"><table id="tbDrift"></table></div>
+      <div class="scroll" style="max-height:300px;overflow-y:auto" tabindex="0" role="region" aria-label="Drift check per storey"><table id="tbDrift"></table></div>
     </div>
   </div>
 </details>
@@ -291,14 +295,14 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
       <button class="b" id="btnRule">Use the textbook tuning rule</button>
       <label for="target">Target cut in peak sway (%) <b id="vtarget"></b></label><input type="range" id="target" min="10" max="60" step="5">
       <button class="b" id="btnTmd">Design the damper mass (bisection)</button>
-      <div id="tmdOut" class="note"></div>
+      <div id="tmdOut" class="note" role="status"></div>
     </div>
     <label class="chk"><input type="checkbox" id="iso"> Base isolation</label>
     <div id="isoRow">
-      <label for="kb">Isolator stiffness (kN/mm) <b id="vkb"></b></label><input type="range" id="kb" min="1" max="400" step="1">
+      <label for="kb">Isolator stiffness (kN/mm) <b id="vkb"></b></label><input type="range" id="kb" min="0.1" max="400" step="0.1">
       <label for="Tiso">Target period (s) <b id="vTiso"></b></label><input type="range" id="Tiso" min="1" max="5" step="0.1">
       <button class="b" id="btnIso">Design the isolator (bisection)</button>
-      <div id="isoOut" class="note"></div>
+      <div id="isoOut" class="note" role="status"></div>
     </div>
     <label class="chk"><input type="checkbox" id="visc"> Shock-absorber dampers between floors</label>
     <div id="viscRow"><label for="vc">Damper size per storey (MN·s/m) <b id="vvc"></b></label><input type="range" id="vc" min="0.5" max="60" step="0.5"></div>
@@ -338,8 +342,8 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <h3>Place the earthquake</h3>
     <p class="lede">Click the map to move it, or type its position. Recordings are synthetic, so the true answer is known.</p>
     <div class="row2">
-      <div><label for="eqLat">Latitude (°N)</label><input type="number" id="eqLat" min="22" max="31" step="0.1"></div>
-      <div><label for="eqLon">Longitude (°E)</label><input type="number" id="eqLon" min="47" max="60" step="0.1"></div>
+      <div><label for="eqLat">Latitude (°N)</label><input type="number" id="eqLat" min="22" max="31" step="0.01"></div>
+      <div><label for="eqLon">Longitude (°E)</label><input type="number" id="eqLon" min="47" max="60" step="0.01"></div>
     </div>
     <label for="mag">Magnitude <b id="vmag"></b></label><input type="range" id="mag" min="3" max="7.5" step="0.1">
     <label for="noise">Background noise at the stations <b id="vnoise"></b></label><input type="range" id="noise" min="0.005" max="0.5" step="0.005">
@@ -354,14 +358,16 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <input type="file" id="csv" accept=".csv,.txt">
     <label for="csvFs">Samples per second (two-column files are resampled to this rate)</label><input type="number" id="csvFs" value="20" min="1" step="1">
     <button class="b" id="btnPhone">Record 25 s from this device's motion sensor</button>
-    <div id="recOut" class="note"></div>
+    <div id="recOut" class="note" role="status"></div>
+    <button class="b" id="btnSynth" hidden>Back to the synthetic recording</button>
   </div>
   <div class="card">
     <p class="eyebrow">02 / The network</p>
     <h3>Stations and epicentre</h3>
     <canvas id="cvMap" data-h="380" role="img" aria-label="Schematic map of stations, cities, the true earthquake and the estimated epicentre. The table below lists the same distances."></canvas>
     <p class="note">Schematic map: positions only, no coastline. ▲ station · ● city · ★ true earthquake · ✚ estimate. Circles are the estimated distances.</p>
-    <div class="scroll"><table id="tbSt"></table></div>
+    <div class="scroll" tabindex="0" role="region" aria-label="Stations: true and estimated distances"><table id="tbSt"></table></div>
+    <p class="note" id="stNote" hidden></p>
   </div>
   <div class="card">
     <p class="eyebrow">03 / The record</p>
@@ -369,11 +375,11 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <canvas id="cvTrace" data-h="190" role="img" aria-label="Chart: the recording, with the P and S picks marked."></canvas>
     <canvas id="cvRatio" data-h="190" role="img" aria-label="Chart: short-term over long-term average, with the trigger threshold."></canvas>
     <h4>Warning time</h4>
-    <div class="scroll"><table id="tbCity"></table></div>
+    <div class="scroll" tabindex="0" role="region" aria-label="Warning time for each city"><table id="tbCity"></table></div>
     <h4>Damage check after a quake</h4>
     <label for="Tmeas">Measured first period after the quake (s)</label><input type="number" id="Tmeas" step="0.01" min="0">
     <button class="b" id="btnDamage">Estimate stiffness loss (bisection)</button>
-    <div id="damageOut" class="note"></div>
+    <div id="damageOut" class="note" role="status"></div>
   </div>
 </div>
 </section>
@@ -384,10 +390,10 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
   <div><p class="eyebrow">Field study / 04</p><h2 class="display">One building, every method.</h2></div>
   <button class="cta" id="btnLab"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Run all</button>
 </div>
-<p class="note">Everything here uses the building from the Building tab. <b id="labStale" class="fail" hidden>The building has changed since this run. Run all again to update.</b></p>
+<p class="note">Everything here uses the building from the Building tab. <b id="labStale" class="fail" role="status" hidden>The building has changed since this run. Run all again to update.</b></p>
 <div class="grid2">
   <div class="card"><p class="eyebrow">Linear systems</p><h3>Stiffness matrix K</h3><canvas id="cvK" data-h="260" role="img" aria-label="Picture of the stiffness matrix: which entries are positive, negative or zero."></canvas><div id="kNote" class="note"></div></div>
-  <div class="card"><p class="eyebrow">Linear systems</p><h3>One problem, every linear solver</h3><p class="lede">Solving K·u = F for the code load.</p><div class="scroll"><table id="tbRace"></table></div></div>
+  <div class="card"><p class="eyebrow">Linear systems</p><h3>One problem, every linear solver</h3><p class="lede">Solving K·u = F for the code load.</p><div class="scroll" tabindex="0" role="region" aria-label="Linear solvers compared"><table id="tbRace"></table></div></div>
   <div class="card"><p class="eyebrow">Iterative methods</p><h3>Iterative solvers: error per iteration</h3><canvas id="cvIter" data-h="240" role="img" aria-label="Chart: error per iteration for Jacobi, Gauss-Seidel and SOR."></canvas></div>
   <div class="card"><p class="eyebrow">Iterative methods</p><h3>SOR: iterations against the relaxation factor ω</h3><canvas id="cvSor" data-h="240" role="img" aria-label="Chart: SOR iterations needed against the relaxation factor."></canvas></div>
   <div class="card"><p class="eyebrow">Eigenvalues</p><h3>Natural frequencies as roots of det(K − λM) = 0</h3><canvas id="cvDet" data-h="240" role="img" aria-label="Chart: the determinant against lambda, with its roots marked. The roots are listed below."></canvas><div id="detOut" class="note"></div></div>
@@ -412,7 +418,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
 96, 2.63</textarea>
     <button class="b" id="btnReg">Fit T = C·hˣ</button>
     <button class="b" id="btnCal">Calibrate the model's stiffness to this curve (bisection)</button>
-    <div id="regOut" class="note"></div>
+    <div id="regOut" class="note" role="status"></div>
   </div>
   <div class="card"><p class="eyebrow">Regression</p><h3>Fit</h3><canvas id="cvReg" data-h="300" role="img" aria-label="Chart: measured periods against height with the fitted curve."></canvas></div>
 </div>
@@ -428,7 +434,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
   <p class="eyebrow">Verification</p>
   <p class="lede">Each row compares the solver with an exact formula, a hand calculation or a second method. The same checks run in the test script in the repository.</p>
   <p id="verSum" role="status" style="margin:0 0 8px"></p>
-  <div class="scroll"><table id="tbVer"></table></div>
+  <div class="scroll" tabindex="0" role="region" aria-label="Verification checks"><table id="tbVer"></table></div>
 </div>
 </section>
 
@@ -444,7 +450,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
   <ul>
     <li><b>Frame:</b> each floor is a mass and each storey is a spring. The stiffness matrix is tridiagonal.</li>
     <li><b>Wall or core:</b> a cantilever beam. Its flexibility matrix comes from the beam deflection formula, and the stiffness matrix is its inverse.</li>
-    <li><b>Static check:</b> a simplified equivalent-lateral-force procedure in the style of ASCE 7. It uses the computed period directly and ignores the code's cap on that period.</li>
+    <li><b>Static check:</b> a simplified equivalent-lateral-force procedure in the style of ASCE 7. It uses the computed period directly and ignores the code's cap on that period. It also leaves out the long-period branch of the load, the extra lower bound on the load for sites with S<sub>1</sub> of 0.6 g or more, and the second soft-storey rule (80% of the average of the three storeys above). In a frame + core building the soft-storey test looks at the frame alone.</li>
     <li><b>Shake test:</b> steady shaking at one frequency with damping proportional to stiffness.</li>
     <li><b>Detection:</b> a short-term over long-term average trigger, the P-to-S time gap for distance, and circle equations for the epicentre.</li>
   </ul>
@@ -453,12 +459,18 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <li>The static check is only valid for regular low and mid-rise buildings. The page warns above about 48 m.</li>
     <li>The frame model is poor for tall towers. Use the wall or frame + core option, and treat results as a period comparison.</li>
     <li>No yielding, cracking, twisting or collapse is modelled.</li>
+    <li>Floors are lumped masses, with a whole floor's mass at the roof. Against a smooth beam of the same mass a wall's first frequency comes out a few percent low: 4.8% for 20 storeys, 2.4% for 40.</li>
     <li>One shaking frequency is not an earthquake. Real earthquakes are short and broadband, so real damper benefits are smaller.</li>
     <li>The damper tuning rule is exact only for a one-storey building with no damping and a force on the main mass.</li>
-    <li>Epicentre: flat map, fixed depth, constant wave speeds (6.0 and 3.5 km/s by default).</li>
+    <li>Epicentre: flat map, fixed depth, constant wave speeds (6.0 and 3.5 km/s by default). Distances on the flat map differ from great-circle distances by up to 4% at the corners of the map.</li>
+    <li>Arrival picks come up to about 1 s late, because the 1 s averaging window has to fill. A station nearer than about 55 km gives no distance: the S wave follows the P wave within 7 s and the two cannot be timed separately. For a station just beyond that the distance reads up to 6 km long.</li>
+    <li>At a trigger threshold of 2 or 3 the background noise alone crosses it, so the first "arrival" is often a false trigger. The station table marks these.</li>
+    <li>Jacobi, Gauss–Seidel, SOR, false position and fixed-point iteration stop when their last step is small. That is not the same as a small error: when they converge slowly the true error can be hundreds of times larger. The Lab tab shows the true error beside each.</li>
     <li>The damage check fits one overall stiffness factor. It cannot say which storey is damaged.</li>
-    <li>For wall and frame + core buildings the stiffness matrix is the inverse of a flexibility matrix, which is badly conditioned for many storeys. The residual shown in the calculation trail can then rise to around 10<sup>−5</sup>, against 10<sup>−13</sup> for a frame.</li>
-    <li>The drawings are sketches. The windows and the trace along the ground in the Building tab are decoration; only the sway, the colours and the numbers come from the solver.</li>
+    <li>The roof damper's mass is a share of the first mode's moving (modal) mass, not of the whole building. That moving mass is about half of the total for the 8-storey preset and under a third for the 30-storey tower.</li>
+    <li>Warning times use the true distance from the earthquake to each city, not the located one. The recovered magnitude reads about 0.03 low, because the synthetic wave train never quite reaches its nominal height.</li>
+    <li>For wall and frame + core buildings the stiffness matrix is the inverse of a flexibility matrix, which is badly conditioned for many storeys. At 40 storeys the condition number is about 10<sup>7</sup> and the residual shown in the calculation trail is about 10<sup>−9</sup>, against 10<sup>−13</sup> for a frame.</li>
+    <li>The drawings are sketches. The windows and the trace along the ground in the Building tab are decoration; only the sway, the colours and the numbers come from the solver. A roof damper moves several times further than the roof, so its travel is cut off at the edge of the drawing.</li>
   </ul>
 </div>
 <div class="card">
@@ -504,19 +516,27 @@ G = 9.81
 # ---------------------------------------------------------------------
 # MODULE 2 (part 1): direct methods for linear systems
 # ---------------------------------------------------------------------
+SINGULAR = 1e-14    # a pivot this small compared with the largest entry of its own row counts as zero
+
+
 def gauss_solve(A, b):
-    """Gauss elimination with partial pivoting, then back substitution."""
+    """Gauss elimination with partial pivoting, then back substitution.
+    A pivot that is zero, or zero apart from rounding, means the matrix is singular. Each pivot is
+    judged against the largest entry its own row started with, not against the whole matrix: the rows
+    of a stiffness matrix can differ in size by a factor of 1e11 (a concrete core beside the spring of
+    a small damper), and a sound small row must not be mistaken for a zero one."""
     A = np.array(A, float); b = np.array(b, float); n = len(b)
+    tiny = SINGULAR * np.max(np.abs(A), axis=1) if n else np.zeros(0)       # one threshold per row
     for k in range(n - 1):
         p = k + int(np.argmax(np.abs(A[k:, k])))      # partial pivoting
-        if A[p, k] == 0.0:
+        if abs(A[p, k]) <= tiny[p]:
             raise ZeroDivisionError("singular matrix")
         if p != k:
-            A[[k, p]] = A[[p, k]]; b[[k, p]] = b[[p, k]]
+            A[[k, p]] = A[[p, k]]; b[[k, p]] = b[[p, k]]; tiny[[k, p]] = tiny[[p, k]]
         f = A[k + 1:, k] / A[k, k]                     # elimination factors
         A[k + 1:, k:] -= np.outer(f, A[k, k:])
         b[k + 1:] -= f * b[k]
-    if A[n - 1, n - 1] == 0.0:
+    if abs(A[n - 1, n - 1]) <= tiny[n - 1]:
         raise ZeroDivisionError("singular matrix")
     x = np.zeros(n)
     for i in range(n - 1, -1, -1):                     # back substitution
@@ -541,6 +561,8 @@ def lu_decompose(A):
 def lu_solve(lu, b):
     """Forward then back substitution using stored L and U."""
     A, perm, _ = lu; n = len(perm)
+    if any(A[i, i] == 0.0 for i in range(n)):
+        raise ZeroDivisionError("singular matrix")
     y = np.array([b[i] for i in perm], float)
     for i in range(1, n):
         y[i] -= A[i, :i] @ y[:i]
@@ -561,13 +583,14 @@ def lu_det(lu):
 def gauss_jordan_inverse(A):
     """Matrix inverse by Gauss-Jordan elimination on [A | I] with pivoting."""
     A = np.array(A, float); n = len(A)
+    tiny = SINGULAR * np.max(np.abs(A), axis=1) if n else np.zeros(0)       # one threshold per row, as in gauss_solve
     W = np.hstack([A, np.eye(n)])
     for k in range(n):
         p = k + int(np.argmax(np.abs(W[k:, k])))
-        if W[p, k] == 0.0:
+        if abs(W[p, k]) <= tiny[p]:
             raise ZeroDivisionError("singular matrix")
         if p != k:
-            W[[k, p]] = W[[p, k]]
+            W[[k, p]] = W[[p, k]]; tiny[[k, p]] = tiny[[p, k]]
         W[k] /= W[k, k]
         f = W[:, k].copy(); f[k] = 0.0
         W -= np.outer(f, W[k])
@@ -600,9 +623,13 @@ def thomas(e, f, g, r):
     """Thomas algorithm. e = sub-diagonal, f = diagonal, g = super-diagonal."""
     n = len(f); f = np.array(f, float); r = np.array(r, float)
     for k in range(1, n):
+        if f[k - 1] == 0.0:                            # no pivoting here: fine for the positive definite matrices it is used on
+            raise ZeroDivisionError("zero pivot in the Thomas algorithm")
         w = e[k] / f[k - 1]
         f[k] -= w * g[k - 1]
         r[k] -= w * r[k - 1]
+    if f[n - 1] == 0.0:
+        raise ZeroDivisionError("zero pivot in the Thomas algorithm")
     x = np.zeros(n); x[n - 1] = r[n - 1] / f[n - 1]
     for k in range(n - 2, -1, -1):
         x[k] = (r[k] - g[k] * x[k + 1]) / f[k]
@@ -625,15 +652,23 @@ def cond_inf(A):
 # ---------------------------------------------------------------------
 # MODULE 2 (part 2): iterative methods and eigenvalues
 # ---------------------------------------------------------------------
+DIVERGED = 1e12    # an iteration is given up once its answer is this many times larger than its first guess
+
+
 def jacobi(A, b, es=1e-8, maxit=20000):
-    """Jacobi iteration. Stops when the approximate relative error < es."""
+    """Jacobi iteration. Stops when the approximate relative error < es.
+    The approximate error is the size of the last step, not the distance to the true answer:
+    when convergence is slow the true error is much larger. A diverging iteration keeps a
+    relative step near 1 for ever, so divergence is caught by the size of the answer instead."""
     A = np.array(A, float); b = np.array(b, float)
     d = np.diag(A).copy(); R = A - np.diag(d); x = np.zeros(len(b)); hist = []
+    blown = DIVERGED * max(float(np.max(np.abs(b / d))), 1e-300)
     for it in range(1, maxit + 1):
         xn = (b - R @ x) / d
-        ea = float(np.max(np.abs(xn - x)) / max(np.max(np.abs(xn)), 1e-300))
+        size = float(np.max(np.abs(xn)))
+        ea = float(np.max(np.abs(xn - x)) / max(size, 1e-300))
         x = xn; hist.append(ea)
-        if ea < es or not math.isfinite(ea) or ea > 1e12:
+        if ea < es or not math.isfinite(ea) or size > blown:
             break
     return x, it, hist
 
@@ -642,15 +677,17 @@ def sor(A, b, omega=1.0, es=1e-8, maxit=20000):
     """Successive over-relaxation. omega = 1 is Gauss-Seidel."""
     A = np.array(A, float); b = np.array(b, float); n = len(b)
     x = np.zeros(n); hist = []
+    blown = DIVERGED * max(float(np.max(np.abs(b / np.diag(A)))), 1e-300)
     for it in range(1, maxit + 1):
         dmax = 0.0
         for i in range(n):
             s = A[i] @ x - A[i, i] * x[i]
             xi = omega * (b[i] - s) / A[i, i] + (1.0 - omega) * x[i]
             dmax = max(dmax, abs(xi - x[i])); x[i] = xi
-        ea = dmax / max(float(np.max(np.abs(x))), 1e-300)
+        size = float(np.max(np.abs(x)))
+        ea = dmax / max(size, 1e-300)
         hist.append(ea)
-        if ea < es or not math.isfinite(ea) or ea > 1e12:
+        if ea < es or not math.isfinite(ea) or size > blown:
             break
     return x, it, hist
 
@@ -659,8 +696,13 @@ def gauss_seidel(A, b, es=1e-8, maxit=20000):
     return sor(A, b, 1.0, es, maxit)
 
 
-def power_iteration(K, m, tol=1e-10, maxit=5000):
-    """Largest eigenvalue of K phi = lambda M phi (M is diagonal, stored as m)."""
+POWER_MAXIT = 5000
+
+
+def power_iteration(K, m, tol=1e-10, maxit=POWER_MAXIT):
+    """Largest eigenvalue of K phi = lambda M phi (M is diagonal, stored as m).
+    Convergence is slow when the two highest eigenvalues are close together. If the count returned
+    equals maxit the iteration was cut off, and the answer is good to about 5 figures, not 10."""
     n = len(m); x = np.array([(-1.0) ** i + 0.1 * i for i in range(n)]); lam = 0.0
     for it in range(1, maxit + 1):
         y = (K @ x) / m
@@ -673,7 +715,10 @@ def power_iteration(K, m, tol=1e-10, maxit=5000):
     return lam, x, it
 
 
-def inverse_iteration(K, m, nm=3, tol=1e-9, maxit=400):
+INVERSE_MAXIT = 400
+
+
+def inverse_iteration(K, m, nm=3, tol=1e-9, maxit=INVERSE_MAXIT):
     """Lowest nm eigenvalues by inverse power iteration.
     K is LU-factorised once and reused. Modes already found are removed
     from the guess at every step (deflation), so the next mode appears."""
@@ -700,15 +745,24 @@ def inverse_iteration(K, m, nm=3, tol=1e-9, maxit=400):
 # ---------------------------------------------------------------------
 # MODULE 3: roots of equations
 # ---------------------------------------------------------------------
+def same_sign(u, v):
+    """True when both numbers are positive or both are negative.
+    Textbooks test u * v > 0. That product underflows to zero when both numbers are tiny
+    (about 1e-160 or smaller), and the test then gives the wrong answer without any warning."""
+    return (u > 0.0 and v > 0.0) or (u < 0.0 and v < 0.0)
+
+
 def bisection(f, a, b, es=1e-7, maxit=200):
+    """Halves the bracket [a, b] until the midpoint moves by less than es (relative).
+    Here the approximate error is a true bound: the root is never further away than the last step."""
     fa = f(a); fb = f(b)
-    if fa * fb > 0:
+    if same_sign(fa, fb):
         raise ValueError("no sign change in the bracket")
     hist = []; c_old = a
     for it in range(1, maxit + 1):
         c = 0.5 * (a + b); fc = f(c)
         ea = abs(c - c_old) / max(abs(c), 1e-300); hist.append(ea); c_old = c
-        if fa * fc <= 0:
+        if not same_sign(fa, fc):
             b = c; fb = fc
         else:
             a = c; fa = fc
@@ -718,14 +772,16 @@ def bisection(f, a, b, es=1e-7, maxit=200):
 
 
 def false_position(f, a, b, es=1e-7, maxit=200):
+    """Like bisection, but the new point is where the straight line through the two ends crosses zero.
+    One end can stay fixed for many steps, and then a small step does not mean a small error."""
     fa = f(a); fb = f(b)
-    if fa * fb > 0:
+    if same_sign(fa, fb):
         raise ValueError("no sign change in the bracket")
     hist = []; c_old = a
     for it in range(1, maxit + 1):
         c = b - fb * (a - b) / (fa - fb); fc = f(c)
         ea = abs(c - c_old) / max(abs(c), 1e-300); hist.append(ea); c_old = c
-        if fa * fc <= 0:
+        if not same_sign(fa, fc):
             b = c; fb = fc
         else:
             a = c; fa = fc
@@ -831,7 +887,11 @@ def structure(p, scale=1.0):
     if system in ("frame", "dual"):
         Ks += frame_matrix(k)
     if system in ("wall", "dual"):
-        Ks += gauss_jordan_inverse(wall_flexibility(x, float(p["EI"]) * scale))
+        Kw = gauss_jordan_inverse(wall_flexibility(x, float(p["EI"]) * scale))
+        # The exact inverse of a symmetric matrix is symmetric. Rounding leaves the computed one lopsided
+        # by about 1e-11 of its size. Cholesky reads only the lower half, so without this line the static
+        # sway of a 40-storey wall was good to about 5 figures; with it, to about 10.
+        Ks += 0.5 * (Kw + Kw.T)
     return x, m, Ks, k, (system == "frame")
 
 
@@ -886,7 +946,7 @@ def system_modes(mod, nm=3):
         if ph[mod["roof"]] < 0:
             ph = -ph
         out.append({"T": 2 * math.pi / math.sqrt(lam), "f": math.sqrt(lam) / (2 * math.pi),
-                    "shape": [float(v) for v in ph], "iters": it})
+                    "shape": [float(v) for v in ph], "iters": it, "capped": it >= INVERSE_MAXIT})
     return out
 
 
@@ -937,16 +997,18 @@ def design_stiffness(p):
     while f(hi) > 0 and hi < 64.0:
         hi *= 2.0
     if f(lo) < 0:
-        return {"error": "the drift limit is met even with almost no column stiffness (other parts, such as bracing, carry the load)"}
-    out["bracket"] = [lo, hi]
+        braced = brace_stiffness(p) > 0.0 and p.get("system", "frame") != "wall"
+        return {"error": "the drift limit is still met with a ten-thousandth of the current stiffness, so there is nothing to design"
+                         + (" (the bracing carries the load)" if braced else "")}
+    out["bracket"] = [lo, hi]; cap = 300          # "capped" = stopped at the cap, so the answer may not have converged
     try:
-        s, it, hist = bisection(f, lo, hi, 1e-6); out["bisection"] = {"s": s, "it": it, "hist": hist}
+        s, it, hist = bisection(f, lo, hi, 1e-6, cap); out["bisection"] = {"s": s, "it": it, "hist": hist, "capped": it >= cap}
     except ValueError:
         return {"error": "no solution up to 60x the current stiffness"}
-    s, it, hist = false_position(f, lo, hi, 1e-6, 300); out["false_position"] = {"s": s, "it": it, "hist": hist}
+    s, it, hist = false_position(f, lo, hi, 1e-6, cap); out["false_position"] = {"s": s, "it": it, "hist": hist, "capped": it >= cap}
     # fixed point: drift is roughly (load / stiffness), so scale stiffness by the drift ratio
-    s, it, hist = fixed_point(lambda q: q * drift_ratio_for_scale(p, q), 1.0, 1e-6, 300)
-    out["fixed_point"] = {"s": s, "it": it, "hist": hist}
+    s, it, hist = fixed_point(lambda q: q * drift_ratio_for_scale(p, q), 1.0, 1e-6, cap)
+    out["fixed_point"] = {"s": s, "it": it, "hist": hist, "capped": it >= cap}
     return out
 
 
@@ -983,8 +1045,11 @@ def sweep(mod, freqs, ag, want_cond=True, want_shapes=True):
     amp = []; und = []; cond = []; A = []; B = []
     for f in freqs:
         Om = 2 * math.pi * f
-        a, b = harmonic_solve(M, mod["C"], mod["K"], F, Om)
-        amp.append(roof_amp(mod, a, b))
+        try:
+            a, b = harmonic_solve(M, mod["C"], mod["K"], F, Om)
+            amp.append(min(roof_amp(mod, a, b), 1e6))
+        except ZeroDivisionError:                      # singular to rounding: an undamped part sitting exactly on its resonance
+            a = b = np.zeros(n); amp.append(1e6)
         if want_shapes:
             A.append([float(v) for v in a]); B.append([float(v) for v in b])
         D = mod["K"] - np.diag(Om * Om * M)
@@ -1004,7 +1069,10 @@ def peak_near_mode(mod, f1, ag, npts=45, lo=0.6, hi=1.45, refine=3):
     so the coarse scan alone would step over it and report too small a peak."""
     M = mod["M"]; F = -M * ag
     def amp(f):
-        a, b = harmonic_solve(M, mod["C"], mod["K"], F, 2 * math.pi * f)
+        try:
+            a, b = harmonic_solve(M, mod["C"], mod["K"], F, 2 * math.pi * f)
+        except ZeroDivisionError:                      # not a usable point; the scan carries on without it
+            return 0.0
         return roof_amp(mod, a, b)
     step = f1 * (hi - lo) / (npts - 1); best = 0.0; fbest = f1
     for i in range(npts):
@@ -1117,7 +1185,7 @@ def euler_demo(p):
         runs.append(r)
     lam_max, _, it = power_iteration(Ks, m)
     tx = [tend * i / 400.0 for i in range(401)]        # the exact answer has its own time grid
-    return {"T1": T1, "runs": runs, "w_max": math.sqrt(lam_max), "power_iters": it, "stop": EULER_STOP,
+    return {"T1": T1, "runs": runs, "w_max": math.sqrt(lam_max), "power_iters": it, "power_capped": it >= POWER_MAXIT, "stop": EULER_STOP,
             "exact_t": tx, "exact": [0.05 * math.cos(w1 * t) for t in tx]}
 
 
@@ -1128,7 +1196,7 @@ def method_race(p):
     x, m, Ks, k, tri = structure(p); w1, _ = first_mode(Ks, m)
     st = static_check(p, x, m, Ks, k, tri, 2 * math.pi / w1); F = st["F"]; n = len(F)
     ref = gauss_solve(Ks, F); rows = []
-    def add(name, u, it, ops):
+    def add(name, u, it, ops):                         # ops: multiplications, divisions, additions and subtractions together, to leading order
         rows.append({"name": name, "it": it, "ops": ops, "bad": bool(not np.all(np.isfinite(u))),
                      "resid": float(np.max(np.abs(Ks @ u - F)) / np.max(np.abs(F))),
                      "diff": float(np.max(np.abs(u - ref)) / np.max(np.abs(ref)))})
@@ -1140,14 +1208,14 @@ def method_race(p):
         e = np.concatenate([[0.0], np.diag(Ks, -1)]); g = np.concatenate([np.diag(Ks, 1), [0.0]])
         add("Thomas (tridiagonal)", thomas(e, np.diag(Ks), g, F), None, 8 * n)
     es = 1e-7; cap = 6000 if (tri and n <= 20) else 800; hists = {}
-    u, it, h = jacobi(Ks, F, es, cap); add("Jacobi", u, it, it * n * n); hists["Jacobi"] = h[::max(1, len(h) // 200)]
-    u, it, h = gauss_seidel(Ks, F, es, cap); add("Gauss-Seidel", u, it, it * n * n); hists["Gauss-Seidel"] = h[::max(1, len(h) // 200)]
+    u, it, h = jacobi(Ks, F, es, cap); add("Jacobi", u, it, 2 * it * n * n); hists["Jacobi"] = h[::max(1, len(h) // 200)]
+    u, it, h = gauss_seidel(Ks, F, es, cap); add("Gauss-Seidel", u, it, 2 * it * n * n); hists["Gauss-Seidel"] = h[::max(1, len(h) // 200)]
     scan = []; best = (None, 10 ** 9, None, None)
     for w in ((1.0, 1.2, 1.4, 1.5, 1.6, 1.7, 1.75, 1.8, 1.85, 1.9, 1.95) if cap > 800 else (1.0, 1.4, 1.7, 1.85, 1.95)):
         u, it, h = sor(Ks, F, w, es, cap); scan.append([w, it])
         if it < best[1]:
             best = (w, it, u, h)
-    add("SOR (best omega = %.2f)" % best[0], best[2], best[1], best[1] * n * n)
+    add("SOR (best omega = %.2f)" % best[0], best[2], best[1], 2 * best[1] * n * n)
     hists["SOR"] = best[3][::max(1, len(best[3]) // 200)]
     return {"rows": rows, "scan": scan, "hists": hists, "n": n, "cond": cond_inf(Ks), "cap": cap}
 
@@ -1162,7 +1230,7 @@ def det_roots(p, nroots=3):
     grid = [top * i / (npts - 1) for i in range(npts)]; vals = [f(v) for v in grid]
     roots = []
     for i in range(npts - 1):
-        if vals[i] * vals[i + 1] < 0 and len(roots) < nroots:
+        if same_sign(vals[i], -vals[i + 1]) and len(roots) < nroots:      # opposite signs: a root lies between
             r, it, _ = bisection(f, grid[i], grid[i + 1], 1e-10)
             roots.append({"lam": r * kref / mref, "it": it})
     sc = max(abs(v) for v in vals) or 1.0
@@ -1257,17 +1325,25 @@ def sta_lta(x, fs, sta=1.0, lta=15.0):
 def pick_arrivals(x, fs, thr=5.0, sta=1.0, lta=15.0, lta2=4.0, guard=3.0):
     """P pick: first time the ratio crosses the threshold.
     S pick: first crossing afterwards, using a short long-window so the
-    fading P wave becomes the new background."""
+    fading P wave becomes the new background. That search can only start
+    guard + lta2 seconds (7 s) after the P pick. If the ratio is already over
+    the threshold at that moment the S wave came earlier and cannot be timed,
+    so no S pick is given. With the default wave speeds the two waves are 7 s
+    apart at 59 km; the P pick is itself a little late, so in practice it is the
+    stations nearer than about 55 km that are not used for distance."""
     r1 = sta_lta(x, fs, sta, lta)
     quiet = [v for v in r1[int((sta + lta) * fs): int((sta + lta) * fs) + int(10 * fs)] if v > 0]
     out = {"ratio": r1, "noise_mean": mean(quiet) if quiet else 0.0, "noise_std": std(quiet) if quiet else 0.0,
-           "tP": None, "tS": None}
+           "tP": None, "tS": None, "too_close": False}
     iP = next((i for i, v in enumerate(r1) if v > thr), None)
     if iP is None:
         return out
     out["tP"] = iP / fs
     r2 = sta_lta(x, fs, sta, lta2); out["ratio2"] = r2
     start = iP + int((guard + lta2) * fs)
+    if start < len(r2) and r2[start] > thr:
+        out["too_close"] = True
+        return out
     iS = next((i for i in range(start, len(r2)) if r2[i] > thr), None)
     if iS is not None:
         out["tS"] = iS / fs
@@ -1305,16 +1381,23 @@ def detect(q):
     vp = float(q.get("vp", 6.0)); vs = float(q.get("vs", 3.5)); thr = float(q.get("thr", 5.0))
     lat0, lon0 = 26.0, 54.0
     ex, ey = to_xy(q["lat"], q["lon"], lat0, lon0); mag = float(q["mag"])
-    used = []; rows = []; first_alarm = None
+    used = []; rows = []; first_alarm = None; false_alarm = False
     for i, s in enumerate(q["stations"]):
         sx, sy = to_xy(s["lat"], s["lon"], lat0, lon0); dtrue = math.hypot(sx - ex, sy - ey)
         rec = synth_seismogram(dtrue, mag, vp, vs, noise=float(q.get("noise", 0.02)), seed=int(q.get("seed", 1)) + i)
         pk = pick_arrivals(rec["x"], rec["fs"], thr)
+        # The recordings are synthetic, so the true arrival is known. A "P pick" more than a second before it
+        # is background noise crossing the threshold. A real network could not tell; here it can be labelled.
+        false_trigger = pk["tP"] is not None and pk["tP"] < rec["tP"] - 1.0
+        # Why a station has no S pick is known here in the same way: the S wave got there before the S search
+        # could begin, 7 s after the P pick. (pick_arrivals itself only notices the cases where the ratio is still high.)
+        too_close = pk["too_close"] or (pk["tP"] is not None and pk["tS"] is None and not false_trigger and rec["tS"] < pk["tP"] + 7.0)
         row = {"name": s["name"], "true": dtrue, "tP_true": rec["tP"], "tS_true": rec["tS"],
-               "tP": pk["tP"], "tS": pk["tS"], "est": None, "ml": None}
+               "tP": pk["tP"], "tS": pk["tS"], "est": None, "ml": None, "too_close": too_close, "false_trigger": false_trigger}
         if pk["tP"] is not None:
             t_alarm = pk["tP"] - rec["pre"]
-            first_alarm = t_alarm if first_alarm is None else min(first_alarm, t_alarm)
+            if first_alarm is None or t_alarm < first_alarm:
+                first_alarm = t_alarm; false_alarm = false_trigger
         if pk["tP"] is not None and pk["tS"] is not None:
             dest = (pk["tS"] - pk["tP"]) * vp * vs / (vp - vs)
             i0 = int(pk["tS"] * rec["fs"]); peak = max(abs(v) for v in rec["x"][i0:])
@@ -1343,7 +1426,7 @@ def detect(q):
         cx, cy = to_xy(c["lat"], c["lon"], lat0, lon0); dc = math.hypot(cx - ex, cy - ey)
         warn = None if first_alarm is None else dc / vs - (first_alarm + delay)
         out["cities"].append({"name": c["name"], "dist": dc, "warn": warn, "s_arrival": dc / vs})
-    out["first_alarm"] = first_alarm
+    out["first_alarm"] = first_alarm; out["false_alarm"] = false_alarm      # false_alarm: the first alert was set off by noise
     return out
 
 
@@ -1352,7 +1435,7 @@ def analyse_record(x, fs, thr=5.0, vp=6.0, vs=3.5):
     mu = mean(x); x = [v - mu for v in x]
     pk = pick_arrivals(x, fs, thr); st = max(1, len(x) // 1500)
     out = {"tP": pk["tP"], "tS": pk["tS"], "x": x[::st], "ratio": pk["ratio"][::st], "dt": st / fs,
-           "noise_mean": pk["noise_mean"], "noise_std": pk["noise_std"], "dist": None}
+           "noise_mean": pk["noise_mean"], "noise_std": pk["noise_std"], "dist": None, "too_close": pk["too_close"]}
     if pk["tP"] is not None and pk["tS"] is not None:
         out["dist"] = (pk["tS"] - pk["tP"]) * vp * vs / (vp - vs)
     return out
@@ -1456,7 +1539,17 @@ def verify():
     chk("Jacobi converges to the same answer", float(np.max(np.abs(jacobi(Kt, bt, 1e-12, 50000)[0] - xt))), 0.0, 1e-7)
     chk("Gauss-Seidel converges to the same answer", float(np.max(np.abs(gauss_seidel(Kt, bt, 1e-12)[0] - xt))), 0.0, 1e-7)
     chk("SOR (omega 1.5) converges to the same answer", float(np.max(np.abs(sor(Kt, bt, 1.5, 1e-12)[0] - xt))), 0.0, 1e-7)
-    chk("Condition number of the identity", cond_inf(np.eye(4)), 1.0, 1e-12)
+    chk("Condition number of [[1,2],[3,4]] by hand", cond_inf(np.array([[1.0, 2.0], [3.0, 4.0]])), 21.0, 1e-12, "row-sum norms 7 and 3")
+    chk("Row-sum norm of [[1,-2],[3,4]]", norm_inf(np.array([[1.0, -2.0], [3.0, 4.0]])), 7.0, 1e-12, "largest row sum; the largest column sum would be 6")
+    chk("Gauss-Jordan inverse needs pivoting too", float(gauss_jordan_inverse(Z)[0, 1]), 1.0 / 3.0, 1e-12, "inverse of [[0,2],[3,1]] by hand")
+    uneven = np.array([[2e13, 0.0], [0.0, 0.05]])       # sound, but one row is 4e14 times smaller than the other
+    chk("Gauss elimination accepts a badly scaled matrix", float(gauss_solve(uneven, [2e13, 0.1])[1]), 2.0, 1e-12, "a small row is not a zero row")
+    chk("Gauss-Jordan inverse accepts a badly scaled matrix", float(gauss_jordan_inverse(uneven)[1, 1]), 20.0, 1e-12)
+    chk("Jacobi gives up on a matrix where it diverges (sweeps used)", float(jacobi(np.array([[1.0, 3.0], [4.0, 1.0]]), np.array([1.0, 1.0]), 1e-8, 5000)[1]), 24.0, 0.5,
+        "stops when the answer has grown a million million times, long before the cap")
+    chk("False position finds the root of a straight line in one step", float(false_position(lambda v: 2.0 * v - 1.0, 0.0, 3.0)[1]), 1.0, 0.0, "bisection would need about 25")
+    chk("Root finders work on a function of size 1e-200", bisection(lambda v: 1e-200 * (v - 2.0), 0.0, 3.0, 1e-12)[0], 2.0, 1e-9,
+        "the sign test must not multiply two tiny numbers")
     # --- natural frequencies
     N = 8; k = 4e8; m = 3e5; K = frame_matrix([k] * N); mv = np.full(N, m)
     lams, _, _ = inverse_iteration(K, mv, 3)
@@ -1468,7 +1561,7 @@ def verify():
     chk("2-storey hand case: mode 2", l2[1], (3 + math.sqrt(5)) / 2 * k / m, 1e-9, "(3+sqrt5)/2 k/m")
     lam_max, _, _ = power_iteration(K, mv)
     chk("Power iteration: highest frequency (rad/s)", math.sqrt(lam_max),
-        2 * math.sqrt(k / m) * math.sin((2 * N - 1) * math.pi / (2 * (2 * N + 1))), 1e-4)
+        2 * math.sqrt(k / m) * math.sin((2 * N - 1) * math.pi / (2 * (2 * N + 1))), 1e-7, "closed-form formula")
     p = {"N": N, "h": 3.2, "m": [m] * N, "k": [k] * N, "system": "frame"}
     dr = det_roots(p, 2)
     chk("det(K - lambda M) = 0 by bisection matches mode 1", dr["roots"][0]["lam"], lams[0], 1e-7)
@@ -1479,34 +1572,78 @@ def verify():
     F2 = wall_flexibility([3.0, 6.0], EI)
     chk("Wall, 2 floors: off-diagonal = 5 h^3 / 6EI", F2[0, 1], 5 * 27.0 / (6 * EI), 1e-12)
     Nw = 30; hw = 3.2; xw = hw * np.arange(1, Nw + 1); mw = np.full(Nw, 4e5)
+    mw[-1] *= 0.5                                       # a smooth beam's top half-storey of mass belongs to the roof; the rest hangs below
     lw, _, _ = inverse_iteration(gauss_jordan_inverse(wall_flexibility(xw, EI)), mw, 1)
-    cont = 1.8751 ** 2 * math.sqrt(EI / ((4e5 / hw) * (Nw * hw) ** 4))
-    chk("Wall, 30 floors: frequency vs continuous-beam formula", math.sqrt(lw[0]), cont, 0.06, "lumped floors vs a smooth beam")
+    cont = 1.875104 ** 2 * math.sqrt(EI / ((4e5 / hw) * (Nw * hw) ** 4))
+    chk("Wall, 30 floors: frequency vs continuous-beam formula", math.sqrt(lw[0]), cont, 2e-3, "lumped floors vs a smooth beam")
+    xs_, ms_, Kw_, kw_, tw_ = structure({"N": 40, "h": 3.2, "m": [4e5] * 40, "k": [3e8] * 40, "system": "wall", "EI": EI})
+    chk("Wall, 40 floors: stiffness matrix is exactly symmetric", float(np.max(np.abs(Kw_ - Kw_.T))), 0.0, 0.0, "Cholesky reads one half")
+    chk("Bracing: stiffness of one diagonal by hand", brace_stiffness({"h": 3.2, "brace": {"on": True, "A": 0.004, "bay": 6.0}}),
+        200e9 * 0.004 / 6.8 * (6.0 / 6.8) ** 2, 1e-12, "(EA / L) cos^2, L = 6.8 m")
     # --- static check
     q = dict(p); x_, m_, Ks_, k_, tri_ = structure(q); w1_, _ = first_mode(Ks_, m_)
     st = static_check(q, x_, m_, Ks_, k_, tri_, 2 * math.pi / w1_)
     chk("Static check: residual of K u = F", st["resid"], 0.0, 1e-10)
-    chk("Static check: storey forces add up to the base force", float(np.sum(st["F"])), st["V"], 1e-12)
+    two = {"N": 2, "h": 3.0, "m": [1e5, 1e5], "k": [2e7, 2e7], "system": "frame", "code": {"SDS": 0.8, "SD1": 0.4, "R": 5.0, "Cd": 4.5, "I": 1.0, "drift": 0.02}}
+    x2, m2, K2, k2, t2 = structure(two)
+    sa = static_check(two, x2, m2, K2, k2, t2, 0.4)     # short period: Cs = SDS / R = 0.16, forces in proportion to height
+    chk("Code load by hand, period 0.4 s: Cs", sa["Cs"], 0.16, 1e-12, "SDS / (R / I)")
+    chk("Code load by hand, period 0.4 s: top storey force (N)", float(sa["F"][1]), 0.16 * 2e5 * G * 2.0 / 3.0, 1e-12, "2/3 of the base force")
+    chk("Code load by hand, period 0.4 s: top storey design drift (m)", float(sa["drift"][1]), 4.5 * (0.16 * 2e5 * G * 2.0 / 3.0) / 2e7, 1e-12, "Cd x force / stiffness")
+    chk("Code load by hand, period 0.4 s: top storey drift / limit", float(sa["ratio"][1]), 4.5 * (0.16 * 2e5 * G * 2.0 / 3.0) / 2e7 / (0.02 * 3.0), 1e-12, "limit = 2% of 3 m")
+    sb = static_check(two, x2, m2, K2, k2, t2, 2.0)     # long period: Cs = SD1 / (T R) = 0.04, height exponent 1.75
+    chk("Code load by hand, period 2 s: Cs", sb["Cs"], 0.04, 1e-12, "SD1 / (T R / I)")
+    chk("Code load by hand, period 2 s: top storey force (N)", float(sb["F"][1]), 0.04 * 2e5 * G * 6.0 ** 1.75 / (3.0 ** 1.75 + 6.0 ** 1.75), 1e-12, "height exponent 1.75")
+    sc = static_check(two, x2, m2, K2, k2, t2, 20.0)    # very long period: the floor 0.044 SDS takes over
+    chk("Code load by hand, period 20 s: Cs floor", sc["Cs"], 0.044 * 0.8, 1e-12, "0.044 SDS I")
+    soft = dict(two, N=3, m=[1e5] * 3, k=[1.3e7, 2e7, 2e7]); x3, m3, K3, k3, t3 = structure(soft)
+    chk("Soft storey rule: 65% of the storey above is flagged", float(len(static_check(soft, x3, m3, K3, k3, t3, 0.4)["soft"])), 1.0, 0.0, "below 70%")
+    soft = dict(soft, k=[1.5e7, 2e7, 2e7]); x3, m3, K3, k3, t3 = structure(soft)
+    chk("Soft storey rule: 75% of the storey above is not flagged", float(len(static_check(soft, x3, m3, K3, k3, t3, 0.4)["soft"])), 0.0, 0.0)
     one = {"N": 1, "h": 3.0, "m": [1e5], "k": [2e7], "system": "frame"}
     x1, m1, K1, k1, t1 = structure(one); s1 = static_check(one, x1, m1, K1, k1, t1, 2 * math.pi / math.sqrt(200.0))
     chk("1-storey: sway = force / stiffness", float(s1["u"][0]), s1["V"] / 2e7, 1e-12)
     ds = design_stiffness(q)
-    chk("Design: false position agrees with bisection", ds["false_position"]["s"], ds["bisection"]["s"], 1e-4)
-    chk("Design: fixed-point agrees with bisection", ds["fixed_point"]["s"], ds["bisection"]["s"], 1e-4)
-    chk("Design: drift ratio at the answer = 1", drift_ratio_for_scale(q, ds["bisection"]["s"]), 1.0, 1e-4)
+    chk("Design: false position agrees with bisection", ds["false_position"]["s"], ds["bisection"]["s"], 1e-5)
+    chk("Design: fixed-point agrees with bisection", ds["fixed_point"]["s"], ds["bisection"]["s"], 1e-5)
+    chk("Design: drift ratio at the answer = 1", drift_ratio_for_scale(q, ds["bisection"]["s"]), 1.0, 1e-5)
     # --- damped shaking
     w0 = 2 * math.pi; z = 0.05; Om = 5.0
     a, b_ = harmonic_solve(np.array([2.0]), np.array([[2 * z * w0 * 2.0]]), np.array([[w0 * w0 * 2.0]]), np.array([3.0]), Om)
     chk("Damped 1-storey: amplitude vs exact formula", math.hypot(a[0], b_[0]),
         1.5 / math.sqrt((w0 ** 2 - Om ** 2) ** 2 + (2 * z * w0 * Om) ** 2), 1e-12)
+    chk("Damped 1-storey: the part that lags the force (sine part) is positive below resonance", float(b_[0]),
+        1.5 * (2 * z * w0 * Om) / ((w0 ** 2 - Om ** 2) ** 2 + (2 * z * w0 * Om) ** 2), 1e-12, "u = a cos + b sin")
     mod = build(dict(p, zeta=1e-9)); Fv = -mod["M"] * 1.0
     a, b_ = harmonic_solve(mod["M"], mod["C"], mod["K"], Fv, 3.0)
     a0 = gauss_solve(mod["K"] - np.diag(9.0 * mod["M"]), Fv)
     chk("Damping -> 0 recovers the undamped answer", float(a[-1]), float(a0[-1]), 1e-6)
     mu = 0.05; f_rule, z_rule = tmd_rule(mu)
     fopt, _, _ = bisection(lambda f: (lambda lr: lr[0] - lr[1])(den_hartog_case(mu, f, z_rule, 401)), 0.85, 1.05, 1e-4)
-    chk("Damper: equal-peak tuning vs textbook 1/(1+mu)", fopt, f_rule, 0.01, "Den Hartog")
-    chk("Damper: peak sway vs textbook sqrt(1 + 2/mu)", max(den_hartog_case(mu, fopt, z_rule)), math.sqrt(1 + 2 / mu), 0.03, "Den Hartog")
+    chk("Damper: equal-peak tuning vs textbook 1/(1+mu)", fopt, f_rule, 1e-3, "Den Hartog")
+    chk("Damper: peak sway vs textbook sqrt(1 + 2/mu)", max(den_hartog_case(mu, fopt, z_rule)), math.sqrt(1 + 2 / mu), 5e-3, "Den Hartog")
+    chk("Damper rule by hand at mu = 5%: tuning", f_rule, 1.0 / 1.05, 1e-12)
+    chk("Damper rule by hand at mu = 5%: damping", z_rule, math.sqrt(0.15 / 8.4), 1e-12, "sqrt(3 mu / (8 (1 + mu)))")
+    # an isolated one-storey building is two masses on two springs, which has a closed-form lowest frequency
+    two_mass = {"N": 1, "h": 3.0, "m": [2e5], "k": [4e7], "system": "frame", "iso": {"on": True, "kb": 1e7, "mb": 1e5, "zb": 0.15}}
+    mod2 = build(two_mass); bq = (1e7 + 4e7) / 1e5 + 4e7 / 2e5; cq = 1e7 * 4e7 / (1e5 * 2e5)
+    chk("Base isolation: lowest frequency of the two-mass system (rad/s)", mod2["w_ref"], math.sqrt((bq - math.sqrt(bq * bq - 4 * cq)) / 2), 1e-9, "roots of a quadratic")
+    chk("Base isolation: isolator damping", float(mod2["C"][0, 0] - mod2["C"][1, 1]), 2 * 0.15 * math.sqrt(1e7 * 3e5), 1e-9, "2 zeta sqrt(kb x total mass)")
+    chk("Base isolation: slab-to-floor coupling", float(mod2["K"][0, 1]), -4e7, 1e-12, "moving the slab alone pulls the floor after it")
+    mvd = build(dict(two, zeta=0.0, visc={"on": True, "c": 5e6}))            # no structural damping, so C is the floor dampers alone
+    chk("Floor dampers: each one joins two neighbouring floors", float(mvd["C"][0, 1]), -5e6, 1e-12, "like the storey springs")
+    chk("Floor dampers: a middle floor feels two of them", float(mvd["C"][0, 0]), 1e7, 1e-12)
+    md_ = build(dict(p, tmd={"on": True, "mu": 0.02, "f": 0.9, "zd": 0.1}))
+    sh_ = [math.sin((j + 1) * math.pi / (2 * N + 1)) for j in range(N)]      # first mode of a uniform chain of storeys, in closed form
+    mm_ = m * sum(v * v for v in sh_) / sh_[-1] ** 2                          # its moving mass, with the shape scaled to 1 at the roof
+    w1_ = 2 * math.sqrt(k / m) * math.sin(math.pi / (2 * (2 * N + 1)))
+    chk("Roof damper: mass = 2% of the first mode's moving mass", md_["tmd_info"]["md"], 0.02 * mm_, 1e-5, "closed-form mode shape")
+    chk("Roof damper: spring = mass x (0.9 x first frequency)^2", md_["tmd_info"]["kd"], 0.02 * mm_ * (0.9 * w1_) ** 2, 1e-5, "closed-form frequency")
+    chk("Roof damper: dashpot = 2 zd x mass x (0.9 x first frequency)", md_["tmd_info"]["cd"], 2 * 0.1 * 0.02 * mm_ * 0.9 * w1_, 1e-5)
+    iso8 = build(dict(p, m=[m * (1.0 + 0.15 * (i % 3)) for i in range(N)], zeta=0.05, iso={"on": True, "kb": 2e7, "mb": 5e5, "zb": 0.15})); Om8 = 0.8 * iso8["w_ref"]
+    a8, b8 = harmonic_solve(iso8["M"], iso8["C"], iso8["K"], -iso8["M"] * 2.0, Om8)       # load = mass x ground acceleration (2 m/s2), floor by floor
+    chk("Sweep of an isolated building: load is mass x acceleration, roof sway is measured from the base slab",
+        sweep(iso8, [Om8 / (2 * math.pi)], 2.0, False, False)["amp"][0], math.hypot(a8[-1] - a8[0], b8[-1] - b8[0]), 1e-9)
     lite = {"N": 1, "h": 3.0, "m": [1e5], "k": [2e7], "system": "frame", "zeta": 0.01}; ml = build(lite)
     chk("Peak search finds a narrow resonance peak (1% damping)", peak_near_mode(ml, ml["w1"] / (2 * math.pi), 1.0),
         1.0 / (200.0 * 2 * 0.01 * math.sqrt(1 - 0.01 ** 2)), 1e-3, "exact one-storey peak")
@@ -1527,22 +1664,36 @@ def verify():
     # --- statistics and regression
     chk("Mean", mean([2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]), 5.0, 1e-12)
     chk("Sample standard deviation", std([2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]), math.sqrt(32.0 / 7.0), 1e-12)
-    chk("Linear interpolation", interp_linear([0.5, 2.5], [1.0, 2.0], 1.0), 1.25, 1e-12)
+    chk("Linear interpolation in a three-point table", interp_linear([0.0, 1.0, 3.0], [0.0, 10.0, 14.0], 2.0), 12.0, 1e-12, "half-way along the second piece")
     hh = [10.0, 20.0, 35.0, 50.0, 80.0, 120.0]; C_, x_e, r2, _ = fit_power_law(hh, [0.05 * v ** 0.85 for v in hh])
     chk("Regression recovers the coefficient", C_, 0.05, 1e-9)
     chk("Regression recovers the exponent", x_e, 0.85, 1e-9)
+    chk("Regression: r^2 of an exact power law", r2, 1.0, 1e-12)
+    # three points (1, 1), (10, 20), (100, 100): the best line in log space has slope 1 and misses by -d, 2d, -d with d = ln(4) / 6
+    my_ = (math.log(20.0) + math.log(100.0)) / 3.0; sst_ = my_ ** 2 + (math.log(20.0) - my_) ** 2 + (math.log(100.0) - my_) ** 2
+    chk("Regression: r^2 of three scattered points by hand", fit_power_law([1.0, 10.0, 100.0], [1.0, 20.0, 100.0])[2], 1.0 - (math.log(4.0) ** 2 / 6.0) / sst_, 1e-12,
+        "1 - (squared misses) / (squared spread), in log space")
     # --- detection
     rec = synth_seismogram(250.0, 6.0, seed=3); pk = pick_arrivals(rec["x"], rec["fs"], 5.0)
-    chk("Trigger: P-wave pick (s)", pk["tP"] or -99, rec["tP"], 0.02, "planted arrival time")
-    chk("Trigger: S-wave pick (s)", pk["tS"] or -99, rec["tS"], 0.02, "planted arrival time")
+    chk("Trigger: P-wave pick is late by (s)", (pk["tP"] or -99) - rec["tP"], 0.0, 0.25, "planted arrival time")
+    chk("Trigger: S-wave pick is late by (s)", (pk["tS"] or -99) - rec["tS"], 0.0, 0.25, "planted arrival time")
+    near = pick_arrivals(synth_seismogram(48.0, 6.0, seed=1)["x"], 20.0, 5.0)
+    chk("Trigger: a station 48 km away gives no S pick rather than a wrong one", 1.0 if near["tS"] is None and near["too_close"] else 0.0, 1.0, 0.0, "S follows P within 7 s")
+    chk("Distance correction of the magnitude scale at 100 km", ml_correction(100.0), 3.0, 1e-12, "Hutton and Boore (1987)")
+    chk("Distance correction of the magnitude scale at 10 km", ml_correction(10.0), 3.0 - 1.110 - 0.00189 * 90.0, 1e-12, "log to base 10")
+    chk("Map: one degree of longitude at 26 N in km", to_xy(26.0, 55.0, 26.0, 54.0)[0], 111.32 * math.cos(math.radians(26.0)), 1e-12)
+    st3 = [{"name": "A", "lat": 26.0, "lon": 54.0}, {"name": "B", "lat": 24.0, "lon": 57.0}, {"name": "C", "lat": 29.0, "lon": 52.0}, {"name": "D", "lat": 23.5, "lon": 51.0}]
+    dq = detect({"lat": 27.0, "lon": 55.0, "mag": 6.5, "stations": st3, "cities": st3[:1], "thr": 5.0, "delay": 4.0, "show": 0})
+    cq_ = to_xy(27.0, 55.0, 26.0, 54.0); dist_a = math.hypot(cq_[0], cq_[1])
+    chk("Warning time = S-wave travel time - (first alert + delay)", dq["cities"][0]["warn"], dist_a / 3.5 - (dq["first_alarm"] + 4.0), 1e-9, "S waves at 3.5 km/s")
+    chk("Magnitude recovered by the whole pipeline", dq["epi"]["ml_mean"], 6.5, 0.01, "reads about 0.025 low: the wave train never quite reaches its nominal height")
     pts = [(0.0, 0.0), (300.0, 20.0), (120.0, 260.0), (-150.0, 180.0)]; tr = (80.0, 140.0)
     lx, ly, _, _ = locate(pts, [math.hypot(tr[0] - a_, tr[1] - b2) for a_, b2 in pts])
     chk("Epicentre x from exact distances (km)", lx, 80.0, 1e-9)
     chk("Epicentre y from exact distances (km)", ly, 140.0, 1e-9)
     sr = seismometer_response(1.0, 0.7, [0.5, 1.0, 3.0])
     chk("Seismometer response vs exact formula", sr[1][1], sr[1][2], 1e-10)
-    tt = [0.0, 0.1, 0.25, 0.3, 0.5, 0.6, 1.0]
-    chk("Resampling by interpolation", resample_uniform(tt, [2 * v for v in tt], 10.0)[7], 1.4, 1e-12)
+    chk("Resampling by interpolation", resample_uniform([0.0, 1.0, 2.0, 4.0], [0.0, 1.0, 4.0, 16.0], 2.0)[6], 10.0, 1e-12, "between the last two points of an uneven record")
     return R
 
 
@@ -1563,6 +1714,8 @@ def _clean(o):
         return float("%.7g" % v)
     if isinstance(o, np.integer):
         return int(o)
+    if isinstance(o, np.bool_):
+        return bool(o)
     return o
 
 
@@ -1584,7 +1737,7 @@ def analyse(p):
     return {"modes": modes, "T_fixed": T_fixed, "static": st, "freqs": freqs, "sweep": sw,
             "roof": mod["roof"], "base": mod["base"], "tmd": mod["tmd"], "tmd_info": mod["tmd_info"],
             "N": mod["N"], "ndof": len(mod["M"]), "warn": warn, "H": H,
-            "K": (mod["K"] / float(np.max(np.abs(mod["K"])))), "condK": cond_inf(mod["Ks"]),
+            "K": (mod["Ks"] / float(np.max(np.abs(mod["Ks"])))), "condK": cond_inf(mod["Ks"]),      # the structure alone, scaled to 1
             "tri": tri, "ag": ag}
 
 
@@ -1610,7 +1763,10 @@ def api(name, payload):
         else: r = {"error": "unknown call " + name}
     except Exception as ex:                             # report the problem to the page
         r = {"error": "%s: %s" % (type(ex).__name__, ex)}
-    return json.dumps(_clean(r))
+    try:
+        return json.dumps(_clean(r))
+    except Exception as ex:                             # a result that cannot be written as JSON is also a reportable problem
+        return json.dumps({"error": "%s: %s" % (type(ex).__name__, ex)})
 </script>
 <script type="text/js-worker" id="worker">
 // Runs the Python solver in a background thread, so the page never freezes while it computes.
@@ -1649,7 +1805,12 @@ onmessage = e => {
 const $ = id => document.getElementById(id);
 const ESC = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
 const esc = s => String(s).replace(/[&<>"']/g, c => ESC[c]);     // for any text that goes into innerHTML
-const fmt = (v, d = 3) => v == null || !isFinite(v) ? "–" : (Math.abs(v) >= 1e5 || (Math.abs(v) < 1e-3 && v !== 0)) ? v.toExponential(2) : Number(v.toPrecision(d)).toString();
+// A number with d significant figures. Very large and very small ones use exponent form, still with d figures.
+function fmt(v, d = 3) {
+  if (v == null || !isFinite(v)) return "–";
+  const r = Number(v.toPrecision(d)), a = Math.abs(r);
+  return a !== 0 && (a >= 1e7 || a < 1e-3) ? r.toExponential() : r.toString();
+}
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const kvHtml = rows => rows.map(r => `<span>${r[0]}</span><span>${r[1]}</span>`).join("");
 const parseRows = txt => txt.split(/\r?\n/).map(l => l.split(/[,;\t ]+/).filter(Boolean).map(Number)).filter(r => r.length && r.every(isFinite));
@@ -1673,6 +1834,7 @@ let R = null;                  // latest analysis result
 let pinned = null;             // sweep curve kept for comparison
 let DET = null, DET_ST = [];   // latest detection result and the station list it was computed for
 let REG = null;                // latest regression result
+let upload = null;             // the user's own recording: {t, x, name, shown}. shown = it is the one on the two record charts
 let tmeasUser = false;         // true once the user has typed a measured period
 let labStamp = null;           // the building the numerics lab last ran on (as JSON)
 const PRESETS = {
@@ -1681,10 +1843,11 @@ const PRESETS = {
   office: {N: 15, mass: 400, stiff: 600, system: "frame", h: 3.6},
   tower: {N: 30, mass: 400, stiff: 300, system: "dual", EI: 3000, h: 3.2},
   soft: {N: 8, mass: 300, stiff: 400, system: "frame", h: 3.2, softStorey: 0.25}};
-const LIMITS = {stiff: [20, 2000], EI: [100, 10000], kb: [1, 400]};
+const LIMITS = {stiff: [20, 2000], EI: [100, 10000], kb: [0.1, 400]};      // slider ranges, in the sliders' own units
 const BANDS = [[1.0, 1.75], [2.9, 4.0]];   // periods (s) reported for distant-earthquake shaking in the UAE
-const CITIES = [["Abu Dhabi", 24.45, 54.38], ["Dubai", 25.20, 55.27], ["Sharjah", 25.35, 55.39], ["Fujairah", 25.13, 56.33],
-  ["Doha", 25.29, 51.53], ["Muscat", 23.59, 58.41], ["Manama", 26.23, 50.59], ["Bandar Abbas", 27.19, 56.27], ["Shiraz", 29.59, 52.58]];
+// name, latitude, longitude, and where its label goes on the map (n, s, e, w of the dot) so that neighbours do not collide
+const CITIES = [["Abu Dhabi", 24.45, 54.38, "s"], ["Dubai", 25.20, 55.27, "w"], ["Sharjah", 25.35, 55.39, "n"], ["Fujairah", 25.13, 56.33, "e"],
+  ["Doha", 25.29, 51.53, "s"], ["Muscat", 23.59, 58.41, "w"], ["Manama", 26.23, 50.59, "n"], ["Bandar Abbas", 27.19, 56.27, "e"], ["Shiraz", 29.59, 52.58, "e"]];
 const STATIONS = [["UOSS (real)", 24.9453, 56.2042], ["Abu Dhabi", 24.45, 54.38], ["Doha", 25.29, 51.53], ["Muscat", 23.59, 58.41], ["Manama", 26.23, 50.59]];
 const MAPBOX = {lon0: 47, lon1: 60, lat0: 22, lat1: 31};
 const EQ = {lat: 27.7, lon: 55.2};
@@ -1705,13 +1868,14 @@ function params() {            // the building in SI units, as the solver expect
 // ------------------------------------------------------------ 3 solver link
 // The worker handles one request at a time, in the order they were sent.
 const solver = (() => {
-  let worker = null, nextId = 1;
-  const waiting = new Map();   // request id -> {resolve, reject}
-  function failAll(err) { for (const w of waiting.values()) w.reject(err); waiting.clear(); }
+  const PATIENCE = 300000;     // ms. A call with no answer after five minutes means the worker is gone: browsers can kill one without telling the page.
+  let worker = null, nextId = 1, crashed = () => {};
+  const waiting = new Map();   // request id -> {resolve, reject, timer}
+  function failAll(err) { for (const w of waiting.values()) { clearTimeout(w.timer); w.reject(err); } waiting.clear(); }
   function start(onProgress, onCrash) {
     if (worker) { worker.terminate(); failAll(new Error("the solver was restarted")); }
     const url = URL.createObjectURL(new Blob([$("worker").textContent], {type: "text/javascript"}));
-    worker = new Worker(url);
+    worker = new Worker(url); crashed = onCrash;
     return new Promise((resolve, reject) => {
       let up = false;
       worker.onmessage = e => {
@@ -1719,7 +1883,7 @@ const solver = (() => {
         if (m.type === "progress") onProgress(m.text);
         else if (m.type === "ready") { up = true; resolve(); }
         else if (m.type === "failed") reject(new Error(m.text));
-        else if (m.type === "result") { const w = waiting.get(m.id); waiting.delete(m.id); if (w) w.resolve(JSON.parse(m.json)); }
+        else if (m.type === "result") { const w = waiting.get(m.id); waiting.delete(m.id); if (w) { clearTimeout(w.timer); w.resolve(JSON.parse(m.json)); } }
       };
       worker.onerror = e => {
         const err = new Error(e.message || "the solver thread stopped");
@@ -1731,7 +1895,9 @@ const solver = (() => {
   // Returns whatever the Python function returned. Expected problems come back as {error: "..."}.
   function call(name, args) {
     return new Promise((resolve, reject) => {
-      const id = nextId++; waiting.set(id, {resolve, reject});
+      const id = nextId++;
+      const timer = setTimeout(() => { if (waiting.has(id)) { const err = new Error("the solver has not answered for five minutes"); failAll(err); crashed(err); } }, PATIENCE);
+      waiting.set(id, {resolve, reject, timer});
       worker.postMessage({type: "call", id, name, payload: JSON.stringify(args || {})});
     });
   }
@@ -1742,9 +1908,9 @@ const solver = (() => {
 
 let solverReady = false, jobs = 0, lastFail = null;
 function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = cls; }
-// Runs one piece of work. The status pill shows "Computing…" until every running job has ended,
+// Runs one piece of work. The status line shows "Computing…" until every running job has ended,
 // and the button that started it (if any) is locked meanwhile so it cannot be pressed twice.
-// An error stays in the pill until the next piece of work starts.
+// An error stays in the status line until the next piece of work starts.
 async function job(fn, btn) {
   if (!jobs) lastFail = null;
   jobs++; setStatus("Computing…", "busy"); if (btn) btn.disabled = true;
@@ -1757,9 +1923,25 @@ async function job(fn, btn) {
 // request was made for; unchanged() says whether the sliders still describe that building when the
 // answer comes back. An answer for a building that has since changed is not applied.
 const structureKey = p => JSON.stringify([p.N, p.h, p.m, p.k, p.system, p.EI, p.brace, p.code]);   // what the static check, the design and the lab depend on
-const snapshot = (keyOf = JSON.stringify) => { const p = params(); return {p, keyOf, key: keyOf(p)}; };
-const unchanged = snap => snap.key === snap.keyOf(params());
+const KEY_OF = {structure: structureKey, all: JSON.stringify};
+const snapshot = (kind = "all") => { const p = params(); return {p, kind, key: KEY_OF[kind](p)}; };
+const unchanged = snap => snap.key === KEY_OF[snap.kind](params());
 const CHANGED = "The building was changed while this was being worked out, so nothing was applied. Press the button again.";
+// The sentence under a design button describes one building. say() writes it and remembers which building;
+// clearStale() wipes the sentences that no longer match the sliders, so an old answer is never left standing.
+const saidFor = new Map();     // element id -> {kind, key}
+// about: a snapshot taken when the request was made (the building the answer is for), or "all" / "structure" for the sliders as they are now
+function say(id, html, about = "all") {
+  $(id).innerHTML = html;
+  saidFor.set(id, typeof about === "string" ? {kind: about, key: KEY_OF[about](params())} : {kind: about.kind, key: about.key});
+}
+function clearStale() {
+  const p = params();
+  for (const [id, was] of saidFor) if (was.key !== KEY_OF[was.kind](p)) {
+    $(id).textContent = ""; saidFor.delete(id);
+    if (id === "designOut") $("cvDesign").hidden = true;
+  }
+}
 // For slider-driven work. While one run is in progress, further requests collapse into a single
 // re-run with the newest settings, so dragging a slider never queues up stale analyses.
 function latest(run) {
@@ -1793,16 +1975,22 @@ function prep(cv) {
 // the window is resized or the colour scheme changes. Nothing is drawn while the canvas is hidden.
 function retained(cv, draw) { cv._draw = draw; if (cv.clientWidth) draw(); }
 function redrawVisible() { for (const cv of document.querySelectorAll("canvas")) if (cv._draw && cv.clientWidth) cv._draw(); }
-function ticks(a, b, n) {
+function ticks(a, b, n) {      // round tick values between a and b, about n of them
   const st = Math.pow(10, Math.floor(Math.log10((b - a) / n))), e = (b - a) / n / st, s = st * (e > 5 ? 10 : e > 2 ? 5 : e > 1 ? 2 : 1), r = [];
-  for (let v = Math.ceil(a / s) * s; v <= b + 1e-9; v += s) r.push(v);
+  for (let k = Math.ceil(a / s - 1e-9); k * s <= b + 1e-9 * s; k++) r.push(k * s);      // k * s, not repeated adding, so that the zero tick is exactly 0
   return r;
+}
+const flat = (lo, hi) => !(hi - lo > 1e-12 * Math.max(Math.abs(lo), Math.abs(hi), 1e-300));      // no spread worth drawing
+function shorten(c, text, width) {      // cut a label to fit, with an ellipsis
+  if (c.measureText(text).width <= width) return text;
+  while (text.length > 1 && c.measureText(text + "…").width > width) text = text.slice(0, -1);
+  return text + "…";
 }
 // series: [{x: [], y: [], color, dash, label, pts, w}]     colours may be CSS variable names such as "--acc"
 // opt: {xl, yl, logx, logy, ymin, ymax, ylim: [lo, hi], bands: [[x0, x1, label]], vl: [[x, label, color, dash]]}
 function plot(cv, series, opt = {}) { retained(cv, () => drawPlot(cv, series, opt)); }
 function drawPlot(cv, series, o) {
-  const [c, W, H] = prep(cv), L = 52, Rm = 10, T = 18, B = 34, ink = css("--ink"), mut = css("--mut");
+  const [c, W, H] = prep(cv), Rm = 10, B = 34, ink = css("--ink"), mut = css("--mut");
   const tx = v => o.logx ? Math.log10(Math.max(v, 1e-300)) : v, ty = v => o.logy ? Math.log10(Math.max(v, 1e-300)) : v;
   const usable = v => v != null && isFinite(v) && !(o.logy && v <= 0);
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
@@ -1810,26 +1998,37 @@ function drawPlot(cv, series, o) {
     if (!usable(s.y[i])) continue;
     x0 = Math.min(x0, tx(s.x[i])); x1 = Math.max(x1, tx(s.x[i])); y0 = Math.min(y0, ty(s.y[i])); y1 = Math.max(y1, ty(s.y[i]));
   }
-  if (!isFinite(x0)) { c.fillStyle = mut; c.fillText("No data yet", L, H / 2); return; }
+  if (!isFinite(x0)) { c.fillStyle = mut; c.fillText("No data yet", 52, H / 2); return; }
   if (o.ymin != null) y0 = ty(o.ymin);                                   // ymin: the axis starts exactly here
   if (o.ymax != null) y1 = Math.min(y1, ty(o.ymax));                     // ymax: the axis never goes above this
   if (o.ylim) { y0 = Math.max(y0, ty(o.ylim[0])); y1 = Math.min(y1, ty(o.ylim[1])); }   // ylim: the axis never goes outside this range
-  if (y1 - y0 < 1e-12) { y1 += 1; y0 -= 1; }
-  if (x1 - x0 < 1e-12) { x1 += 1; x0 -= 1; }
+  if (flat(y0, y1)) { const d = o.logy || y0 === 0 ? 1 : Math.abs(y0) * 0.5; y1 += d; y0 -= d; }
+  if (flat(x0, x1)) { const d = o.logx || x0 === 0 ? 1 : Math.abs(x0) * 0.5; x1 += d; x0 -= d; }
   const pad = (y1 - y0) * 0.06; y1 += pad; if (!o.logy && o.ymin == null) y0 -= pad;
+  // the left margin is as wide as the longest axis number needs; the top margin has a line for each row of the legend
+  const yt = o.logy ? ticks(y0, y1, 5).filter(v => Math.abs(v - Math.round(v)) < 1e-9 || y1 - y0 < 2) : ticks(y0, y1, 5);
+  const ylab = yt.map(v => o.logy ? "1e" + fmt(v, 2) : fmt(v, 3));
+  const L = Math.max(52, Math.ceil(Math.max(0, ...ylab.map(t => c.measureText(t).width))) + (o.yl ? 26 : 12));
+  const legend = []; let lx = L + 6, row = 0;
+  for (const s of series) if (s.label) {
+    const text = shorten(c, s.label, W - Rm - L - 22), w = c.measureText(text).width + 30;
+    if (lx + w - 16 > W - Rm && lx > L + 6) { row++; lx = L + 6; }
+    legend.push({text, x: lx, row, color: s.color}); lx += w;
+  }
+  const T = 18 + 13 * row;
   const X = v => L + (tx(v) - x0) / (x1 - x0) * (W - L - Rm), Y = v => H - B - (ty(v) - y0) / (y1 - y0) * (H - T - B);
+  const bandLabels = [];
   for (const b of o.bands || []) {                       // shaded ranges
     const a = Math.max(L, X(b[0])), z = Math.min(W - Rm, X(b[1])); if (z <= a) continue;
     c.fillStyle = css("--band"); c.globalAlpha = 0.16; c.fillRect(a, T, z - a, H - T - B); c.globalAlpha = 1;
-    if (b[2]) { c.fillStyle = mut; c.fillText(b[2], a + 2, T + 10); }
+    if (b[2]) bandLabels.push([b[2], a + 2]);
   }
   c.strokeStyle = css("--grid"); c.fillStyle = mut; c.lineWidth = 1;
-  const yt = o.logy ? ticks(y0, y1, 5).filter(v => Math.abs(v - Math.round(v)) < 1e-9 || y1 - y0 < 2) : ticks(y0, y1, 5);
-  for (const v of yt) {                                  // grid lines and axis numbers
+  yt.forEach((v, i) => {                                 // grid lines and axis numbers
     const yy = H - B - (v - y0) / (y1 - y0) * (H - T - B);
     c.beginPath(); c.moveTo(L, yy); c.lineTo(W - Rm, yy); c.stroke();
-    c.textAlign = "right"; c.fillText(o.logy ? "1e" + fmt(v, 2) : fmt(v, 3), L - 5, yy + 3);
-  }
+    c.textAlign = "right"; c.fillText(ylab[i], L - 5, yy + 3);
+  });
   for (const v of ticks(x0, x1, 6)) {
     const xx = L + (v - x0) / (x1 - x0) * (W - L - Rm);
     c.beginPath(); c.moveTo(xx, T); c.lineTo(xx, H - B); c.stroke();
@@ -1858,11 +2057,16 @@ function drawPlot(cv, series, o) {
     c.strokeStyle = col; c.lineWidth = 1.2; c.setLineDash(v[3] || []); c.beginPath(); c.moveTo(X(v[0]), T); c.lineTo(X(v[0]), H - B); c.stroke(); c.setLineDash([]);
     if (v[1]) { c.fillStyle = col; c.textAlign = "left"; c.fillText(v[1], X(v[0]) + 3, T + 22 + 12 * (vi++ % 3)); }
   }
+  for (const [text, x] of bandLabels) {                  // written last and on a backing, so no curve or marker line runs through the words
+    c.textAlign = "left"; const wide = c.measureText(text).width;
+    c.fillStyle = css("--card"); c.globalAlpha = 0.9; c.fillRect(x - 3, T + 1, wide + 6, 13); c.globalAlpha = 1;
+    c.fillStyle = mut; c.fillText(text, x, T + 10);
+  }
   c.restore();
-  let lx = L + 6; c.textAlign = "left";
-  for (const s of series) if (s.label) {                 // legend
-    c.fillStyle = colour(s.color) || css("--acc"); c.fillRect(lx, 5, 10, 3);
-    c.fillStyle = ink; c.fillText(s.label, lx + 14, 11); lx += c.measureText(s.label).width + 30;
+  c.textAlign = "left";
+  for (const g of legend) {
+    c.fillStyle = colour(g.color) || css("--acc"); c.fillRect(g.x, 5 + 13 * g.row, 10, 3);
+    c.fillStyle = ink; c.fillText(g.text, g.x + 14, 11 + 13 * g.row);
   }
 }
 
@@ -1884,10 +2088,10 @@ function drawGround(c, W, y, cx, wave) {
   c.strokeStyle = css("--ink"); c.lineWidth = 1.3; c.beginPath(); c.moveTo(14, y); c.lineTo(W - 14, y); c.stroke();
 }
 // disp: sideways offset of every degree of freedom in "floor widths"; colors: per-storey colour, or null
-// opt: {labels: text beside each storey, note: [small line, value line] beside the roof, wave: phase of the ground wave}
+// opt: {labels: text beside each storey, mark: a storey whose label is always shown, note: [small line, value line] beside the roof, wave: phase of the ground wave}
 function drawBuilding(cv, disp, colors, opt = {}) {
   const [c, W, H] = prep(cv);
-  const N = R.N, iso = R.base != null, ground = H - 26, top = 40, slab = 4;
+  const N = R.N, iso = R.base != null, wall = S.system === "wall", ground = H - 26, top = 40, slab = 4;
   const fh = Math.min(46, (ground - top) / (N + (iso ? 0.6 : 0))), fw = Math.min(150, W * 0.34), cx = W / 2, half = 0.46 * fw;
   const off = iso ? 1 : 0, ink = css("--ink"), mut = css("--mut"), line = css("--line"), paper = css("--card"), acc = css("--acc"), acc2 = css("--acc2");
   drawGround(c, W, ground, cx, opt.wave);
@@ -1915,16 +2119,18 @@ function drawBuilding(cv, disp, colors, opt = {}) {
   const hit = [];
   c.font = FONT(11);
   for (let j = 0; j < N; j++) {                                         // pass 2: columns, bracing, dampers, floor slabs, labels
-    const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab, roof = j === N - 1;
-    if (S.brace) { c.lineWidth = 1; c.strokeStyle = mut; c.beginPath(); c.moveTo(x0 - half, y0); c.lineTo(x1 + half, y1); c.stroke(); }
+    const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab, roof = j === N - 1, picked = j === sel;
+    // a wall-only building has no columns or braces in the model, so the drawing shows neither stiffness multipliers nor braces
+    if (S.brace && !wall) { c.lineWidth = 1; c.strokeStyle = mut; c.beginPath(); c.moveTo(x0 - half, y0); c.lineTo(x1 + half, y1); c.stroke(); }
     if (S.visc) { c.strokeStyle = acc2; c.lineWidth = 2; c.beginPath(); c.moveTo(x0 + 0.2 * fw, y0); c.lineTo(x1 + 0.36 * fw, y1); c.stroke(); }
-    c.strokeStyle = colors ? colors[j] : ink; c.lineWidth = 2 * clamp(Math.sqrt(kMul[j] || 1), 0.6, 2);                         // thicker = stiffer storey
+    c.strokeStyle = colors ? colors[j] : ink; c.lineWidth = 2 * (wall ? 1 : clamp(Math.sqrt(kMul[j] || 1), 0.6, 2));                 // thicker = stiffer storey
     for (const s of [-1, 1]) { c.beginPath(); c.moveTo(x0 + s * half, y0); c.lineTo(x1 + s * half, y1); c.stroke(); }
     const th = (roof ? 6 : 3.5) * clamp(Math.sqrt(mMul[j] || 1), 0.7, 2.2), over = roof ? 7 : 3;                               // thicker = heavier floor
-    c.fillStyle = j === sel ? acc2 : roof ? acc : ink; c.fillRect(x1 - half - over, y1 - th, 2 * (half + over), th);
+    c.fillStyle = picked ? acc2 : roof ? acc : ink; c.fillRect(x1 - half - over, y1 - th, 2 * (half + over), th);
     hit.push([Y[j] - fh * 0.2, Y[j] + fh * 0.8, j]);
-    if (N <= 20 || (j + 1) % 5 === 0) { c.fillStyle = mut; c.textAlign = "right"; c.fillText(j + 1, cx - fw * 0.95, Y[j] + 6); }
-    if (opt.labels) { c.fillStyle = colors ? colors[j] : mut; c.textAlign = "left"; c.fillText(opt.labels[j], cx + fw * 0.95, Y[j] + fh / 2 + 6); }
+    const thin = N > 20 && (j + 1) % 5 !== 0;                           // tall buildings: number and label every fifth storey only
+    if (!thin || picked) { c.fillStyle = picked ? acc2 : mut; c.textAlign = "right"; c.fillText((picked ? "▸ " : "") + (j + 1), cx - fw * 0.95, Y[j] + 6); }   // the arrow marks the floor being edited
+    if (opt.labels && (!thin || j === opt.mark)) { c.fillStyle = colors ? colors[j] : mut; c.textAlign = "left"; c.fillText(opt.labels[j], cx + fw * 0.95, Y[j] + fh / 2 + 6); }
   }
   if (R.tmd != null) {                                                  // damper block riding on the roof
     const x = cx + disp[R.tmd] * fw, y = Y[N - 1] - 13;
@@ -1933,13 +2139,17 @@ function drawBuilding(cv, disp, colors, opt = {}) {
     c.fillStyle = paper; c.fill(); c.strokeStyle = acc; c.lineWidth = 1.6; c.stroke();
   }
   if (opt.note) {                                                       // two lines beside the roof, kept inside the canvas
-    const yr = Y[N - 1], put = (text, size, colour, y) => { c.font = FONT(size); c.fillStyle = colour; c.textAlign = "left"; c.fillText(text, Math.min(cx + fw * 0.95, W - 6 - c.measureText(text).width), y); };
+    const yr = Y[N - 1], put = (text, size, col, y) => { c.font = FONT(size); c.fillStyle = col; c.textAlign = "left"; c.fillText(text, Math.min(cx + fw * 0.95, W - 6 - c.measureText(text).width), y); };
     put(opt.note[0], 9.5, mut, yr - 15); put(opt.note[1], 11.5, ink, yr - 2);
   }
   cv._hit = hit;                                                        // rows of [y from, y to, floor] for clicks
 }
 const driftColor = r => Math.abs(r) > 1 ? css("--bad") : Math.abs(r) > 0.7 ? css("--warn") : css("--ok");
 const tabOn = t => $("t-" + t).classList.contains("on");
+// The damper moves several times further than the roof. The drawings are scaled to the building, and the
+// damper's travel is cut off at 0.8 of a floor width so that it stays in the picture.
+const withoutDamper = arr => arr.filter((_, i) => i !== R.tmd);
+function keepDamperIn(d) { if (R.tmd != null) d[R.tmd] = clamp(d[R.tmd], -0.8, 0.8); return d; }
 
 // t = time in ms for the animation, or null for one still picture at full sway
 function drawBuildView(t) {
@@ -1948,18 +2158,21 @@ function drawBuildView(t) {
   if (view === "static") {
     const mx = Math.max(...st.u.map(Math.abs)) || 1, g = t == null ? 1 : 0.5 + 0.5 * Math.sin(t / 700);
     for (let j = 0; j < R.N; j++) d[j + off] = st.u[j] / mx * 0.35 * g;
-    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), note: ["ROOF ↗", fmt(Math.abs(st.u[R.N - 1]) * 1000) + " mm"]});
+    if (R.tmd != null) d[R.tmd] = d[R.roof];           // the static check has no dynamics: the damper simply sits on the roof
+    const worst = st.ratio.reduce((best, r, j) => Math.abs(r) > Math.abs(st.ratio[best]) ? j : best, 0);
+    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), mark: worst, note: ["ROOF ↗", fmt(Math.abs(st.u[R.N - 1]) * 1000) + " mm"]});
   } else {
     const mo = R.modes[+view], s = t == null ? 1 : Math.sin(t / 1000 * 2 * Math.PI / clamp(mo.T, 0.6, 3));
-    for (let i = 0; i < R.ndof; i++) d[i] = mo.shape[i] * 0.3 * s;
-    drawBuilding($("cvB"), d, null, {note: ["MODE SHAPE", `φ${+view + 1}(z)`]});
+    const mx = Math.max(...withoutDamper(mo.shape).map(Math.abs)) || 1;
+    for (let i = 0; i < R.ndof; i++) d[i] = mo.shape[i] / mx * 0.3 * s;
+    drawBuilding($("cvB"), keepDamperIn(d), null, {note: ["MODE SHAPE", `φ${+view + 1}(z)`]});
   }
 }
 function drawShakeView(t) {
   const i = fIdx(), a = R.sweep.A[i], b = R.sweep.B[i], r = R.roof;
   const ph = t == null ? Math.atan2(b[r], a[r]) : t / 1000 * 2 * Math.PI * 0.7;      // still picture: the moment of largest roof sway
-  const mx = Math.max(...a.map((v, k) => Math.hypot(v, b[k]))) || 1;
-  drawBuilding($("cvS"), a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * 0.32), null, {wave: ph, note: ["ROOF ↗", fmt(R.sweep.amp[i] * 1000) + " mm"]});
+  const mx = Math.max(...withoutDamper(a.map((v, k) => Math.hypot(v, b[k])))) || 1;
+  drawBuilding($("cvS"), keepDamperIn(a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * 0.32)), null, {wave: ph, note: ["ROOF ↗", fmt(R.sweep.amp[i] * 1000) + " mm"]});
 }
 // The two building drawings are animated. People who ask their system for reduced motion get a still picture.
 const stillOnly = matchMedia("(prefers-reduced-motion: reduce)");
@@ -1985,13 +2198,14 @@ async function freshAnalysis() { if (Rkey !== JSON.stringify(params())) await an
 const requestAnalysis = latest(analyse);
 const settle = debounce(requestAnalysis, 120);
 function refresh() { if (solverReady) stageState("○ Computing…"); settle(); }
-function renderAll() { renderBuild(); renderShake(); drawNow(); markLabStale(); stageState("● Response computed"); }
+function renderAll() { renderBuild(); renderShake(); drawNow(); markLabStale(); clearStale(); stageState("● Response computed"); }
 const SYSTEM_NAMES = {frame: "frame", wall: "wall", dual: "frame + core"};
-function stageCaptions() {                                              // the lines above the two building drawings
+function stageCaptions() {                                              // the lines above and below the two building drawings
   if (!R) return;
   const what = `${R.N}-storey ${SYSTEM_NAMES[S.system]}`, mo = view === "static" ? null : R.modes[+view];
   $("capB1").innerHTML = `${what} / <b>${mo ? "mode 0" + (+view + 1) : "code load"}</b>`;
   $("capB2").textContent = mo ? `Period ${fmt(mo.T)} s · ${fmt(mo.f)} Hz` : "Sway exaggerated";
+  $("capB3").textContent = R.base != null ? "Ground / on base isolators" : "Ground / fixed base";
   $("capS1").innerHTML = `${what} / <b>${fmt(R.freqs[fIdx()])} Hz</b>`;
   $("capS2").textContent = `Roof sway ${fmt(R.sweep.amp[fIdx()] * 1000)} mm`;
 }
@@ -2008,9 +2222,9 @@ function renderBuild() {
   $("warnB").innerHTML = R.warn.map(w => `<div class="warnbox">${esc(w)}</div>`).join("");
   // the calculation trail
   $("kvB").innerHTML = kvHtml([["Height", fmt(R.H) + " m"], ["Period, mode 1", fmt(m[0].T) + " s"], ["Period, mode 2", m[1] ? fmt(m[1].T) + " s" : "–"], ["Period, mode 3", m[2] ? fmt(m[2].T) + " s" : "–"],
-    ["Inverse-iteration steps", m.map(v => v.iters).join(", ")], ["Building weight", fmt(st.W / 1000, 4) + " kN"], ["Code load factor Cs", fmt(st.Cs)], ["Total sideways force", fmt(st.V / 1000, 4) + " kN"],
+    ["Inverse-iteration steps", m.map(v => v.iters + (v.capped ? " (cut off)" : "")).join(", ")], ["Building weight", fmt(st.W / 1000, 4) + " kN"], ["Code load factor Cs", fmt(st.Cs)], ["Total sideways force", fmt(st.V / 1000, 4) + " kN"],
     ["Linear solver used", esc(st.solver)], ["Residual of K·u = F", fmt(st.resid, 2)], ["Condition number of K", fmt(R.condK, 3)],
-    ["Worst drift ÷ limit", `<span class="${fails ? "fail" : "pass"}">${fmt(st.max_ratio)} ${fails ? "FAIL" : "PASS"}</span>`]]);
+    ["Worst drift ÷ limit", `<b class="${fails ? "fail" : "pass"}">${fmt(st.max_ratio)} ${fails ? "FAIL" : "PASS"}</b>`]]);
   let rows = `<tr><th>Storey</th><th class="n">Force (kN)</th><th class="n">Sway, elastic (mm)</th><th class="n">Design drift (mm)</th><th class="n">Limit (mm)</th><th></th></tr>`;
   for (let j = R.N - 1; j >= 0; j--) {
     const bad = Math.abs(st.ratio[j]) > 1;
@@ -2036,7 +2250,7 @@ function renderShake() {
   const pk = Math.max(...sw.amp), ip = sw.amp.indexOf(pk);
   plot($("cvSweep"), ser, {xl: "shaking frequency (Hz)", yl: "roof sway (mm)", logy: true, bands, ymax: pk * 1000 * 30, vl: [[f[i], "", "--ink"]]});
   plot($("cvCond"), [{x: f, y: sw.cond, color: "--acc2"}], {xl: "shaking frequency (Hz)", yl: "condition number", logy: true, vl: R.modes.map((m, k) => [m.f, "mode " + (k + 1), "--mut", [3, 3]])});
-  $("vfreq").textContent = fmt(f[i]) + " Hz";
+  $("vfreq").textContent = fmt(f[i]) + " Hz"; $("freq").setAttribute("aria-valuetext", fmt(f[i]) + " hertz");      // the slider itself only knows 0 to 100
   $("kvS").innerHTML = kvHtml([["Period at this frequency", fmt(1 / f[i]) + " s"], ["Roof sway here", fmt(sw.amp[i] * 1000) + " mm"], ["Largest roof sway", fmt(pk * 1000) + " mm at " + fmt(f[ip]) + " Hz"],
     ["Condition number here", fmt(sw.cond[i], 3)], ["Unknowns in the damped system", 2 * R.ndof]]);
   const T1 = R.modes[0].T, hit = BANDS.find(b => T1 >= b[0] && T1 <= b[1]);
@@ -2048,19 +2262,22 @@ function renderShake() {
 const IDS = ["N", "h", "mass", "stiff", "EI", "braceA", "SDS", "SD1", "R", "Cd", "dlim", "zeta", "ag", "mu", "tf", "zd", "target", "kb", "Tiso", "vc", "mag", "noise", "thr", "delay"];
 const DETECT_IDS = ["mag", "noise", "thr", "delay"];
 const DESIGN_ONLY_IDS = ["target", "Tiso"];                 // inputs to a design button; they do not change the analysis
-const PRESET_IDS = ["N", "h", "mass", "stiff", "EI"];        // changing one of these means the preset no longer describes the building
+const PRESET_IDS = ["N", "h", "mass", "stiff", "EI", "braceA", "mu", "tf", "zd", "kb", "vc"];   // changing one of these means the set-up is no longer the preset
+const custom = () => { $("preset").value = ""; };
 // The filled part of a slider's rail is drawn by CSS from --p, the thumb's position in percent.
 function paintSlider(el) { const lo = +el.min || 0, hi = el.max === "" ? 100 : +el.max; el.style.setProperty("--p", (hi > lo ? (+el.value - lo) / (hi - lo) * 100 : 0) + "%"); }
 document.addEventListener("input", e => { if (e.target.type === "range") paintSlider(e.target); });
 function syncInputs() {                                      // copy the state into every control
   for (const id of IDS) { $(id).value = S[id]; $("v" + id).textContent = S[id]; }
   for (const id of ["brace", "tmd", "iso", "visc", "iran"]) $(id).checked = S[id];
-  $("system").value = S.system; $("eiRow").hidden = S.system === "frame"; $("braceRow").hidden = !S.brace;
+  const wall = S.system === "wall";                          // a wall-only building has no columns or braces in the model
+  $("system").value = S.system; $("eiRow").hidden = S.system === "frame"; $("braceRow").hidden = !S.brace || wall; $("wallNote").hidden = !wall;
+  for (const id of ["stiff", "brace", "braceA"]) $(id).disabled = wall;
   $("tmdRow").hidden = !S.tmd; $("isoRow").hidden = !S.iso; $("viscRow").hidden = !S.visc;
   const fl = $("floorSel");
   if (fl.options.length !== S.N + 1) fl.innerHTML = `<option value="-1">None</option>` + Array.from({length: S.N}, (_, j) => `<option value="${j}">Floor ${j + 1}</option>`).join("");
   fl.value = sel;
-  $("mMul").disabled = $("kMul").disabled = sel < 0;
+  $("mMul").disabled = sel < 0; $("kMul").disabled = sel < 0 || wall;
   if (sel >= 0) { $("mMul").value = mMul[sel]; $("kMul").value = kMul[sel]; $("vmMul").textContent = "×" + mMul[sel]; $("vkMul").textContent = "×" + kMul[sel]; }
   else $("vmMul").textContent = $("vkMul").textContent = "";
   $("eqLat").value = EQ.lat.toFixed(2); $("eqLon").value = EQ.lon.toFixed(2);
@@ -2074,71 +2291,86 @@ function applyPreset(name) {
   mMul = []; kMul = []; sel = -1; resize();
   if (softStorey) kMul[0] = softStorey;
   pinned = null; tmeasUser = false; $("kb").max = LIMITS.kb[1]; S.kb = Math.min(S.kb, LIMITS.kb[1]);
-  $("designOut").textContent = ""; $("cvDesign").hidden = true; $("preset").value = name;
+  $("preset").value = name;
   syncInputs(); refresh();
 }
-// Sets the column stiffness (and the core stiffness, if there is a core) from a design result.
-// Returns a sentence for the user when a slider limit got in the way.
-function setStiffness(stiff, EI) {
-  const s2 = clamp(stiff, ...LIMITS.stiff), e2 = clamp(EI, ...LIMITS.EI), core = S.system !== "frame";
-  S.stiff = s2; if (core) S.EI = e2;
-  $("preset").value = ""; syncInputs();
-  return s2 !== stiff || (core && e2 !== EI) ? " The value needed is outside the slider range, so it was capped and the result will not match exactly." : "";
+// Scales the stiffness by a design result s: the columns' (frame, frame + core) and the core's EI (wall, frame + core).
+// stiff0 and EI0 are the values the result was worked out for. round is Math.ceil or Math.round.
+// Returns what was set, in words, and a sentence when a slider limit got in the way.
+function applyScale(s, stiff0, EI0, round) {
+  const set = []; let capped = false;
+  if (S.system !== "wall") { const want = round(s * stiff0 / 10) * 10, got = clamp(want, ...LIMITS.stiff); capped = capped || got !== want; S.stiff = got; set.push(`column stiffness ${got} kN/mm per storey`); }
+  if (S.system !== "frame") { const want = round(s * EI0 / 100) * 100, got = clamp(want, ...LIMITS.EI); capped = capped || got !== want; S.EI = got; set.push(`core stiffness EI ${got} GN·m²`); }
+  custom(); syncInputs();
+  return {text: set.join(" and "), capped: capped ? " A value needed is outside its slider's range, so it was capped and the result will not match exactly." : ""};
 }
 for (const id of IDS) $(id).addEventListener("input", e => {
   S[id] = +e.target.value;
   if (id === "N") resize();
-  if (PRESET_IDS.includes(id)) $("preset").value = "";
+  if (PRESET_IDS.includes(id)) custom();
   syncInputs();
-  if (DETECT_IDS.includes(id)) refreshDetect(); else if (!DESIGN_ONLY_IDS.includes(id)) refresh();
+  if (DETECT_IDS.includes(id)) { refreshDetect(); if (id === "thr") reanalyseUpload(); } else if (!DESIGN_ONLY_IDS.includes(id)) refresh();
 });
-for (const id of ["brace", "tmd", "iso", "visc"]) $(id).addEventListener("change", e => { S[id] = e.target.checked; syncInputs(); refresh(); });
-$("system").addEventListener("change", e => { S.system = e.target.value; $("preset").value = ""; syncInputs(); refresh(); });
+for (const id of ["brace", "tmd", "iso", "visc"]) $(id).addEventListener("change", e => { S[id] = e.target.checked; custom(); syncInputs(); refresh(); });
+$("system").addEventListener("change", e => { S.system = e.target.value; custom(); syncInputs(); refresh(); });
 $("preset").addEventListener("change", e => applyPreset(e.target.value));
 $("floorSel").addEventListener("change", e => selectFloor(+e.target.value));
-$("mMul").addEventListener("input", e => { if (sel >= 0) { mMul[sel] = +e.target.value; syncInputs(); refresh(); } });
-$("kMul").addEventListener("input", e => { if (sel >= 0) { kMul[sel] = +e.target.value; syncInputs(); refresh(); } });
+$("mMul").addEventListener("input", e => { if (sel >= 0) { mMul[sel] = +e.target.value; custom(); syncInputs(); refresh(); } });
+$("kMul").addEventListener("input", e => { if (sel >= 0) { kMul[sel] = +e.target.value; custom(); syncInputs(); refresh(); } });
 $("cvB").addEventListener("click", e => { const y = e.offsetY, h = ($("cvB")._hit || []).find(r => y >= r[0] && y <= r[1]); selectFloor(h ? h[2] : -1); });
 $("viewBtns").addEventListener("click", e => { const v = e.target.dataset.v; if (v == null || e.target.disabled) return; setView(v); drawNow(); });
 $("freq").addEventListener("input", () => { if (R) { renderShake(); drawNow(); } });
 
 const HIST_COLOURS = {bisection: "--acc", false_position: "--acc2", fixed_point: "--ok"};
 const histSeries = d => Object.keys(HIST_COLOURS).filter(k => d[k] && d[k].hist).map(k => ({x: d[k].hist.map((_, i) => i + 1), y: d[k].hist, color: HIST_COLOURS[k], label: `${k.replace("_", " ")} (${d[k].it})`}));
+const stepsOf = r => r.it + (r.capped ? " (stopped at its cap before it converged)" : "");
 onClick("btnDesign", async () => {
-  const snap = snapshot(structureKey), stiff0 = S.stiff, EI0 = S.EI;
+  const snap = snapshot("structure"), stiff0 = S.stiff, EI0 = S.EI, system = S.system;
   const d = await solver.call("design_stiffness", snap.p);
-  if (!unchanged(snap)) { $("designOut").textContent = CHANGED; $("cvDesign").hidden = true; return; }
-  if (d.error) { $("designOut").textContent = d.error; $("cvDesign").hidden = true; return; }
-  const s = d.bisection.s, stiff = Math.ceil(s * stiff0 / 10) * 10, EI = Math.ceil(s * EI0 / 100) * 100;
-  $("designOut").innerHTML = `Stiffness must be at least <b>×${fmt(s, 4)}</b> of the current value (${fmt(s * stiff0, 4)} kN/mm per storey).<br>Iterations: bisection ${d.bisection.it}, false position ${d.false_position.it}, fixed-point ${d.fixed_point.it}. Their convergence is charted in the calculation trail. <button class="b" id="btnApply">Apply</button><span id="applyNote"></span>`;
+  if (!unchanged(snap)) { say("designOut", CHANGED, "structure"); $("cvDesign").hidden = true; return; }
+  if (d.error) { say("designOut", esc(d.error), "structure"); $("cvDesign").hidden = true; return; }
+  const s = d.bisection.s, cols = `${fmt(s * stiff0, 4)} kN/mm per storey`, core = `${fmt(s * EI0, 4)} GN·m²`;
+  const need = system === "frame" ? `Column stiffness must be at least <b>×${fmt(s, 4)}</b> of the current value (${cols}).`
+    : system === "wall" ? `The core's stiffness EI must be at least <b>×${fmt(s, 4)}</b> of the current value (${core}).`
+    : `Column stiffness and the core's EI must both be at least <b>×${fmt(s, 4)}</b> of their current values (${cols} and ${core}).`;
+  say("designOut", `${need}<br>Iterations: bisection ${stepsOf(d.bisection)}, false position ${stepsOf(d.false_position)}, fixed-point ${stepsOf(d.fixed_point)}. Their convergence is charted in the calculation trail. <button class="b" id="btnApply">Apply</button>`, "structure");
   $("cvDesign").hidden = false; $("trail").open = true; plot($("cvDesign"), histSeries(d), {logy: true, xl: "iteration", yl: "approx. relative error"});
   $("btnApply").onclick = () => {
-    $("btnApply").disabled = true;
-    if (!unchanged(snap)) { $("applyNote").textContent = " The building has changed since this was worked out. Press the design button again."; return; }
-    $("applyNote").textContent = " Applied." + setStiffness(stiff, EI); refresh();
+    if (!unchanged(snap)) { say("designOut", "The building has changed since this was worked out. Press the design button again.", "structure"); return; }
+    const done = applyScale(s, stiff0, EI0, Math.ceil);
+    say("designOut", `Applied: ${done.text}.${done.capped}`, "structure"); refresh();
   };
 });
 onClick("btnRule", async () => {
   const mu = S.mu, r = await solver.must("tmd_rule", {mu: mu / 100});
   if (S.mu !== mu) return;
-  S.tf = +r.f.toFixed(3); S.zd = +(100 * r.zd).toFixed(1); syncInputs(); await analyse();
+  S.tf = +r.f.toFixed(3); S.zd = +(100 * r.zd).toFixed(1); custom(); syncInputs(); await analyse();
 });
 onClick("btnTmd", async () => {
   const snap = snapshot(), d = await solver.call("design_tmd", {p: snap.p, target: S.target / 100});
-  if (!unchanged(snap)) { $("tmdOut").textContent = CHANGED; return; }
-  if (d.error) { $("tmdOut").textContent = d.error; return; }
-  S.mu = +(d.mu * 100).toFixed(1); S.tf = +d.f.toFixed(3); S.zd = +(d.zd * 100).toFixed(1); S.tmd = true; syncInputs();
+  if (!unchanged(snap)) { say("tmdOut", CHANGED); return; }
+  if (d.error) { say("tmdOut", esc(d.error)); return; }
+  S.mu = +(d.mu * 100).toFixed(1); S.tf = +d.f.toFixed(3); S.zd = +(d.zd * 100).toFixed(1); S.tmd = true; custom(); syncInputs();
+  const applied = snapshot();                 // the building with the damper on it: what the sentence below describes
   const cut = `cuts peak sway from ${fmt(d.peak0 * 1000)} to ${fmt(d.peak * 1000)} mm`;
-  $("tmdOut").textContent = d.smallest ? `The smallest damper the search allows, ${fmt(d.mu * 100)}% of the moving mass, already ${cut}, which is more than the target. Applied.`
+  const result = d.smallest ? `The smallest damper the search allows, ${fmt(d.mu * 100)}% of the moving mass, already ${cut}, which is more than the target. Applied.`
     : `Damper mass ${fmt(d.mu * 100)}% of the moving mass ${cut} (${d.it} bisection steps). Applied, rounded to the slider.`;
+  say("tmdOut", result, applied);
   await analyse();
+  if (unchanged(applied) && R.tmd_info && R.tmd_info.md) {      // "moving mass" is the first mode's, which is well under the building's total
+    const total = applied.p.m.reduce((a, b) => a + b, 0);
+    say("tmdOut", `${result} The damper weighs ${fmt(R.tmd_info.md / 1000)} t. The moving mass is the first mode's: the damper is ${fmt(R.tmd_info.md / total * 100, 2)}% of the building's total mass.`, applied);
+  }
 });
 onClick("btnIso", async () => {
   const snap = snapshot(), d = await solver.call("design_isolation", {p: snap.p, T: S.Tiso});
-  if (!unchanged(snap)) { $("isoOut").textContent = CHANGED; return; }
-  if (d.error) { $("isoOut").textContent = d.error; return; }
-  S.kb = Math.max(1, Math.round(d.kb / 1e6)); $("kb").max = Math.max(LIMITS.kb[1], Math.ceil(S.kb / 100) * 100); S.iso = true; syncInputs();
-  $("isoOut").textContent = `Isolator stiffness ${fmt(d.kb / 1e6, 4)} kN/mm gives a first period of ${fmt(d.T, 4)} s (${d.it} bisection steps)${S.tmd ? ", counted without the roof damper" : ""}. Applied, rounded to the slider.`;
+  if (!unchanged(snap)) { say("isoOut", CHANGED); return; }
+  if (d.error) { say("isoOut", esc(d.error)); return; }
+  const need = d.kb / 1e6, kb = Math.max(LIMITS.kb[0], Math.round(need * 10) / 10), off = Math.abs(kb - need) / need;      // the slider moves in steps of 0.1 kN/mm
+  S.kb = kb; $("kb").max = Math.max(LIMITS.kb[1], Math.ceil(kb / 100) * 100); S.iso = true; custom(); syncInputs();
+  say("isoOut", `A first period of ${fmt(d.T, 4)} s needs an isolator stiffness of ${fmt(need, 4)} kN/mm (${d.it} bisection steps)${S.tmd ? ", counted without the roof damper" : ""}. Applied ${kb} kN/mm`
+    + (need < LIMITS.kb[0] ? ", the lowest the slider goes, so the period is shorter than the target."
+      : off > 0.005 ? `, the nearest step of the slider. That is ${fmt(off * 100, 2)}% from what is needed, so the period will be about ${fmt(off * 50, 2)}% off the target.` : "."));
   await analyse();
 });
 $("btnPin").addEventListener("click", () => { if (R) { pinned = {f: R.freqs.slice(), y: R.sweep.amp.map(v => v * 1000)}; renderShake(); } });
@@ -2163,15 +2395,19 @@ function drawMap() {
   const cv = $("cvMap"), [c, W, H] = prep(cv), st = DET_ST;
   const X = lon => 30 + (lon - MAPBOX.lon0) / (MAPBOX.lon1 - MAPBOX.lon0) * (W - 40), Y = lat => H - 20 - (lat - MAPBOX.lat0) / (MAPBOX.lat1 - MAPBOX.lat0) * (H - 30);
   c.strokeStyle = css("--grid"); c.fillStyle = css("--mut");
-  for (let lo = 48; lo <= 60; lo += 2) { c.beginPath(); c.moveTo(X(lo), 10); c.lineTo(X(lo), H - 20); c.stroke(); c.textAlign = "center"; c.fillText(lo + "°E", X(lo), H - 6); }
+  for (let lo = 48; lo <= 60; lo += 2) { c.beginPath(); c.moveTo(X(lo), 10); c.lineTo(X(lo), H - 20); c.stroke(); c.textAlign = lo === 60 ? "right" : "center"; c.fillText(lo + "°E", X(lo), H - 6); }
   for (let la = 22; la <= 31; la += 2) { c.beginPath(); c.moveTo(30, Y(la)); c.lineTo(W - 10, Y(la)); c.stroke(); c.textAlign = "right"; c.fillText(la + "°N", 27, Y(la) + 3); }
   const kx = (X(55) - X(54)) / (111.32 * Math.cos(26 * Math.PI / 180)), ky = (Y(26) - Y(27)) / 110.57;      // pixels per km
+  c.strokeStyle = css("--acc"); c.lineWidth = 1;
   DET.stations.forEach((r, i) => {                                       // distance circles
-    if (r.est == null) return;
-    c.strokeStyle = css("--acc"); c.globalAlpha = 0.45; c.beginPath(); c.ellipse(X(st[i][2]), Y(st[i][1]), Math.abs(r.est * kx), Math.abs(r.est * ky), 0, 0, 7); c.stroke(); c.globalAlpha = 1;
+    if (r.est != null) { c.beginPath(); c.ellipse(X(st[i][2]), Y(st[i][1]), Math.abs(r.est * kx), Math.abs(r.est * ky), 0, 0, 7); c.stroke(); }
   });
-  c.textAlign = "left";
-  for (const s of CITIES) { c.fillStyle = css("--mut"); c.beginPath(); c.arc(X(s[2]), Y(s[1]), 2.5, 0, 7); c.fill(); c.fillText(s[0], X(s[2]) + 5, Y(s[1]) + 11); }
+  for (const [name, lat, lon, side] of CITIES) {                         // a dot and a label on the side that keeps clear of its neighbours
+    const x = X(lon), y = Y(lat);
+    c.fillStyle = css("--mut"); c.beginPath(); c.arc(x, y, 2.5, 0, 7); c.fill();
+    c.textAlign = side === "e" ? "left" : side === "w" ? "right" : "center";
+    c.fillText(name, x + (side === "e" ? 8 : side === "w" ? -8 : 0), y + (side === "n" ? -9 : side === "s" ? 17 : 4));
+  }
   st.forEach((s, i) => { const x = X(s[2]), y = Y(s[1]); c.fillStyle = DET.stations[i].est == null ? css("--mut") : css("--acc"); c.beginPath(); c.moveTo(x, y - 7); c.lineTo(x - 6, y + 5); c.lineTo(x + 6, y + 5); c.fill(); });
   c.fillStyle = css("--bad"); c.font = "18px system-ui"; c.textAlign = "center"; c.fillText("★", X(EQ.lon), Y(EQ.lat) + 6);
   if (DET.epi) { c.fillStyle = css("--ink"); c.fillText("✚", X(DET.epi.lon), Y(DET.epi.lat) + 6); }
@@ -2179,16 +2415,27 @@ function drawMap() {
 }
 function renderDetect(show) {
   retained($("cvMap"), drawMap);
-  let h = `<tr><th>Station</th><th class="n">True distance (km)</th><th class="n">Estimated (km)</th><th class="n">P pick error (s)</th><th class="n">S pick error (s)</th><th class="n">Magnitude</th></tr>`;
-  for (const r of DET.stations) h += `<tr><td>${esc(r.name)}</td><td class="n">${fmt(r.true, 4)}</td><td class="n">${r.est == null ? "no pick" : fmt(r.est, 4)}</td><td class="n">${r.tP == null ? "–" : fmt(r.tP - r.tP_true, 2)}</td><td class="n">${r.tS == null ? "–" : fmt(r.tS - r.tS_true, 2)}</td><td class="n">${fmt(r.ml, 3)}</td></tr>`;
+  // the solver marks a pick made more than a second before the true arrival: noise crossed the threshold, not the earthquake
+  const falseTrigger = r => r.false_trigger, late = (t, t0) => t == null ? "–" : fmt(t - t0, 2);
+  let h = `<tr><th>Station</th><th class="n">True (km)</th><th class="n">Estimate (km)</th><th class="n">P pick late (s)</th><th class="n">S pick late (s)</th><th class="n">Mag.</th></tr>`;
+  for (const r of DET.stations) h += `<tr><td>${esc(r.name)}</td><td class="n">${fmt(r.true, 4)}</td><td class="n">${r.est != null ? fmt(r.est, 4) : r.too_close ? "too close" : "no pick"}</td><td class="n${falseTrigger(r) ? " fail" : ""}">${falseTrigger(r) ? "false trigger" : late(r.tP, r.tP_true)}</td><td class="n">${falseTrigger(r) ? "–" : late(r.tS, r.tS_true)}</td><td class="n">${fmt(r.ml, 3)}</td></tr>`;
   $("tbSt").innerHTML = h;
-  const e = DET.epi;
-  $("kvD").innerHTML = kvHtml(e ? [["Stations used", e.n], ["Epicentre error", fmt(e.err_km) + " km"], ["Condition number", fmt(e.cond, 3)], ["Distance misfit (rms)", fmt(e.rms) + " km"], ["Magnitude", fmt(e.ml_mean, 3) + " ± " + fmt(e.ml_std, 2)], ["Method", e.n > 3 ? "least squares" : "Gauss elimination"]]
-    : [["Epicentre", esc(DET.epi_note || "not found")]]);
+  const notes = [];
+  if (DET.stations.some(r => r.too_close)) notes.push("Too close: the S wave reached that station less than 7 s after the P wave, so the two cannot be timed separately and the station gives no distance.");
+  if (DET.stations.some(falseTrigger)) notes.push("False trigger: the threshold was crossed by background noise before the earthquake arrived. That station's distance is wrong, and it pulls the epicentre and the magnitude off with it. Raise the threshold.");
+  $("stNote").hidden = !notes.length; $("stNote").textContent = notes.join(" ");
+  const e = DET.epi, falseAlarm = DET.false_alarm;
+  const alert = DET.first_alarm == null ? "none: no station triggered" : falseAlarm ? `<b class="fail">false alarm</b>, set off by noise` : `${fmt(DET.first_alarm)} s after the earthquake began`;
+  $("kvD").innerHTML = kvHtml([["First alert", alert]].concat(e
+    ? [["Stations used", e.n], ["Epicentre error", fmt(e.err_km) + " km"], [e.n > 3 ? "Condition number (normal equations)" : "Condition number", fmt(e.cond, 3)], ["Distance misfit (rms)", fmt(e.rms) + " km"], ["Magnitude", fmt(e.ml_mean, 3) + " ± " + fmt(e.ml_std, 2)], ["Method", e.n > 3 ? "least squares" : "Gauss elimination"]]
+    : [["Epicentre", esc(DET.epi_note || "not found")]]));
+  // after a false alarm the alert time means nothing, so no warning time is shown
+  const warnCell = r => falseAlarm ? `<td class="n fail">false alarm</td>` : `<td class="n ${r.warn != null && r.warn > 0 ? "pass" : "fail"}">${r.warn == null ? "no alert" : r.warn > 0 ? fmt(r.warn, 3) : "none"}</td>`;
   h = `<tr><th>City</th><th class="n">Distance (km)</th><th class="n">Strong shaking arrives (s)</th><th class="n">Warning (s)</th></tr>`;
-  for (const r of DET.cities) h += `<tr><td>${esc(r.name)}</td><td class="n">${fmt(r.dist, 4)}</td><td class="n">${fmt(r.s_arrival, 3)}</td><td class="n ${r.warn != null && r.warn > 0 ? "pass" : "fail"}">${r.warn == null ? "no alert" : r.warn > 0 ? fmt(r.warn, 3) : "none"}</td></tr>`;
+  for (const r of DET.cities) h += `<tr><td>${esc(r.name)}</td><td class="n">${fmt(r.dist, 4)}</td><td class="n">${fmt(r.s_arrival, 3)}</td>${warnCell(r)}</tr>`;
   $("tbCity").innerHTML = h;
-  const row = DET.stations[show]; if (row && row.trace) drawTrace(row.trace, row, row.name);
+  const row = DET.stations[show];
+  if (!(upload && upload.shown) && row && row.trace) drawTrace(row.trace, row, row.name);      // the user's own recording, once drawn, stays until it is dismissed
 }
 function drawTrace(tr, row, name) {
   const t = tr.x.map((_, i) => i * tr.dt), vl = [];
@@ -2209,24 +2456,41 @@ $("cvMap").addEventListener("click", e => {
 });
 for (const id of ["eqLat", "eqLon"]) $(id).addEventListener("change", () => { const la = parseFloat($("eqLat").value), lo = parseFloat($("eqLon").value); moveQuake(isFinite(la) ? la : EQ.lat, isFinite(lo) ? lo : EQ.lon); });
 $("iran").addEventListener("change", e => { S.iran = e.target.checked; fillStations(); requestDetect(); });
-$("showSt").addEventListener("change", requestDetect);
+function dropUpload() { upload = null; $("recOut").textContent = ""; $("btnSynth").hidden = true; }
+$("showSt").addEventListener("change", () => { dropUpload(); requestDetect(); });
+$("btnSynth").addEventListener("click", () => { dropUpload(); requestDetect(); });      // back to the synthetic recording
 $("Tmeas").addEventListener("input", () => { tmeasUser = true; });
 
-function showRecord(d, name) {
-  if (d.error) { $("recOut").textContent = d.error; return; }
-  drawTrace(d, {tP: d.tP, tS: d.tS}, name);
-  $("recOut").textContent = d.tP == null ? "No trigger. The record needs at least 16 s of quiet before the event." : `Trigger at ${fmt(d.tP, 4)} s.` + (d.dist != null ? ` Second arrival at ${fmt(d.tS, 4)} s, so the source is about ${fmt(d.dist)} km away.` : " No second arrival found.");
+// The user's own recording (a file or the motion sensor) takes over the two record charts.
+async function analyseUpload() {
+  const u = upload; if (!u) return;
+  // a recording that never got onto the charts is forgotten when it fails; one that is showing is kept, so the setting can be corrected
+  const failed = text => { if (!u.shown) { upload = null; $("btnSynth").hidden = true; } $("recOut").textContent = text; };
+  const fs = u.fs || +$("csvFs").value || 20; let d;
+  try { d = await solver.call("record", u.t ? {t: u.t, x: u.x, fs, thr: S.thr} : {x: u.x, fs, thr: S.thr}); }
+  catch (e) { if (upload === u) failed("The recording could not be analysed because the solver stopped."); throw e; }
+  if (upload !== u) return;                                  // replaced or dismissed meanwhile
+  if (d.error) { failed(d.error + (u.shown ? " The charts still show the last analysis of this recording." : "")); return; }
+  u.shown = true; $("btnSynth").hidden = false;
+  drawTrace(d, {tP: d.tP, tS: d.tS}, u.name);
+  $("recOut").textContent = (d.tP == null ? "No trigger. The record needs at least 16 s of quiet before the event."
+    : `Trigger at ${fmt(d.tP, 4)} s.` + (d.dist != null ? ` Second arrival at ${fmt(d.tS, 4)} s, so the source is about ${fmt(d.dist)} km away.` : d.too_close ? " A second arrival followed within 7 s, too soon to time separately." : " No second arrival found."))
+    + " The two charts show this recording.";
 }
+const reanalyseUpload = debounce(() => { if (upload && solverReady) job(analyseUpload); }, 200);
 $("csv").addEventListener("change", e => {
   const f = e.target.files[0]; if (!f || !solverReady) return;
+  e.target.value = "";                                       // so that choosing the same file again is noticed
   job(async () => {
     const rows = parseRows(await f.text());
     if (rows.length < 50) { $("recOut").textContent = "Could not read at least 50 numeric rows."; return; }
     if (rows.length > 500000) { $("recOut").textContent = "The file has more than 500,000 rows. Cut it down to the part around the event."; return; }
-    const two = rows[0].length >= 2, fs = +$("csvFs").value || 20, full = two ? rows.filter(r => r.length >= 2) : rows;   // skip rows with a missing value
-    showRecord(await solver.call("record", two ? {t: full.map(r => r[0]), x: full.map(r => r[1]), fs, thr: S.thr} : {x: full.map(r => r[0]), fs, thr: S.thr}), f.name);
+    const two = rows[0].length >= 2, full = two ? rows.filter(r => r.length >= 2) : rows;   // skip rows with a missing value
+    upload = two ? {t: full.map(r => r[0]), x: full.map(r => r[1]), name: f.name} : {x: full.map(r => r[0]), name: f.name};
+    await analyseUpload();
   });
 });
+$("csvFs").addEventListener("change", reanalyseUpload);
 $("btnPhone").addEventListener("click", async () => {
   const out = $("recOut"), btn = $("btnPhone");
   if (typeof DeviceMotionEvent === "undefined") { out.textContent = "This device has no motion sensor available to the browser."; return; }
@@ -2240,13 +2504,14 @@ $("btnPhone").addEventListener("click", async () => {
     window.removeEventListener("devicemotion", onMotion); btn.disabled = !solverReady;
     if (!solverReady) { out.textContent = "The solver is not running, so the recording was not analysed."; return; }
     if (x.length < 100) { out.textContent = "No sensor data received."; return; }
-    job(async () => showRecord(await solver.call("record", {t, x, fs: 50, thr: S.thr}), "device sensor"));
+    upload = {t, x, fs: 50, name: "device sensor"}; job(analyseUpload);
   }, 25000);
 });
 onClick("btnDamage", async () => {
-  const d = await solver.call("damage", {p: params(), T: +$("Tmeas").value});
-  $("damageOut").innerHTML = d.error ? esc(d.error) + (d.T0 != null ? ` (healthy period ${fmt(d.T0)} s)` : "")
-    : `Healthy period ${fmt(d.T0)} s. The measured period means the building kept <b>${fmt(d.alpha * 100)}%</b> of its stiffness, a loss of ${fmt((1 - d.alpha) * 100)}% (${d.it} bisection steps${d.exact != null ? `; exact answer ${fmt(d.exact * 100)}%` : "; bracing is not counted as damaged"}).`;
+  const snap = snapshot(), d = await solver.call("damage", {p: snap.p, T: +$("Tmeas").value});
+  if (!unchanged(snap)) { say("damageOut", "The building was changed while this was being worked out. Press the button again."); return; }
+  say("damageOut", d.error ? esc(d.error) + (d.T0 != null ? ` (healthy period ${fmt(d.T0)} s)` : "")
+    : `Healthy period ${fmt(d.T0)} s. The measured period means the building kept <b>${fmt(d.alpha * 100)}%</b> of its stiffness, a loss of ${fmt((1 - d.alpha) * 100)}% (${d.it} bisection steps${d.exact != null ? `; exact answer ${fmt(d.exact * 100)}%` : "; bracing is not counted as damaged"}).`);
 });
 
 // ------------------------------------------------------------ 8 numerics lab and verify tab
@@ -2262,7 +2527,7 @@ async function runReg() {
   if (R) ser.push({x: [R.H], y: [R.T_fixed], pts: true, color: "--bad", label: "this model"});
   plot($("cvReg"), ser, {xl: "height (m)", yl: "period (s)"});
   const ho = d.holdout;
-  $("regOut").innerHTML = `T = <b>${fmt(d.C, 4)}·h<sup>${fmt(d.x, 4)}</sup></b>, r² = ${fmt(d.r2, 4)}, condition number of the normal equations ${fmt(d.cond, 3)}.`
+  $("regOut").innerHTML = `T = <b>${fmt(d.C, 4)}·h<sup>${fmt(d.x, 4)}</sup></b>, r² = ${fmt(d.r2, 4)} (for the straight line in log–log space), condition number of the normal equations ${fmt(d.cond, 3)}.`
     + (ho ? `<br>Hold-out test (fit on every other row, test on the rest): error ${fmt(ho.mean_err, 2)}% ± ${fmt(ho.std_err, 2)}% over ${ho.n} rows.` : "")
     + (R ? `<br>This model: ${fmt(R.T_fixed)} s at ${fmt(R.H)} m. The fitted curve gives ${fmt(d.C * Math.pow(R.H, d.x))} s.` : "");
 }
@@ -2274,9 +2539,9 @@ onClick("btnCal", async () => {
   const T = REG.C * Math.pow(H, REG.x), d = await solver.call("calibrate", {p: snap.p, T});
   if (!unchanged(snap)) { $("regOut").innerHTML += "<br>" + CHANGED; return; }
   if (d.error) { $("regOut").innerHTML += "<br>" + esc(d.error); return; }
-  const capped = setStiffness(Math.round(d.scale * stiff0 / 10) * 10, Math.round(d.scale * EI0 / 100) * 100);
+  const done = applyScale(d.scale, stiff0, EI0, Math.round);
   await analyse(); await runReg();
-  $("regOut").innerHTML += `<br>Calibrated: stiffness ×${fmt(d.scale, 4)} in ${d.it} bisection steps (target ${fmt(T)} s). Applied, rounded to the sliders.${capped}`;
+  $("regOut").innerHTML += `<br>Calibrated: stiffness ×${fmt(d.scale, 4)} in ${d.it} bisection steps (target ${fmt(T)} s). Applied, rounded to the sliders: ${done.text}.${done.capped}`;
 });
 function markLabStale() { $("labStale").hidden = !(labStamp && labStamp !== structureKey(params())); }
 function drawK(K, n) {
@@ -2291,15 +2556,18 @@ function drawK(K, n) {
 }
 onClick("btnLab", async () => {
   await freshAnalysis();                    // the picture of K below must be of the same building as the rest
-  const p = params(), stamp = structureKey(p), {K, ndof: n, tri, condK} = R;
+  const p = params(), stamp = structureKey(p), {K, N: n, tri, condK} = R;      // K is the structure's own matrix: no base slab, no damper
   // 1. the same static problem by every linear solver
   const race = await solver.must("race", p);
   retained($("cvK"), () => drawK(K, n));
-  $("kNote").textContent = `${n} × ${n}. Terracotta is positive, teal is negative, pale squares are zero. ${tri ? "Only three diagonals are filled, so the Thomas algorithm applies." : "The matrix is full or has extra rows, so Cholesky or Gauss elimination is used."} Condition number of the structure's K: ${fmt(condK, 3)}.`;
-  const itText = r => r.it == null ? "direct" : (r.bad || r.resid == null || r.resid > 100) ? r.it + " (diverged)" : r.it + (r.it >= race.cap ? " (stopped at cap)" : "");
-  $("tbRace").innerHTML = `<tr><th>Method</th><th class="n">Iterations</th><th class="n">Work (multiplications, approx.)</th><th class="n">Residual</th><th class="n">Difference from Gauss</th></tr>`
+  $("kNote").textContent = `${n} × ${n}. Terracotta is positive, teal is negative, the faint squares are zero. ${tri ? "Only three diagonals are filled, so the Thomas algorithm applies." : "The matrix is full, so Cholesky is used."} Condition number: ${fmt(condK, 3)}.`;
+  const diverged = r => r.it != null && (r.bad || r.resid == null || r.resid > 100), capped = r => r.it != null && !diverged(r) && r.it >= race.cap;
+  const itText = r => r.it == null ? "direct" : diverged(r) ? r.it + " (diverged)" : r.it + (capped(r) ? " (stopped at cap)" : "");
+  $("tbRace").innerHTML = `<tr><th>Method</th><th class="n">Iterations</th><th class="n">Work (operations, approx.)</th><th class="n">Residual</th><th class="n">Difference from Gauss</th></tr>`
     + race.rows.map(r => `<tr><td>${esc(r.name)}</td><td class="n">${itText(r)}</td><td class="n">${r.ops.toLocaleString()}</td><td class="n">${fmt(r.resid, 2)}</td><td class="n">${fmt(r.diff, 2)}</td></tr>`).join("")
-    + (race.rows.some(r => r.bad || (r.it != null && r.it >= race.cap)) ? `<tr><td colspan="5" class="note">Iterative methods were stopped at ${race.cap} iterations. They converge slowly when the condition number is high (here ${fmt(race.cond, 3)}), and Jacobi can diverge when the matrix is not diagonally dominant.</td></tr>` : "");
+    + `<tr><td colspan="5" class="note">The three iterative methods stop when one more sweep changes the answer by less than 1e-7 of its size. That measures the last step, not the distance to the answer: the last column is the distance, and it is much larger when convergence is slow.</td></tr>`
+    + (race.rows.some(diverged) ? `<tr><td colspan="5" class="note">"Diverged" means every sweep made the answer larger instead of better. It happens to Jacobi when the matrix is not diagonally dominant, as here; the run is given up once the answer has grown a million million times.</td></tr>` : "")
+    + (race.rows.some(capped) ? `<tr><td colspan="5" class="note">"Stopped at cap" means ${race.cap} sweeps were not enough. Iterative methods converge slowly when the condition number is high (here ${fmt(race.cond, 3)}).</td></tr>` : "");
   const iterColours = {Jacobi: "--mut", "Gauss-Seidel": "--acc", SOR: "--acc2"};
   plot($("cvIter"), Object.keys(race.hists).map(k => {
     const h = race.hists[k], stride = Math.max(1, Math.floor(race.rows.find(r => r.name.startsWith(k)).it / 200));     // the solver keeps every stride-th value
@@ -2317,14 +2585,19 @@ onClick("btnLab", async () => {
   if (ds.error) { $("rootOut").textContent = ds.error; retained($("cvRoot"), () => prep($("cvRoot"))); }
   else {
     plot($("cvRoot"), histSeries(ds), {logy: true, xl: "iteration", yl: "approx. relative error"});
-    $("rootOut").textContent = `All three find the stiffness multiplier ${fmt(ds.bisection.s, 6)}, starting from the bracket ${fmt(ds.bracket[0], 3)} to ${fmt(ds.bracket[1], 3)}. Steps needed: bisection ${ds.bisection.it}, false position ${ds.false_position.it}, fixed-point ${ds.fixed_point.it}. Bisection halves the bracket every step. False position keeps one end fixed on a curved function, so its speed depends on the bracket. Fixed-point works here because each update shrinks the error.`;
+    const b = ds.bisection.s, agree = [ds.false_position, ds.fixed_point].every(r => Math.abs(r.s - b) <= 1e-4 * Math.abs(b));
+    $("rootOut").textContent = (agree ? `All three find the stiffness multiplier ${fmt(b, 6)}` : `Bisection finds the stiffness multiplier ${fmt(b, 6)}, but false position gives ${fmt(ds.false_position.s, 6)} and fixed-point ${fmt(ds.fixed_point.s, 6)}`)
+      + `, starting from the bracket ${fmt(ds.bracket[0], 3)} to ${fmt(ds.bracket[1], 3)}. Steps needed: bisection ${stepsOf(ds.bisection)}, false position ${stepsOf(ds.false_position)}, fixed-point ${stepsOf(ds.fixed_point)}. Bisection halves the bracket every step. False position keeps one end fixed on a curved function, so its speed depends on the bracket. `
+      + (ds.fixed_point.capped ? "Fixed-point iteration is too slow here. Each update removes only a small part of the error, which happens when bracing (which the multiplier does not scale) carries most of the load." : "Fixed-point works here because each update shrinks the error.");
   }
   // 4. Euler's method
   const eu = await solver.must("euler", p), eulerColours = ["--bad", "--acc2", "--ok"], fine = eu.runs[2], perT = r => `period ÷ ${Math.round(1 / r.frac)}`;
   plot($("cvEuler"), eu.runs.map((r, i) => ({x: r.t, y: r.energy, color: eulerColours[i], label: "step = " + perT(r)})), {logy: true, xl: "time (s)", yl: "energy ÷ starting energy"});
   plot($("cvEuler2"), [{x: eu.exact_t, y: eu.exact, color: "--mut", dash: [4, 3], label: "exact"}, {x: fine.t, y: fine.roof, color: eulerColours[2], label: "Euler, " + perT(fine)}],
     {xl: "time (s)", yl: "roof position (m)", ylim: [-0.15, 0.15]});      // the start is 0.05 m; a run that blows up is cut off at three times that
-  $("eulerOut").textContent = `With no damping the energy should stay at 1. Euler multiplies it by (1 + ω²h²) every step. The smallest step ${fine.stopped != null ? `was stopped at ${fmt(fine.stopped)} s with its energy at` : "ends at"} ${fmt(fine.energy.at(-1), 4)}, and the formula for the first mode alone predicts ${fmt(fine.predicted, 4)} at the end. The larger steps grow far faster than that formula, because the starting shape is only approximately mode 1: small errors from the eigenvalue iteration and round-off leave a trace of the highest mode (${fmt(eu.w_max, 4)} rad/s, found by power iteration in ${eu.power_iters} steps) in it, and Euler amplifies that mode most.`
+  $("eulerOut").textContent = `With no damping the energy should stay at 1. Euler multiplies it by (1 + ω²h²) every step. The smallest step ${fine.stopped != null ? `was stopped at ${fmt(fine.stopped)} s with its energy at` : "ends at"} ${fmt(fine.energy.at(-1), 4)}, and the formula for the first mode alone predicts ${fmt(fine.predicted, 4)} at the end. `
+    + (p.N === 1 ? "A one-storey building has a single mode, so all three runs follow that formula exactly."
+      : `The larger steps grow far faster than that formula, because the starting shape is only approximately mode 1: small errors from the eigenvalue iteration and round-off leave a trace of the highest mode (${fmt(eu.w_max, 4)} rad/s, found by power iteration${eu.power_capped ? `, which was cut off at its cap of ${eu.power_iters} steps and is good to about 5 figures` : ` in ${eu.power_iters} steps`}) in it, and Euler amplifies that mode most.`)
     + (eu.runs.some(r => r.stopped != null) ? ` A run is stopped once its energy has grown by a factor of ${eu.stop.toExponential(0)}.` : "");
   await runReg();
   labStamp = stamp; markLabStale();
@@ -2349,35 +2622,45 @@ function showTab(t, opt = {}) {
   if (opt.link && location.hash !== "#" + t) history.replaceState(null, "", "#" + t);       // so the address bar can be shared
   redrawVisible(); drawNow(); markLabStale();
 }
+// Going to another tab from inside a tab (a headline button, a card): the button that was pressed is about
+// to be hidden, so the keyboard focus moves to the new tab's own button and the page goes back to the top.
+function goTab(t) { showTab(t, {link: true, focus: true}); window.scrollTo(0, 0); }
 $("nav").addEventListener("click", e => { const t = e.target.dataset.t; if (t) showTab(t, {link: true}); });
 $("nav").addEventListener("keydown", e => {                 // arrow keys move between tabs
   const i = TABS.indexOf(e.target.dataset.t), n = TABS.length; if (i < 0) return;
   const j = e.key === "ArrowRight" ? (i + 1) % n : e.key === "ArrowLeft" ? (i + n - 1) % n : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : -1;
   if (j >= 0) { e.preventDefault(); showTab(TABS[j], {link: true, focus: true}); }
 });
-window.addEventListener("hashchange", () => { showTab(location.hash.slice(1)); window.scrollTo(0, 0); });
-for (const [id, t] of [["goShake", "shake"], ["goDetect", "detect"], ["goLab", "lab"]]) $(id).addEventListener("click", () => { showTab(t, {link: true}); window.scrollTo(0, 0); });
+window.addEventListener("hashchange", () => goTab(location.hash.slice(1)));
+for (const [id, t] of [["goShake", "shake"], ["goDetect", "detect"], ["goLab", "lab"]]) $(id).addEventListener("click", () => goTab(t));
 $("trail").addEventListener("toggle", redrawVisible);                 // a chart inside a closed fold has no width, so it is drawn when the fold opens
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { redrawVisible(); drawNow(); });   // redraw once the web fonts have arrived
+// The typefaces arrive after the first drawing, and not all at once. Text on a canvas does not update itself, so redraw whenever some have landed.
+if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", () => { redrawVisible(); drawNow(); });
 window.addEventListener("resize", debounce(() => { redrawVisible(); drawNow(); }, 100));
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { themeCache = {}; redrawVisible(); drawNow(); });
 stillOnly.addEventListener("change", () => { drawNow(); animate(); });
 
-function lockSolverControls(locked) { for (const el of document.querySelectorAll("button.b, #btnLab, #btnVerify, #csv")) el.disabled = locked; }
+// the controls that need the solver; the rest (tabs, views, pinning) keep working without it
+const SOLVER_CONTROLS = ["btnDesign", "btnRule", "btnTmd", "btnIso", "btnDamage", "btnReg", "btnCal", "btnLab", "btnVerify", "btnPhone", "csv"];
+function lockSolverControls(locked) { for (const id of SOLVER_CONTROLS) $(id).disabled = locked; }
 function bootNote(html) { $("bootNote").hidden = html == null; $("bootNote").innerHTML = html || ""; }
+let started = false;           // true once the solver has run at least once in this visit
 function solverFailed(err) {
   console.error(err); solverReady = false; lockSolverControls(true);
   setStatus("Python is not running", "err");
-  bootNote(`<b>The Python solver could not start.</b> ${esc(err.message)}<br>It is downloaded from cdn.jsdelivr.net (about 9 MB, kept by the browser afterwards), so the first visit needs an internet connection. <button class="b" id="btnRetry">Try again</button>`);
+  bootNote(`<b>${started ? "The Python solver has stopped." : "The Python solver could not start."}</b> ${esc(err.message)}<br>`
+    + (started ? "The numbers on screen are the last ones it gave. " : "It is downloaded from cdn.jsdelivr.net (about 9 MB, kept by the browser afterwards), so the first visit needs an internet connection. ")
+    + `<button class="b" id="btnRetry">Try again</button>`);
   $("btnRetry").onclick = boot;
 }
 async function boot() {
   solverReady = false; lockSolverControls(true);
   setStatus("Loading Python…", "busy");
   bootNote("Loading the Python solver. The first visit downloads about 9 MB; after that the browser keeps it.");
+  const slow = setTimeout(() => { if (!solverReady) bootNote("Still loading the Python solver. On a slow connection the first visit can take a minute or two."); }, 30000);
   try { await solver.start(text => setStatus(text, "busy"), solverFailed); }
-  catch (e) { solverFailed(e); return; }
-  solverReady = true; bootNote(null); lockSolverControls(false); setStatus("Ready", "ok");
+  catch (e) { clearTimeout(slow); solverFailed(e); return; }
+  clearTimeout(slow); solverReady = true; started = true; bootNote(null); lockSolverControls(false); setStatus("Ready", "ok");
   requestAnalysis(); requestDetect();
 }
 

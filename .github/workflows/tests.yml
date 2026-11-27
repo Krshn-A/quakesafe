@@ -1,4 +1,4 @@
-# Runs the solver tests on every push and pull request.
+# Runs the three test scripts on every push and pull request (a few minutes).
 # Python 3.12 is the version Pyodide 0.27 runs in the browser.
 name: tests
 
@@ -12,11 +12,16 @@ permissions:
 jobs:
   solver:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install numpy
-      - run: python test_solver.py
+      - name: Regression tests
+        run: python test_solver.py
+      - name: Accuracy against outside references
+        run: python test_accuracy.py
+      - name: Do the built-in checks catch a wrong solver
+        run: python test_mutants.py

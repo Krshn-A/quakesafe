@@ -136,6 +136,73 @@ for label in ("40-storey frame", "wall only", "frame + core"):
     report(all(v is not None for v in flat) and len(r["exact"]) == 401, "Euler demo stays finite: " + label,
            "stopped at %s s" % [run["stopped"] for run in r["runs"]])
 
+# Found by the accuracy audit of 27 November 2026.
+x_, m_, Kw, k_, tri_ = ns["structure"](dict(variants["wall only"], N=40, m=[4e5] * 40, k=[3e8] * 40))
+report(float(np.max(np.abs(Kw - Kw.T))) == 0.0, "wall stiffness matrix is exactly symmetric (Cholesky reads one half)")
+r = call("analyse", dict(variants["wall only"], N=40, m=[4e5] * 40, k=[3e8] * 40))
+report(r["static"]["resid"] < 1e-7, "40-storey wall: residual of the static solve", "%.1e (it was about 3e-5 before the matrix was made symmetric)" % r["static"]["resid"])
+both = dict(base, iso={"on": True, "kb": 2e7, "mb": 3e5, "zb": 0.15}, tmd={"on": True, "mu": 0.03, "f": 0.97, "zd": 0.1})
+r = call("analyse", both); own = ns["structure"](both)[2]
+report(r["ndof"] == len(own) + 2 and np.array(r["K"]).shape == own.shape and np.allclose(np.array(r["K"]), own / np.max(np.abs(own)), rtol=1e-6, atol=1e-9),
+       "analyse() hands the page the structure's own stiffness matrix, without the rows of the isolator and the damper",
+       "%d unknowns in the system, %d rows shown" % (r["ndof"], len(r["K"])))
+x, it, hist = ns["bisection"](lambda v: 1e-200 * (v - 2.0), 0.0, 3.0, 1e-12)
+report(abs(x - 2.0) < 1e-9, "bisection on a function whose values are about 1e-200", "root %.12g (a sign test by multiplication gave 0)" % x)
+try:
+    ns["bisection"](lambda v: 1e-200 * (v * v + 1.0), -1.0, 1.0); refused = False
+except ValueError:
+    refused = True
+report(refused, "bisection refuses a tiny function that has no sign change")
+x, it, hist = ns["jacobi"](np.array([[1.0, 3.0], [4.0, 1.0]]), np.array([1.0, 1.0]), 1e-8, 5000)
+report(it < 100 and bool(np.all(np.isfinite(x))), "Jacobi gives up on a diverging problem long before the cap", "%d sweeps" % it)
+for label, bad in (("an exactly singular", [[1.0, 2.0], [2.0, 4.0]]), ("a singular-to-rounding", [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])):
+    try:
+        ns["gauss_solve"](np.array(bad), np.ones(len(bad))); refused = False
+    except ZeroDivisionError:
+        refused = True
+    report(refused and math.isinf(ns["cond_inf"](np.array(bad))), "Gauss elimination refuses %s matrix, and its condition number is infinite" % label)
+try:
+    ns["lu_solve"](ns["lu_decompose"](np.array([[1.0, 2.0], [2.0, 4.0]])), np.ones(2)); refused = False
+except ZeroDivisionError:
+    refused = True
+report(refused, "LU solve refuses a singular matrix instead of returning infinities")
+# Found by the second review: "singular" used to be judged against the largest entry of the whole matrix, which refused
+# sound systems whose rows differ hugely in size (a concrete core beside the spring of a 0.2% damper on a 0.1 kN/mm isolator).
+uneven = np.array([[3e13, 1e13, 0.0], [1e13, 4e13, 2e-2], [0.0, 2e-2, 5e-2]])
+report(np.allclose(ns["gauss_solve"](uneven, uneven @ np.array([1.0, -2.0, 3.0])), [1.0, -2.0, 3.0], rtol=1e-9)
+       and np.allclose(ns["gauss_jordan_inverse"](uneven) @ uneven, np.eye(3), atol=1e-9), "Gauss elimination and the inverse accept a sound matrix whose rows differ by 1e15")
+worst_case = []
+for system in ("wall", "dual"):
+    for N in (2, 5, 40):
+        q = {"N": N, "h": 2.6, "m": [3e5] * N, "k": [4e8] * N, "system": system, "EI": 1e13, "zeta": 0.05, "ag": 0.05, "npts": 150, "cond": True,
+             "iso": {"on": True, "kb": 1e5, "mb": 3e5, "zb": 0.15}, "tmd": {"on": True, "mu": 0.002, "f": 0.70, "zd": 0.0}}
+        r = call("analyse", q)
+        if "error" in r: worst_case.append("%s N=%d: %s" % (system, N, r["error"]))
+report(not worst_case, "softest isolator + lightest undamped damper under a stiff core is analysed, not refused", "; ".join(worst_case))
+M2 = np.array([1.0, 1.0]); K2 = np.array([[2.0, -1.0], [-1.0, 1.0]])              # no damping, driven exactly at a natural frequency
+w_res = math.sqrt((3 - math.sqrt(5)) / 2)
+r = ns["sweep"]({"M": M2, "C": np.zeros((2, 2)), "K": K2, "roof": 1, "base": None, "N": 2}, [w_res / (2 * math.pi), 0.5], 0.05, False, False)
+report(len(r["amp"]) == 2 and all(math.isfinite(a) and a <= 1e6 for a in r["amp"]), "a sweep point that lands on an undamped resonance is capped, and the sweep carries on",
+       "amplitudes %s" % np.array(r["amp"]))
+near = [{"name": "near", "lat": 26.0, "lon": 54.0}] + st
+r = call("detect", dict(quake, lat=26.43, lon=54.0, stations=near, cities=near))        # the first station is 48 km from the earthquake
+row = r["stations"][0]
+report(45 < row["true"] < 51 and row["est"] is None and row["too_close"], "a station 48 km away is marked too close instead of being given 58.8 km",
+       "true %.1f km, estimate %s" % (row["true"], row["est"]))
+r = call("detect", dict(quake, thr=2.0))
+report(r["false_alarm"] and any(s["false_trigger"] for s in r["stations"]), "at threshold 2 the first alert is labelled a false alarm", "first alert %.1f s" % r["first_alarm"])
+r = call("detect", quake)
+report(not r["false_alarm"] and not any(s["false_trigger"] for s in r["stations"]) and r["first_alarm"] > 0, "at threshold 5 the alert is real")
+braced = dict(base, brace={"on": True, "A": 0.0025, "bay": 6}, code={"SDS": 0.8, "SD1": 0.4, "R": 5, "Cd": 4.5, "I": 1, "drift": 0.02})   # bracing carries most of the load
+r = call("design_stiffness", braced)
+report("error" not in r and r["fixed_point"]["capped"] and not r["bisection"]["capped"], "a root finder that stops at its cap says so",
+       "fixed-point %d steps, capped %s" % (r["fixed_point"]["it"], r["fixed_point"]["capped"]) if "error" not in r else r["error"])
+r = call("race", base); n8 = r["n"]; jac = next(x for x in r["rows"] if x["name"] == "Jacobi")
+report(jac["ops"] == 2 * jac["it"] * n8 * n8, "the lab's work column counts additions as well as multiplications for the iterative solvers")
+r = call("euler", base)
+report(r["power_capped"] is False and isinstance(r["power_iters"], int), "the Euler demo says whether power iteration was cut off")
+report(json.loads(ns["api"]("verify", "{}"))[0]["ok"] is True and ns["_clean"](np.bool_(True)) is True, "numpy booleans survive the trip to the page")
+
 # ---------------------------------------------------------------- 6. the corners of the slider ranges
 def nulls(o):
     """Count JSON nulls, which is what a NaN or an infinity becomes on its way to the page."""
@@ -158,6 +225,10 @@ corners = [("1 light soft storey", building(1, "frame", 50, 20, 100, 2.6)), ("1 
            ("40-storey frame + core, all devices", building(40, "dual", 400, 300, 3000, 3.2, ("iso", "tmd", "visc", "brace"))),
            ("uneven 12-storey frame, isolated", building(12, "frame", 300, 400, 3000, 3.2, ("uneven", "iso"))),
            ("uneven 20-storey frame + core with damper", building(20, "dual", 300, 400, 3000, 3.2, ("uneven", "tmd")))]
+soft = building(40, "wall", 400, 300, 10000, 2.6, ("iso", "tmd")); soft["iso"]["kb"] = 1e5; soft["tmd"].update(mu=0.002, f=0.7, zd=0.0)
+corners.append(("40-storey stiffest wall on the softest isolator, lightest undamped damper", soft))
+soft = building(2, "dual", 50, 2000, 10000, 2.6, ("iso", "tmd", "visc")); soft["iso"]["kb"] = 1e5; soft["tmd"].update(mu=0.002, f=1.2, zd=0.0)
+corners.append(("2-storey frame + core on the softest isolator", soft))
 for label, q in corners:
     r = call("analyse", q)
     if "error" in r:
