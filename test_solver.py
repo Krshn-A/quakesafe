@@ -203,6 +203,26 @@ r = call("euler", base)
 report(r["power_capped"] is False and isinstance(r["power_iters"], int), "the Euler demo says whether power iteration was cut off")
 report(json.loads(ns["api"]("verify", "{}"))[0]["ok"] is True and ns["_clean"](np.bool_(True)) is True, "numpy booleans survive the trip to the page")
 
+# The link between the tabs (28 November 2026): the Detect tab's earthquake gives a ground shaking under the building.
+# Hand values. Wood-Anderson seismograph: magnification 2080, natural frequency 1.25 Hz, damping 0.7.
+# At 1 Hz the frequency ratio is 0.8, so the gain is 2080 x 0.64 / sqrt((1 - 0.64)^2 + (2 x 0.7 x 0.8)^2) = 1131.55.
+gain1 = 2080 * 0.64 / math.sqrt(0.1296 + 1.2544)
+report(abs(ns["wood_anderson_gain"](1.0) - gain1) < 1e-9 * gain1 and abs(gain1 - 1131.55) < 0.01, "Wood-Anderson gain at 1 Hz, by hand", "%.2f" % ns["wood_anderson_gain"](1.0))
+report(abs(ns["wood_anderson_gain"](1.25) - 2080 / 1.4) < 1e-9, "Wood-Anderson gain at its own frequency is magnification / (2 x damping)")
+r = ns["site_shaking"](6.0, 100.0)                # at 100 km the distance correction is exactly 3, so the recording reads 10^(6-3) = 1000 mm
+disp = 1000.0 / gain1 / 1000.0; acc = (2 * math.pi) ** 2 * disp
+report(abs(r["amp"] - 1000.0) < 1e-9 and abs(r["disp"] - disp) < 1e-15 and abs(r["acc"] - acc) < 1e-13 and abs(r["g"] - acc / 9.81) < 1e-14,
+       "magnitude 6 at 100 km: 1000 mm on the recording, 0.884 mm of ground movement, 0.00356 g, by hand", "%.4f mm, %.5f g" % (r["disp"] * 1000, r["g"]))
+report(abs(ns["site_shaking"](7.0, 250.0)["acc"] / ns["site_shaking"](6.0, 250.0)["acc"] - 10.0) < 1e-9, "one unit of magnitude is ten times the ground shaking")
+report(ns["site_shaking"](6.0, 400.0)["acc"] < ns["site_shaking"](6.0, 200.0)["acc"] < ns["site_shaking"](6.0, 100.0)["acc"], "the ground shaking falls with distance")
+dubai = {"name": "Dubai", "lat": 25.20, "lon": 55.27}
+r = call("detect", dict(quake, lat=26.9, lon=55.2, cities=[dubai], site=dubai))
+site, city = r["site"], r["cities"][0]
+report(abs(site["dist"] - city["dist"]) < 1e-9 and abs(site["warn"] - city["warn"]) < 1e-9 and abs(site["g"] / ns["site_shaking"](6.0, site["dist"])["g"] - 1) < 1e-5,      # the page gets 7 significant figures
+       "detect() reports the building's site: same distance and warning as the city there, and the shaking from site_shaking", "%.1f km, %.5f g" % (site["dist"], site["g"]))
+report("site" not in call("detect", quake), "detect() adds no site when none is asked for")
+report('id="btnLab"' not in html and "labIfNeeded" in html and "leanOf" in html, "the Lab has no run button and fills itself; the drawings scale with the sway")
+
 # ---------------------------------------------------------------- 6. the corners of the slider ranges
 def nulls(o):
     """Count JSON nulls, which is what a NaN or an infinity becomes on its way to the page."""

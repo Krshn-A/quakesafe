@@ -31,6 +31,8 @@ Priority = (Impact + Risk) × (6 − Effort). A higher number means do it sooner
 | 15 | Result sentences under the regression buttons are not cleared when the building changes (the others are). | Code | 1 | 1 | 1 | 10 |
 | 16 | One analysis of a 40-storey building takes about 1.8 s (several times more on a phone). The page does not freeze, but the result lags the slider. | Speed | 2 | 1 | 3 | 9 |
 | 17 | Power iteration is cut off at 5000 steps for about 1 building in 100, leaving 5 good figures. It is only used for a number in the Lab's text, and the text says when it happened. | Numerics | 1 | 1 | 2 | 8 |
+| 19 | The formula that links the Detect tab's earthquake to the building (`site_shaking`, added 28 November 2026) is checked by hand values in `test_solver.py` only. It has no row in the page's 87 built-in checks and no wrong copy in `test_mutants.py`, because the presentation quotes 87. Move the checks into `verify()` after it. | Test | 2 | 2 | 1 | 20 |
+| 20 | That link is rough: one harmonic S wave at 1 Hz, read as a Wood-Anderson trace, with a distance correction made for Southern California. It gives an order of magnitude. A published ground-motion relation for the region would be better. | Model | 1 | 2 | 3 | 9 |
 | 18 | Arrival picks are up to about 1 s late and stations nearer than about 55 km give no distance, because of the trigger's fixed windows (1 s, and 7 s between P and S). Shorter windows would need retuning against false triggers. | Model | 1 | 1 | 3 | 6 |
 
 ## Suggested order
@@ -44,7 +46,7 @@ Priority = (Impact + Risk) × (6 − Effort). A higher number means do it sooner
 
 **Next (a day or two)**
 
-- Item 3: one Playwright test that loads the page, waits for "Ready", opens each tab, presses *Run all* and *Run all checks*, and fails on any console error. Add it to the GitHub workflow as a second job. A random-interaction run like the one described in TESTING.md would be a good second test.
+- Item 3: one Playwright test that loads the page, waits for "Ready", opens each tab, presses *Run all checks*, and fails on any console error. Add it to the GitHub workflow as a second job. A random-interaction run like the one described in TESTING.md would be a good second test.
 - Item 2: replace the regression rows with measured periods (Goel and Chopra 1997) and check the period bands against the paper.
 
 **Later, only if the project keeps growing**

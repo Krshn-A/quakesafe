@@ -11,13 +11,15 @@ The whole app is `index.html`. The numerical solver is Python, embedded in that 
 | Tab | Contents |
 |---|---|
 | Building | Frame, wall/core or frame + core buildings; soft storeys, uneven mass, bracing; natural periods and mode shapes; code-style static drift check; minimum-stiffness design |
-| Shake | Damped response to steady shaking across frequencies; tuned mass damper, base isolation and inter-storey dampers; condition number of the undamped system |
-| Detect | Trigger on synthetic recordings; distance from the P-to-S gap; epicentre from station distances; magnitude; warning time per city; damage check from a period change |
-| Lab | Every linear solver on one problem; iterative convergence; SOR relaxation scan; determinant roots; root-finding comparison; Euler error growth; regression |
+| Shake | Damped response to steady shaking across frequencies; tuned mass damper, base isolation and inter-storey dampers; condition number of the undamped system; the strength can be taken from the Detect tab's earthquake |
+| Detect | Trigger on synthetic recordings; distance from the P-to-S gap; epicentre from station distances; magnitude; warning time per city; what the earthquake does to the building where it stands; damage check from a period change |
+| Lab | Every linear solver on one problem; iterative convergence; SOR relaxation scan; determinant roots; root-finding comparison; Euler error growth; regression. It fills itself for the building on screen |
 | Verify | 87 checks against exact formulas, hand calculations and second methods |
 | Limits | Assumptions, what is synthetic, references |
 
 A tab can be linked directly: add `#shake`, `#detect`, `#lab`, `#verify` or `#about` to the address.
+
+The tabs share one building and one earthquake. A change on one tab shows on the others: the building's sliders move the Shake curves, the Lab and the "At the building" lines of the Detect tab; the earthquake's magnitude and position give a ground shaking under the building, which the Shake tab can use as its strength.
 
 ## Methods and where they are used
 

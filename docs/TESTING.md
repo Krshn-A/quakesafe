@@ -5,7 +5,7 @@
 | Layer | Question it answers | How | Size | Runs |
 |---|---|---|---|---|
 | Built-in checks | Is each method and formula right? | `verify()` inside the solver: exact formulas, hand calculations, second methods | 87 checks | In the page (Verify tab) and in `test_solver.py` |
-| Regression | Does every page call work, and do fixed bugs stay fixed? | Each call through `api`, one test per bug, the corners of the slider ranges | 245 checks, 25 s | `test_solver.py` |
+| Regression | Does every page call work, and do fixed bugs stay fixed? | Each call through `api`, one test per bug, the corners of the slider ranges | 253 checks, 25 s | `test_solver.py` |
 | Accuracy | How many digits are right? | Each method and model formula against LAPACK, closed forms and second implementations; prints worst error and its limit | 93 checks, 1 min | `test_accuracy.py` |
 | Checks on the checks | Would the built-in checks notice a wrong solver? | 56 copies of the solver, each with one deliberate mistake | 56 copies, 2 min | `test_mutants.py` |
 | Page wiring | Do the script and the markup agree? | Static checks of `index.html` | 6 checks | `test_solver.py`, section 7 |
@@ -91,10 +91,16 @@ Do this in a browser at 100% zoom, and once more on a phone or with the browser'
 - [ ] Upload a small CSV. Its trace replaces the synthetic one and stays while other sliders move. Picking a station brings the synthetic recording back.
 - [ ] *Estimate stiffness loss* with a period of 60 gives a sentence, not a Python error.
 
+**The link between the tabs**
+
+- [ ] On the Detect tab, raise the magnitude. "Ground shaking there" and "Roof sway of your building" both grow, and the note under the Building tab's answer changes too.
+- [ ] Press *Shake the building with this earthquake*. The Shake tab opens with its strength slider locked and a note naming the earthquake. Untick the box: the slider is back at 0.05.
+- [ ] On the Building and Shake tabs, the building leans further when a slider makes the sway larger, and swings faster at a higher frequency.
+
 **Lab**
 
-- [ ] *Run all* fills all eight charts and the table. No legend runs off its chart.
-- [ ] Go to the Building tab, change the mass, come back. A red note says the building has changed.
+- [ ] Opening the tab fills all eight charts and the table without pressing anything. No legend runs off its chart.
+- [ ] Go to the Building tab, change the mass, come back. The cards are worked out again for the new building.
 - [ ] Resize the window. The charts are redrawn sharp, not stretched.
 
 **Verify**

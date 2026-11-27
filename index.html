@@ -85,6 +85,7 @@ h3{margin:0 0 6px;font:600 15px/1.3 var(--sans)}
 h4{margin:18px 0 6px;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
 .lede{margin:0 0 10px;color:var(--mut);font-size:12.5px}
 .note{color:var(--mut);font-size:12.5px}
+canvas[hidden]+.note{display:none}
 a.card{display:block;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s}
 a.card:hover{border-color:var(--acc);transform:translateY(-1px)}
 a.card p:last-of-type{margin:0;color:var(--mut);font-size:12.5px}
@@ -169,15 +170,15 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
 <!-- ============================ BUILDING ============================ -->
 <section class="tab on" id="t-build" role="tabpanel" aria-labelledby="tab-build">
 <div class="hero">
-  <div><p class="eyebrow">Field study / 01</p><h2 class="display">Read the ground. Understand the building.</h2></div>
+  <div><p class="eyebrow">Field study / 01</p><h2 class="display">Read the ground. Understand the building.</h2><p class="lede" style="margin:8px 0 0;font-size:14px">Describe a building. See how far it sways in the earthquake a building code asks for, and whether that is allowed.</p></div>
   <button class="cta" id="goShake"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Run the shake test</button>
 </div>
 <div class="grid answer">
   <div class="card">
     <p class="eyebrow">01 / Set the scene<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h7M12 4h2M2 8h2M7 8h7M2 12h8M13 12h1"/><circle cx="10.5" cy="4" r="1.5"/><circle cx="5.5" cy="8" r="1.5"/><circle cx="11.5" cy="12" r="1.5"/></svg></p>
     <h3>Shape the structure</h3>
-    <p class="lede">Adjust the building and watch the sway, the periods and the drift check follow.</p>
-    <label for="preset">Preset (illustrative values)</label>
+    <p class="lede">Move a slider. The drawing and the answer follow by themselves.</p>
+    <label for="preset">Ready-made building</label>
     <select id="preset">
       <option value="" hidden>Custom</option>
       <option value="apartment">8-storey apartment block</option>
@@ -196,21 +197,21 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
       <option value="wall">Wall or core (bends like a flagpole)</option>
       <option value="dual">Frame + core</option>
     </select>
-    <p class="note" id="wallNote" hidden>A wall-only building has no columns or braces in this model. Its stiffness is the core's EI, so the column, bracing and storey-stiffness controls are switched off.</p>
-    <div id="eiRow"><label for="EI">Core bending stiffness EI (GN·m²) <b id="vEI"></b></label><input type="range" id="EI" min="100" max="10000" step="100"></div>
+    <p class="note" id="wallNote" hidden>A wall-only building has no columns or braces here, so those controls are switched off. Its stiffness is the core's EI.</p>
+    <div id="eiRow"><label for="EI">Stiffness of the concrete core, EI (GN·m²) <b id="vEI"></b></label><input type="range" id="EI" min="100" max="10000" step="100"></div>
     <label class="chk"><input type="checkbox" id="brace"> Steel bracing in every storey</label>
     <div id="braceRow"><label for="braceA">Brace area (cm²) <b id="vbraceA"></b></label><input type="range" id="braceA" min="5" max="200" step="5"></div>
-    <details id="floorBox"><summary>Edit one floor (soft storey, heavy floor)</summary>
+    <details id="floorBox"><summary>Change one floor (a heavier floor, a weaker storey)</summary>
       <label for="floorSel">Floor (pick it here or click it in the drawing)</label>
       <select id="floorSel"><option value="-1">None</option></select>
-      <label for="mMul">Mass multiplier <b id="vmMul"></b></label><input type="range" id="mMul" min="0.2" max="4" step="0.1" disabled>
-      <label for="kMul">Stiffness multiplier of the storey below it <b id="vkMul"></b></label><input type="range" id="kMul" min="0.1" max="3" step="0.05" disabled>
+      <label for="mMul">Mass of this floor, times <b id="vmMul"></b></label><input type="range" id="mMul" min="0.2" max="4" step="0.1" disabled>
+      <label for="kMul">Stiffness of the storey under it, times <b id="vkMul"></b></label><input type="range" id="kMul" min="0.1" max="3" step="0.05" disabled>
     </details>
-    <details><summary>Earthquake load settings (example values, take yours from the local code)</summary>
-      <label for="SDS">S<sub>DS</sub> short-period design value (g) <b id="vSDS"></b></label><input type="range" id="SDS" min="0.1" max="1.5" step="0.05">
-      <label for="SD1">S<sub>D1</sub> one-second design value (g) <b id="vSD1"></b></label><input type="range" id="SD1" min="0.05" max="1" step="0.05">
-      <label for="R">Response factor R <b id="vR"></b></label><input type="range" id="R" min="1" max="8" step="0.5">
-      <label for="Cd">Deflection factor C<sub>d</sub> <b id="vCd"></b></label><input type="range" id="Cd" min="1" max="6.5" step="0.5">
+    <details><summary>Earthquake load from the building code (example values)</summary>
+      <label for="SDS">Design shaking for low, stiff buildings, S<sub>DS</sub> (g) <b id="vSDS"></b></label><input type="range" id="SDS" min="0.1" max="1.5" step="0.05">
+      <label for="SD1">Design shaking for tall, slow buildings, S<sub>D1</sub> (g) <b id="vSD1"></b></label><input type="range" id="SD1" min="0.05" max="1" step="0.05">
+      <label for="R">Load reduction factor R <b id="vR"></b></label><input type="range" id="R" min="1" max="8" step="0.5">
+      <label for="Cd">Drift multiplier C<sub>d</sub> <b id="vCd"></b></label><input type="range" id="Cd" min="1" max="6.5" step="0.5">
       <label for="dlim">Drift limit (% of storey height) <b id="vdlim"></b></label><input type="range" id="dlim" min="0.5" max="2.5" step="0.1">
     </details>
   </div>
@@ -230,12 +231,13 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <h3 class="vh">The answer</h3>
     <p class="eyebrow">02 / The answer<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14h12M4 11V7M8 11V3M12 11V8"/></svg></p>
     <div class="stats">
-      <div class="stat"><span>Natural period</span><strong id="statT">–</strong><em>s</em></div>
-      <div class="stat"><span>Peak storey drift (share of storey height)</span><strong id="statDrift">–</strong><em>%</em></div>
-      <div class="stat"><span>Roof sway (code load)</span><strong id="statRoof">–</strong><em>mm</em></div>
+      <div class="stat"><span>Natural period (one full swing)</span><strong id="statT">–</strong><em>s</em></div>
+      <div class="stat"><span>Largest storey drift (% of storey height)</span><strong id="statDrift">–</strong><em>%</em></div>
+      <div class="stat"><span>Roof sway under the code load</span><strong id="statRoof">–</strong><em>mm</em></div>
     </div>
     <div class="verdict" id="verdict" role="status"><b>Waiting</b>The answer appears here once Python has loaded.</div>
     <div id="warnB"></div>
+    <p class="note" id="siteB" role="status"></p>
     <h4>Design</h4>
     <button class="b" id="btnDesign">Find the minimum stiffness that passes</button>
     <div id="designOut" class="note" role="status"></div>
@@ -248,6 +250,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
       <h4>Model and solver</h4>
       <div class="kv" id="kvB"></div>
       <canvas id="cvDesign" data-h="170" style="margin-top:16px" hidden role="img" aria-label="Chart: error per iteration for bisection, false position and fixed-point iteration."></canvas>
+    <p class="note">Each line is one method closing in on the answer. Lower is closer, and a steeper line gets there in fewer steps.</p>
     </div>
     <div>
       <h4>Drift check per storey</h4>
@@ -265,7 +268,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
   <a class="card" href="#detect">
     <p class="eyebrow">Seismic input</p>
     <h3>Five stations, one event</h3>
-    <p>Arrival-time gaps become distances; least squares reconciles the noisy station estimates into one epicentre.</p>
+    <p>The gap between two waves gives each station's distance. Least squares turns five rough distances into one location.</p>
   </a>
   <a class="card" href="#lab">
     <p class="eyebrow">Numerical engine</p>
@@ -278,15 +281,17 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
 <!-- ============================ SHAKE ============================ -->
 <section class="tab" id="t-shake" role="tabpanel" aria-labelledby="tab-shake">
 <div class="hero">
-  <div><p class="eyebrow">Field study / 02</p><h2 class="display">Shake it at every frequency. See what protects it.</h2></div>
+  <div><p class="eyebrow">Field study / 02</p><h2 class="display">Shake it at every frequency. See what protects it.</h2><p class="lede" style="margin:8px 0 0;font-size:14px">Shake the ground slowly or quickly. Add a damper or soft bearings and watch the sway fall.</p></div>
   <button class="cta" id="goDetect"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Detect the earthquake</button>
 </div>
 <div class="grid">
   <div class="card">
     <p class="eyebrow">01 / Shaking and protection</p>
-    <h3>Tune the response</h3>
-    <label for="zeta">Structural damping (%) <b id="vzeta"></b></label><input type="range" id="zeta" min="0.5" max="10" step="0.5">
+    <h3>Shake it, then protect it</h3>
+    <label for="zeta">Damping of the building (%) <b id="vzeta"></b></label><input type="range" id="zeta" min="0.5" max="10" step="0.5">
     <label for="ag">Ground shaking strength (g) <b id="vag"></b></label><input type="range" id="ag" min="0.005" max="0.2" step="0.005">
+    <label class="chk"><input type="checkbox" id="link"> Take the strength from the Detect tab's earthquake</label>
+    <p class="note" id="linkNote" hidden></p>
     <label class="chk"><input type="checkbox" id="tmd"> Tuned mass damper on the roof</label>
     <div id="tmdRow">
       <label for="mu">Damper mass (% of the building's moving mass) <b id="vmu"></b></label><input type="range" id="mu" min="0.2" max="15" step="0.1">
@@ -314,18 +319,19 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <p class="eyebrow">02 / The response</p>
     <h3>Roof sway against shaking frequency</h3>
     <canvas id="cvSweep" data-h="300" role="img" aria-label="Chart: roof sway against shaking frequency. The peak and the value at the chosen frequency are listed below it."></canvas>
+    <p class="note">How far the roof sways when the ground shakes slowly (left) or quickly (right). The peak is the speed to avoid: the building's own rhythm. Orange is your building now. The dashed line is the same building with no damping.</p>
     <label for="freq">Shaking frequency <b id="vfreq"></b></label><input type="range" id="freq" min="0" max="100" step="1" value="20">
     <div class="kv" id="kvS"></div>
     <div id="bandOut"></div>
-    <h4>Condition number of the undamped system</h4>
+    <h4>Condition number (how hard the equations are to solve)</h4>
     <canvas id="cvCond" data-h="170" role="img" aria-label="Chart: condition number of the undamped system against shaking frequency, with a spike at each natural frequency."></canvas>
-    <p class="note">The spikes sit exactly on the natural frequencies: there the undamped matrix K − Ω²M is singular.</p>
+    <p class="note">A high value means the equations are hard to solve accurately. Each spike is one of the building's natural frequencies: there, without damping, the equations have no answer.</p>
   </div>
   <div class="stage">
-    <div class="cap"><span id="capS1">Motion at this frequency</span><span>Sway exaggerated</span></div>
+    <div class="cap"><span id="capS1">Motion at this frequency</span><span>Sway exaggerated · slow motion</span></div>
     <canvas id="cvS" data-h="470" role="img" aria-label="Drawing of the building moving at the chosen shaking frequency."></canvas>
     <div class="cap"><span>Ground / steady shaking</span><span id="capS2"></span></div>
-    <p class="note" style="margin:10px 0 0">Steady shaking at one frequency. This is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies.</p>
+    <p class="note" style="margin:10px 0 0">The building swings further when the roof sway is larger, and faster when the shaking frequency is higher. Steady shaking at one frequency is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies.</p>
   </div>
 </div>
 </section>
@@ -333,24 +339,25 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
 <!-- ============================ DETECT ============================ -->
 <section class="tab" id="t-detect" role="tabpanel" aria-labelledby="tab-detect">
 <div class="hero">
-  <div><p class="eyebrow">Field study / 03</p><h2 class="display">Hear the earthquake before it arrives.</h2></div>
+  <div><p class="eyebrow">Field study / 03</p><h2 class="display">Hear the earthquake before it arrives.</h2><p class="lede" style="margin:8px 0 0;font-size:14px">Place an earthquake. See where the stations think it is, how big, and how many seconds of warning each city gets.</p></div>
   <button class="cta" id="goLab"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Open the numerics lab</button>
 </div>
 <div class="grid">
   <div class="card">
     <p class="eyebrow">01 / The event</p>
     <h3>Place the earthquake</h3>
-    <p class="lede">Click the map to move it, or type its position. Recordings are synthetic, so the true answer is known.</p>
+    <p class="lede">Click the map to move the earthquake. The recordings are made up, so the true answer is known.</p>
     <div class="row2">
       <div><label for="eqLat">Latitude (°N)</label><input type="number" id="eqLat" min="22" max="31" step="0.01"></div>
       <div><label for="eqLon">Longitude (°E)</label><input type="number" id="eqLon" min="47" max="60" step="0.01"></div>
     </div>
     <label for="mag">Magnitude <b id="vmag"></b></label><input type="range" id="mag" min="3" max="7.5" step="0.1">
     <label for="noise">Background noise at the stations <b id="vnoise"></b></label><input type="range" id="noise" min="0.005" max="0.5" step="0.005">
-    <label for="thr">Trigger threshold (ratio) <b id="vthr"></b></label><input type="range" id="thr" min="2" max="15" step="0.5">
-    <label for="delay">Processing delay before the alert (s) <b id="vdelay"></b></label><input type="range" id="delay" min="0" max="20" step="1">
+    <label for="thr">Trigger threshold (how big a jump counts) <b id="vthr"></b></label><input type="range" id="thr" min="2" max="15" step="0.5">
+    <label for="delay">Delay before the alert goes out (s) <b id="vdelay"></b></label><input type="range" id="delay" min="0" max="20" step="1">
     <label class="chk"><input type="checkbox" id="iran"> Add a station on the Iranian side (hypothetical)</label>
     <label for="showSt">Show the recording from</label><select id="showSt"></select>
+    <label for="site">The building stands in</label><select id="site"></select>
     <h4>Result</h4>
     <div class="kv" id="kvD"></div>
     <h4>Your own recording</h4>
@@ -365,7 +372,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <p class="eyebrow">02 / The network</p>
     <h3>Stations and epicentre</h3>
     <canvas id="cvMap" data-h="380" role="img" aria-label="Schematic map of stations, cities, the true earthquake and the estimated epicentre. The table below lists the same distances."></canvas>
-    <p class="note">Schematic map: positions only, no coastline. ▲ station · ● city · ★ true earthquake · ✚ estimate. Circles are the estimated distances.</p>
+    <p class="note">Each circle is one station's estimate of how far away the earthquake is. Where the circles cross is the earthquake. ▲ station · ● city · ★ true earthquake · ✚ estimate. Positions only, no coastline.</p>
     <div class="scroll" tabindex="0" role="region" aria-label="Stations: true and estimated distances"><table id="tbSt"></table></div>
     <p class="note" id="stNote" hidden></p>
   </div>
@@ -373,9 +380,14 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <p class="eyebrow">03 / The record</p>
     <h3>Recording and trigger</h3>
     <canvas id="cvTrace" data-h="190" role="img" aria-label="Chart: the recording, with the P and S picks marked."></canvas>
+    <p class="note">What one station's instrument writes. The first jump is the fast P wave. The bigger one is the slow S wave, which does the damage.</p>
     <canvas id="cvRatio" data-h="190" role="img" aria-label="Chart: short-term over long-term average, with the trigger threshold."></canvas>
+    <p class="note">The trigger. It compares the last second with the 15 seconds before. When the line jumps above the dashed threshold, an arrival is marked.</p>
     <h4>Warning time</h4>
     <div class="scroll" tabindex="0" role="region" aria-label="Warning time for each city"><table id="tbCity"></table></div>
+    <h4>At the building</h4>
+    <div class="kv" id="kvSite"></div>
+    <button class="b" id="btnLink">Shake the building with this earthquake</button>
     <h4>Damage check after a quake</h4>
     <label for="Tmeas">Measured first period after the quake (s)</label><input type="number" id="Tmeas" step="0.01" min="0">
     <button class="b" id="btnDamage">Estimate stiffness loss (bisection)</button>
@@ -387,23 +399,22 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
 <!-- ============================ LAB ============================ -->
 <section class="tab" id="t-lab" role="tabpanel" aria-labelledby="tab-lab">
 <div class="hero">
-  <div><p class="eyebrow">Field study / 04</p><h2 class="display">One building, every method.</h2></div>
-  <button class="cta" id="btnLab"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Run all</button>
+  <div><p class="eyebrow">Field study / 04</p><h2 class="display">One building, every method.</h2><p class="lede" style="margin:8px 0 0;font-size:14px">The same building, solved by every numerical method of the course, side by side.</p></div>
 </div>
-<p class="note">Everything here uses the building from the Building tab. <b id="labStale" class="fail" role="status" hidden>The building has changed since this run. Run all again to update.</b></p>
+<p class="note">Everything here uses the building from the Building tab, and is worked out again whenever that building changes. <b id="labStale" role="status" hidden>Working it out for the current building…</b></p>
 <div class="grid2">
   <div class="card"><p class="eyebrow">Linear systems</p><h3>Stiffness matrix K</h3><canvas id="cvK" data-h="260" role="img" aria-label="Picture of the stiffness matrix: which entries are positive, negative or zero."></canvas><div id="kNote" class="note"></div></div>
   <div class="card"><p class="eyebrow">Linear systems</p><h3>One problem, every linear solver</h3><p class="lede">Solving K·u = F for the code load.</p><div class="scroll" tabindex="0" role="region" aria-label="Linear solvers compared"><table id="tbRace"></table></div></div>
-  <div class="card"><p class="eyebrow">Iterative methods</p><h3>Iterative solvers: error per iteration</h3><canvas id="cvIter" data-h="240" role="img" aria-label="Chart: error per iteration for Jacobi, Gauss-Seidel and SOR."></canvas></div>
-  <div class="card"><p class="eyebrow">Iterative methods</p><h3>SOR: iterations against the relaxation factor ω</h3><canvas id="cvSor" data-h="240" role="img" aria-label="Chart: SOR iterations needed against the relaxation factor."></canvas></div>
-  <div class="card"><p class="eyebrow">Eigenvalues</p><h3>Natural frequencies as roots of det(K − λM) = 0</h3><canvas id="cvDet" data-h="240" role="img" aria-label="Chart: the determinant against lambda, with its roots marked. The roots are listed below."></canvas><div id="detOut" class="note"></div></div>
+  <div class="card"><p class="eyebrow">Iterative methods</p><h3>Iterative solvers: error per iteration</h3><canvas id="cvIter" data-h="240" role="img" aria-label="Chart: error per iteration for Jacobi, Gauss-Seidel and SOR."></canvas><p class="note">Each line is one method guessing again and again. The faster a line falls, the fewer rounds it needs.</p></div>
+  <div class="card"><p class="eyebrow">Iterative methods</p><h3>SOR: iterations against the relaxation factor ω</h3><canvas id="cvSor" data-h="240" role="img" aria-label="Chart: SOR iterations needed against the relaxation factor."></canvas><p class="note">How many rounds SOR needs for each setting of ω. The lowest point is the best setting.</p></div>
+  <div class="card"><p class="eyebrow">Eigenvalues</p><h3>Natural frequencies as roots of det(K − λM) = 0</h3><canvas id="cvDet" data-h="240" role="img" aria-label="Chart: the determinant against lambda, with its roots marked. The roots are listed below."></canvas><p class="note">Every place where the curve crosses zero is a natural frequency of the building.</p><div id="detOut" class="note"></div></div>
   <div class="card"><p class="eyebrow">Roots of equations</p><h3>Root finding: three methods on the design problem</h3><canvas id="cvRoot" data-h="240" role="img" aria-label="Chart: error per iteration for the three root-finding methods."></canvas><div id="rootOut" class="note"></div></div>
   <div class="card"><p class="eyebrow">Error growth</p><h3>Euler's method: energy that should stay constant</h3><canvas id="cvEuler" data-h="240" role="img" aria-label="Chart: energy against time for three Euler step sizes."></canvas><div id="eulerOut" class="note"></div></div>
-  <div class="card"><p class="eyebrow">Error growth</p><h3>Euler's method: roof motion against the exact answer</h3><canvas id="cvEuler2" data-h="240" role="img" aria-label="Chart: roof position from Euler's method against the exact answer."></canvas></div>
+  <div class="card"><p class="eyebrow">Error growth</p><h3>Euler's method: roof motion against the exact answer</h3><canvas id="cvEuler2" data-h="240" role="img" aria-label="Chart: roof position from Euler's method against the exact answer."></canvas><p class="note">The dashed line is the exact motion. Euler's line slowly swings too far, because its small errors add up.</p></div>
   <div class="card">
     <p class="eyebrow">Regression</p>
     <h3>Period against height</h3>
-    <p class="lede" id="regHelp">Rows are height (m), period (s). The sample rows are <b>synthetic</b>: made from the ASCE 7 concrete-frame formula T = 0.0466·h<sup>0.9</sup> with scatter added. Replace them with measured data, such as the tables in Goel and Chopra (1997).</p>
+    <p class="lede" id="regHelp">One building per row: height (m), period (s). These sample rows are <b>made up</b> from the code formula T = 0.0466·h<sup>0.9</sup> with scatter added. Replace them with measured data.</p>
     <textarea id="regData" aria-label="Height and period rows" aria-describedby="regHelp">9.6, 0.35
 12.8, 0.43
 16, 0.58
@@ -420,19 +431,19 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <button class="b" id="btnCal">Calibrate the model's stiffness to this curve (bisection)</button>
     <div id="regOut" class="note" role="status"></div>
   </div>
-  <div class="card"><p class="eyebrow">Regression</p><h3>Fit</h3><canvas id="cvReg" data-h="300" role="img" aria-label="Chart: measured periods against height with the fitted curve."></canvas></div>
+  <div class="card"><p class="eyebrow">Regression</p><h3>Fit</h3><canvas id="cvReg" data-h="300" role="img" aria-label="Chart: measured periods against height with the fitted curve."></canvas><p class="note">Dots are the data. The line is the curve fitted through them. The red dot is the building from the Building tab.</p></div>
 </div>
 </section>
 
 <!-- ============================ VERIFY ============================ -->
 <section class="tab" id="t-verify" role="tabpanel" aria-labelledby="tab-verify">
 <div class="hero">
-  <div><p class="eyebrow">Field study / 05</p><h2 class="display">Check the solver against exact answers.</h2></div>
+  <div><p class="eyebrow">Field study / 05</p><h2 class="display">Check the solver against exact answers.</h2><p class="lede" style="margin:8px 0 0;font-size:14px">Each check compares the solver with an answer worked out another way.</p></div>
   <button class="cta" id="btnVerify"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>Run all checks</button>
 </div>
 <div class="card">
   <p class="eyebrow">Verification</p>
-  <p class="lede">Each row compares the solver with an exact formula, a hand calculation or a second method. The same checks run in the test script in the repository.</p>
+  <p class="lede">"Against" says where the expected answer comes from: an exact formula, a hand calculation or a second method.</p>
   <p id="verSum" role="status" style="margin:0 0 8px"></p>
   <div class="scroll" tabindex="0" role="region" aria-label="Verification checks"><table id="tbVer"></table></div>
 </div>
@@ -441,7 +452,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
 <!-- ============================ LIMITS ============================ -->
 <section class="tab" id="t-about" role="tabpanel" aria-labelledby="tab-about">
 <div class="hero">
-  <div><p class="eyebrow">Field notes</p><h2 class="display">Know what this model is, and what it is not.</h2></div>
+  <div><p class="eyebrow">Field notes</p><h2 class="display">Know what this model is, and what it is not.</h2><p class="lede" style="margin:8px 0 0;font-size:14px">What the model can tell you, and what it leaves out.</p></div>
 </div>
 <div class="grid2">
 <div class="card">
@@ -470,6 +481,8 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <li>The roof damper's mass is a share of the first mode's moving (modal) mass, not of the whole building. That moving mass is about half of the total for the 8-storey preset and under a third for the 30-storey tower.</li>
     <li>Warning times use the true distance from the earthquake to each city, not the located one. The recovered magnitude reads about 0.03 low, because the synthetic wave train never quite reaches its nominal height.</li>
     <li>For wall and frame + core buildings the stiffness matrix is the inverse of a flexibility matrix, which is badly conditioned for many storeys. At 40 storeys the condition number is about 10<sup>7</sup> and the residual shown in the calculation trail is about 10<sup>−9</sup>, against 10<sup>−13</sup> for a frame.</li>
+    <li>The lean of a drawing is not to scale. It grows with the square root of the real sway, so that a sway of 2 mm and one of 200 mm can both be seen; a sway of 0.6% of the building's height or more is drawn at the largest lean. The motion is shown at about a third of its real speed.</li>
+    <li>The link from the Detect tab's earthquake to the building is rough. It reads the S wave of the made-up recording as the trace of a standard Wood–Anderson seismograph, turns that into a ground movement at 1 Hz, and shakes the building steadily at that strength. It gives the order of magnitude, not a forecast.</li>
     <li>The drawings are sketches. The windows and the trace along the ground in the Building tab are decoration; only the sway, the colours and the numbers come from the solver. A roof damper moves several times further than the roof, so its travel is cut off at the edge of the drawing.</li>
   </ul>
 </div>
@@ -1289,6 +1302,32 @@ def ml_correction(r):
     return 1.110 * math.log10(r / 100.0) + 0.00189 * (r - 100.0) + 3.0
 
 
+# The synthetic recordings are what a standard Wood-Anderson seismograph would write, in millimetres: local
+# magnitude is defined on that instrument. Its constants are the ones measured by Uhrhammer and Collins (1990).
+WA_GAIN = 2080.0     # static magnification
+WA_F0 = 1.25         # natural frequency in Hz (a period of 0.8 s)
+WA_DAMPING = 0.7     # share of critical damping
+S_WAVE_HZ = 1.0      # frequency of the synthetic S wave, as written in synth_seismogram
+
+
+def wood_anderson_gain(f):
+    """How many times a Wood-Anderson seismograph magnifies a ground movement at frequency f (Hz).
+    The instrument is a damped mass on a spring, so this is the formula checked in seismometer_response,
+    times the static magnification."""
+    r = f / WA_F0
+    return WA_GAIN * r * r / math.sqrt((1.0 - r * r) ** 2 + (2.0 * WA_DAMPING * r) ** 2)
+
+
+def site_shaking(mag, dist):
+    """Ground motion at a place `dist` km from the earthquake. It comes from the S wave of the same model that
+    writes the stations' recordings: size on the recording -> movement of the ground -> acceleration of the ground.
+    This is what links the Detect tab to the building. It is good for the order of magnitude only."""
+    amp = 10.0 ** (mag - ml_correction(max(dist, 5.0)))       # mm on the recording, exactly as in synth_seismogram
+    disp = amp / wood_anderson_gain(S_WAVE_HZ) / 1000.0       # m: how far the ground itself moves
+    acc = (2.0 * math.pi * S_WAVE_HZ) ** 2 * disp             # m/s2: a steady swing of that size at that frequency
+    return {"amp": amp, "disp": disp, "acc": acc, "g": acc / G, "freq": S_WAVE_HZ}
+
+
 def synth_seismogram(dist, mag, vp=6.0, vs=3.5, fs=20.0, noise=0.02, seed=1, pre=40.0):
     """Synthetic recording: noise, then a P wave, then a larger S wave.
     The record starts `pre` seconds before the earthquake happens."""
@@ -1426,6 +1465,11 @@ def detect(q):
         cx, cy = to_xy(c["lat"], c["lon"], lat0, lon0); dc = math.hypot(cx - ex, cy - ey)
         warn = None if first_alarm is None else dc / vs - (first_alarm + delay)
         out["cities"].append({"name": c["name"], "dist": dc, "warn": warn, "s_arrival": dc / vs})
+    site = q.get("site")                                    # where the building of the other tabs stands
+    if site:
+        cx, cy = to_xy(site["lat"], site["lon"], lat0, lon0); dc = math.hypot(cx - ex, cy - ey)
+        out["site"] = dict(site_shaking(mag, dc), name=site.get("name", ""), dist=dc, s_arrival=dc / vs,
+                           warn=None if first_alarm is None else dc / vs - (first_alarm + delay))
     out["first_alarm"] = first_alarm; out["false_alarm"] = false_alarm      # false_alarm: the first alert was set off by noise
     return out
 
@@ -1826,7 +1870,8 @@ const FONT = px => `${px}px "DM Mono", ui-monospace, Consolas, monospace`;      
 const S = {N: 8, h: 3.2, mass: 300, stiff: 400, system: "frame", EI: 3000, brace: false, braceA: 40,
   SDS: 0.8, SD1: 0.4, R: 5, Cd: 4.5, dlim: 2, zeta: 5, ag: 0.05,
   tmd: false, mu: 3, tf: 0.97, zd: 10, target: 40, iso: false, kb: 20, Tiso: 2.5, visc: false, vc: 5,
-  mag: 6, noise: 0.02, thr: 5, delay: 5, iran: false};
+  mag: 6, noise: 0.02, thr: 5, delay: 5, iran: false,
+  site: "Dubai", link: false};   // where the building stands, and whether the Shake tab takes its strength from the Detect tab's earthquake
 let mMul = [], kMul = [];      // per-floor multipliers on mass and on the stiffness of the storey below
 let sel = -1;                  // floor being edited, -1 = none
 let view = "static";           // what the building drawing shows: "static" or a mode number
@@ -1837,6 +1882,7 @@ let REG = null;                // latest regression result
 let upload = null;             // the user's own recording: {t, x, name, shown}. shown = it is the one on the two record charts
 let tmeasUser = false;         // true once the user has typed a measured period
 let labStamp = null;           // the building the numerics lab last ran on (as JSON)
+let labBusyFor = null;         // the building a lab run is working on right now, or null
 const PRESETS = {
   apartment: {N: 8, mass: 300, stiff: 400, system: "frame", h: 3.2},
   villa: {N: 3, mass: 150, stiff: 150, system: "frame", h: 3.2},
@@ -1857,10 +1903,13 @@ function resize() {            // keep the per-floor lists as long as the buildi
   mMul.length = S.N; kMul.length = S.N;
   if (sel >= S.N) sel = -1;
 }
+// The strength of the shaking, in g: the Shake tab's slider, or the Detect tab's earthquake when the two are linked.
+const shaking = () => S.link && DET && DET.site ? DET.site.g : S.ag;
+const siteOf = () => { const c = CITIES.find(c => c[0] === S.site) || CITIES[1]; return {name: c[0], lat: c[1], lon: c[2]}; };
 function params() {            // the building in SI units, as the solver expects it
   resize();
   return {N: S.N, h: S.h, m: mMul.map(v => v * S.mass * 1000), k: kMul.map(v => v * S.stiff * 1e6), system: S.system, EI: S.EI * 1e9,
-    zeta: S.zeta / 100, ag: S.ag, brace: {on: S.brace, A: S.braceA * 1e-4, bay: 6},
+    zeta: S.zeta / 100, ag: shaking(), brace: {on: S.brace, A: S.braceA * 1e-4, bay: 6},
     iso: {on: S.iso, kb: S.kb * 1e6, mb: S.mass * 1000, zb: 0.15}, tmd: {on: S.tmd, mu: S.mu / 100, f: S.tf, zd: S.zd / 100},
     visc: {on: S.visc, c: S.vc * 1e6}, code: {SDS: S.SDS, SD1: S.SD1, R: S.R, Cd: S.Cd, I: 1, drift: S.dlim / 100}, npts: 150, cond: true};
 }
@@ -2088,12 +2137,14 @@ function drawGround(c, W, y, cx, wave) {
   c.strokeStyle = css("--ink"); c.lineWidth = 1.3; c.beginPath(); c.moveTo(14, y); c.lineTo(W - 14, y); c.stroke();
 }
 // disp: sideways offset of every degree of freedom in "floor widths"; colors: per-storey colour, or null
-// opt: {labels: text beside each storey, mark: a storey whose label is always shown, note: [small line, value line] beside the roof, wave: phase of the ground wave}
+// opt: {labels: text beside each storey, mark: a storey whose label is always shown, note: [small line, value line] beside the roof, wave: phase of the ground wave,
+//       reach: the largest lean of the picture at full sway, in floor widths, so that the labels can stand clear of it}
 function drawBuilding(cv, disp, colors, opt = {}) {
   const [c, W, H] = prep(cv);
   const N = R.N, iso = R.base != null, wall = S.system === "wall", ground = H - 26, top = 40, slab = 4;
   const fh = Math.min(46, (ground - top) / (N + (iso ? 0.6 : 0))), fw = Math.min(150, W * 0.34), cx = W / 2, half = 0.46 * fw;
   const off = iso ? 1 : 0, ink = css("--ink"), mut = css("--mut"), line = css("--line"), paper = css("--card"), acc = css("--acc"), acc2 = css("--acc2");
+  const clear = fw * Math.max(0.95, (opt.reach || 0) + 0.58), labelR = Math.min(cx + clear, W - 40), labelL = Math.max(cx - clear, 22);   // where the labels go: outside the furthest lean
   drawGround(c, W, ground, cx, opt.wave);
   c.setLineDash([3, 4]); c.strokeStyle = mut; c.globalAlpha = 0.45; c.beginPath(); c.moveTo(cx, top - 16); c.lineTo(cx, ground); c.stroke(); c.setLineDash([]); c.globalAlpha = 1;   // plumb line
   let baseX = cx, baseY = ground;
@@ -2129,8 +2180,8 @@ function drawBuilding(cv, disp, colors, opt = {}) {
     c.fillStyle = picked ? acc2 : roof ? acc : ink; c.fillRect(x1 - half - over, y1 - th, 2 * (half + over), th);
     hit.push([Y[j] - fh * 0.2, Y[j] + fh * 0.8, j]);
     const thin = N > 20 && (j + 1) % 5 !== 0;                           // tall buildings: number and label every fifth storey only
-    if (!thin || picked) { c.fillStyle = picked ? acc2 : mut; c.textAlign = "right"; c.fillText((picked ? "▸ " : "") + (j + 1), cx - fw * 0.95, Y[j] + 6); }   // the arrow marks the floor being edited
-    if (opt.labels && (!thin || j === opt.mark)) { c.fillStyle = colors ? colors[j] : mut; c.textAlign = "left"; c.fillText(opt.labels[j], cx + fw * 0.95, Y[j] + fh / 2 + 6); }
+    if (!thin || picked) { c.fillStyle = picked ? acc2 : mut; c.textAlign = "right"; c.fillText((picked ? "▸ " : "") + (j + 1), labelL, Y[j] + 6); }   // the arrow marks the floor being edited
+    if (opt.labels && (!thin || j === opt.mark)) { c.fillStyle = colors ? colors[j] : mut; c.textAlign = "left"; c.fillText(opt.labels[j], labelR, Y[j] + fh / 2 + 6); }
   }
   if (R.tmd != null) {                                                  // damper block riding on the roof
     const x = cx + disp[R.tmd] * fw, y = Y[N - 1] - 13;
@@ -2139,7 +2190,7 @@ function drawBuilding(cv, disp, colors, opt = {}) {
     c.fillStyle = paper; c.fill(); c.strokeStyle = acc; c.lineWidth = 1.6; c.stroke();
   }
   if (opt.note) {                                                       // two lines beside the roof, kept inside the canvas
-    const yr = Y[N - 1], put = (text, size, col, y) => { c.font = FONT(size); c.fillStyle = col; c.textAlign = "left"; c.fillText(text, Math.min(cx + fw * 0.95, W - 6 - c.measureText(text).width), y); };
+    const yr = Y[N - 1], put = (text, size, col, y) => { c.font = FONT(size); c.fillStyle = col; c.textAlign = "left"; c.fillText(text, Math.min(labelR, W - 6 - c.measureText(text).width), y); };
     put(opt.note[0], 9.5, mut, yr - 15); put(opt.note[1], 11.5, ink, yr - 2);
   }
   cv._hit = hit;                                                        // rows of [y from, y to, floor] for clicks
@@ -2151,28 +2202,45 @@ const tabOn = t => $("t-" + t).classList.contains("on");
 const withoutDamper = arr => arr.filter((_, i) => i !== R.tmd);
 function keepDamperIn(d) { if (R.tmd != null) d[R.tmd] = clamp(d[R.tmd], -0.8, 0.8); return d; }
 
+// How far a drawing leans, and how fast it moves.
+// Until 28 November 2026 every picture was stretched to the same size, so a slider changed the numbers and not the
+// drawing. Now the lean follows the real sway. It is not to scale: it grows with the SQUARE ROOT of the sway, so that
+// 2 mm and 200 mm can both be seen and a change in a slider is a change in the picture.
+//   s = the largest sideways movement in metres. A sway of LEAN_FULL of the building's height, or more, is drawn
+//   at LEAN_MAX floor widths (the furthest that still fits beside the labels).
+const LEAN_MAX = 0.6, LEAN_FULL = 0.006, MODE_LEAN = 0.3;
+const leanOf = s => LEAN_MAX * Math.min(1, Math.sqrt(Math.max(s, 0) / (LEAN_FULL * R.H)));
+// Slow motion: about a third of the real speed, kept between one swing in 5 s and 2.5 swings a second.
+const SLOW = 0.35, shownHz = f => clamp(SLOW * f, 0.2, 2.5);
+// The swing's phase is added up frame by frame, so that a change of speed does not make the picture jump.
+const swing = {t: null, phase: 0};
+function swingPhase(t, hz) {
+  if (swing.t != null) swing.phase += 2 * Math.PI * hz * clamp((t - swing.t) / 1000, 0, 0.1);
+  swing.t = t; return swing.phase;
+}
+
 // t = time in ms for the animation, or null for one still picture at full sway
 function drawBuildView(t) {
   const off = R.base != null ? 1 : 0, d = new Array(R.ndof).fill(0), st = R.static;
   if (view !== "static" && !R.modes[+view]) setView("static");
   if (view === "static") {
-    const mx = Math.max(...st.u.map(Math.abs)) || 1, g = t == null ? 1 : 0.5 + 0.5 * Math.sin(t / 700);
-    for (let j = 0; j < R.N; j++) d[j + off] = st.u[j] / mx * 0.35 * g;
+    const mx = Math.max(...st.u.map(Math.abs)) || 1, g = t == null ? 1 : 0.5 + 0.5 * Math.sin(t / 700), lean = leanOf(mx);
+    for (let j = 0; j < R.N; j++) d[j + off] = st.u[j] / mx * lean * g;
     if (R.tmd != null) d[R.tmd] = d[R.roof];           // the static check has no dynamics: the damper simply sits on the roof
     const worst = st.ratio.reduce((best, r, j) => Math.abs(r) > Math.abs(st.ratio[best]) ? j : best, 0);
-    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), mark: worst, note: ["ROOF ↗", fmt(Math.abs(st.u[R.N - 1]) * 1000) + " mm"]});
+    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), mark: worst, reach: lean, note: ["ROOF ↗", fmt(Math.abs(st.u[R.N - 1]) * 1000) + " mm"]});
   } else {
-    const mo = R.modes[+view], s = t == null ? 1 : Math.sin(t / 1000 * 2 * Math.PI / clamp(mo.T, 0.6, 3));
+    const mo = R.modes[+view], s = t == null ? 1 : Math.sin(swingPhase(t, shownHz(mo.f)));      // a mode has a shape and a speed, but no size of its own
     const mx = Math.max(...withoutDamper(mo.shape).map(Math.abs)) || 1;
-    for (let i = 0; i < R.ndof; i++) d[i] = mo.shape[i] / mx * 0.3 * s;
-    drawBuilding($("cvB"), keepDamperIn(d), null, {note: ["MODE SHAPE", `φ${+view + 1}(z)`]});
+    for (let i = 0; i < R.ndof; i++) d[i] = mo.shape[i] / mx * MODE_LEAN * s;
+    drawBuilding($("cvB"), keepDamperIn(d), null, {reach: MODE_LEAN, note: ["MODE SHAPE", `φ${+view + 1}(z)`]});
   }
 }
 function drawShakeView(t) {
   const i = fIdx(), a = R.sweep.A[i], b = R.sweep.B[i], r = R.roof;
-  const ph = t == null ? Math.atan2(b[r], a[r]) : t / 1000 * 2 * Math.PI * 0.7;      // still picture: the moment of largest roof sway
-  const mx = Math.max(...withoutDamper(a.map((v, k) => Math.hypot(v, b[k])))) || 1;
-  drawBuilding($("cvS"), keepDamperIn(a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * 0.32)), null, {wave: ph, note: ["ROOF ↗", fmt(R.sweep.amp[i] * 1000) + " mm"]});
+  const ph = t == null ? Math.atan2(b[r], a[r]) : swingPhase(t, shownHz(R.freqs[i]));      // still picture: the moment of largest roof sway
+  const mx = Math.max(...withoutDamper(a.map((v, k) => Math.hypot(v, b[k])))) || 1, lean = leanOf(mx);
+  drawBuilding($("cvS"), keepDamperIn(a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * lean)), null, {wave: ph, reach: lean, note: ["ROOF ↗", fmt(R.sweep.amp[i] * 1000) + " mm"]});
 }
 // The two building drawings are animated. People who ask their system for reduced motion get a still picture.
 const stillOnly = matchMedia("(prefers-reduced-motion: reduce)");
@@ -2198,13 +2266,13 @@ async function freshAnalysis() { if (Rkey !== JSON.stringify(params())) await an
 const requestAnalysis = latest(analyse);
 const settle = debounce(requestAnalysis, 120);
 function refresh() { if (solverReady) stageState("○ Computing…"); settle(); }
-function renderAll() { renderBuild(); renderShake(); drawNow(); markLabStale(); clearStale(); stageState("● Response computed"); }
+function renderAll() { renderBuild(); renderShake(); renderSite(); drawNow(); markLabStale(); clearStale(); stageState("● Response computed"); labIfNeeded(); }
 const SYSTEM_NAMES = {frame: "frame", wall: "wall", dual: "frame + core"};
 function stageCaptions() {                                              // the lines above and below the two building drawings
   if (!R) return;
   const what = `${R.N}-storey ${SYSTEM_NAMES[S.system]}`, mo = view === "static" ? null : R.modes[+view];
   $("capB1").innerHTML = `${what} / <b>${mo ? "mode 0" + (+view + 1) : "code load"}</b>`;
-  $("capB2").textContent = mo ? `Period ${fmt(mo.T)} s · ${fmt(mo.f)} Hz` : "Sway exaggerated";
+  $("capB2").textContent = mo ? `Period ${fmt(mo.T)} s · ${fmt(mo.f)} Hz · slow motion` : "Sway exaggerated";
   $("capB3").textContent = R.base != null ? "Ground / on base isolators" : "Ground / fixed base";
   $("capS1").innerHTML = `${what} / <b>${fmt(R.freqs[fIdx()])} Hz</b>`;
   $("capS2").textContent = `Roof sway ${fmt(R.sweep.amp[fIdx()] * 1000)} mm`;
@@ -2237,8 +2305,8 @@ function renderBuild() {
 function setView(v) {
   view = v;
   for (const b of $("viewBtns").children) { const on = b.dataset.v === v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); }
-  $("viewNote").textContent = v === "static" ? "Numbers on the right are each storey's drift as a share of the limit. Green is safe, amber is above 70%, red fails."
-    : "A mode shape is an eigenvector of the system. The building sways in this shape when shaken at this frequency.";
+  $("viewNote").textContent = v === "static" ? "Numbers on the right are each storey's drift as a share of the limit. Green is safe, amber is above 70%, red fails. The building leans further when it sways more."
+    : "A mode shape is an eigenvector of the system. The building sways in this shape when shaken at this frequency. A heavier or stiffer building swings slower or faster in the same shape; changing one floor changes the shape.";
   stageCaptions();
 }
 function fIdx() { return Math.round(+$("freq").value / 100 * (R.freqs.length - 1)); }
@@ -2269,6 +2337,7 @@ function paintSlider(el) { const lo = +el.min || 0, hi = el.max === "" ? 100 : +
 document.addEventListener("input", e => { if (e.target.type === "range") paintSlider(e.target); });
 function syncInputs() {                                      // copy the state into every control
   for (const id of IDS) { $(id).value = S[id]; $("v" + id).textContent = S[id]; }
+  syncLink();
   for (const id of ["brace", "tmd", "iso", "visc", "iran"]) $(id).checked = S[id];
   const wall = S.system === "wall";                          // a wall-only building has no columns or braces in the model
   $("system").value = S.system; $("eiRow").hidden = S.system === "frame"; $("braceRow").hidden = !S.brace || wall; $("wallNote").hidden = !wall;
@@ -2386,8 +2455,36 @@ function fillStations() {
 async function detect() {
   const st = stations(), show = Math.min(+$("showSt").value || 0, st.length - 1);
   const d = await solver.must("detect", {lat: EQ.lat, lon: EQ.lon, mag: S.mag, noise: S.noise, thr: S.thr, delay: S.delay, show,
-    stations: st.map(s => ({name: s[0], lat: s[1], lon: s[2]})), cities: CITIES.map(s => ({name: s[0], lat: s[1], lon: s[2]}))});
-  DET = d; DET_ST = st; renderDetect(show);
+    stations: st.map(s => ({name: s[0], lat: s[1], lon: s[2]})), cities: CITIES.map(s => ({name: s[0], lat: s[1], lon: s[2]})), site: siteOf()});
+  const was = shaking();
+  DET = d; DET_ST = st; renderDetect(show); renderSite();
+  if (S.link && shaking() !== was) refresh();      // the earthquake changed, so the building is shaken again
+}
+// ---- the link between the tabs: what the Detect tab's earthquake does where the building stands -----------------------
+// Roof sway (m) of the present building for steady shaking of `acc` m/s2 at `hz`. The response is linear in the
+// strength, so it is read off the curve of the Shake tab and scaled.
+function swayAt(hz, acc) {
+  const f = R.freqs, a = R.sweep.amp; let k = f.findIndex(v => v >= hz);
+  if (k < 0) k = f.length - 1; else if (k === 0) k = 1;
+  const t = clamp((hz - f[k - 1]) / (f[k] - f[k - 1]), 0, 1);
+  return (a[k - 1] + t * (a[k] - a[k - 1])) * acc / R.ag;
+}
+function renderSite() {
+  const q = DET && DET.site; syncLink(); if (!q) return;
+  const warn = DET.false_alarm ? "false alarm" : q.warn == null ? "no alert" : q.warn > 0 ? fmt(q.warn, 3) + " s" : "none";
+  const sway = R ? swayAt(q.freq, q.acc) : null;
+  $("kvSite").innerHTML = kvHtml([["Distance from the earthquake", fmt(q.dist, 4) + " km"], ["Warning before the strong shaking", warn],
+    ["Ground shaking there", `${plainG(q.g)} g (the ground moves ${fmt(q.disp * 1000, 2)} mm)`], ["Roof sway of your building", sway == null ? "–" : fmt(sway * 1000, 3) + " mm"]]);
+  $("siteB").textContent = sway == null ? "" : `In the Detect tab's earthquake (magnitude ${S.mag}, ${fmt(q.dist, 3)} km from ${q.name}) this roof would sway about ${fmt(sway * 1000, 2)} mm.`;
+}
+const plainG = g => g < 1e-6 ? "less than 0.000001" : String(Number(g.toPrecision(2)));      // a strength in g, written without an exponent
+// While the link is on, the Shake tab's strength slider gives way to the earthquake.
+function syncLink() {
+  const q = DET && DET.site, on = S.link;
+  $("link").checked = on; $("ag").disabled = on;
+  $("vag").textContent = on && q ? plainG(q.g) : S.ag;
+  $("linkNote").hidden = !on;
+  $("linkNote").textContent = on && q ? `Magnitude ${S.mag}, ${fmt(q.dist, 3)} km from ${q.name}, gives ${plainG(q.g)} g. Change the earthquake on the Detect tab.` : on ? "Waiting for the Detect tab's earthquake." : "";
 }
 const requestDetect = latest(detect);
 const refreshDetect = debounce(requestDetect, 120);
@@ -2417,7 +2514,7 @@ function renderDetect(show) {
   retained($("cvMap"), drawMap);
   // the solver marks a pick made more than a second before the true arrival: noise crossed the threshold, not the earthquake
   const falseTrigger = r => r.false_trigger, late = (t, t0) => t == null ? "–" : fmt(t - t0, 2);
-  let h = `<tr><th>Station</th><th class="n">True (km)</th><th class="n">Estimate (km)</th><th class="n">P pick late (s)</th><th class="n">S pick late (s)</th><th class="n">Mag.</th></tr>`;
+  let h = `<tr><th>Station</th><th class="n">True (km)</th><th class="n">Estimate (km)</th><th class="n">P found late by (s)</th><th class="n">S found late by (s)</th><th class="n">Mag.</th></tr>`;
   for (const r of DET.stations) h += `<tr><td>${esc(r.name)}</td><td class="n">${fmt(r.true, 4)}</td><td class="n">${r.est != null ? fmt(r.est, 4) : r.too_close ? "too close" : "no pick"}</td><td class="n${falseTrigger(r) ? " fail" : ""}">${falseTrigger(r) ? "false trigger" : late(r.tP, r.tP_true)}</td><td class="n">${falseTrigger(r) ? "–" : late(r.tS, r.tS_true)}</td><td class="n">${fmt(r.ml, 3)}</td></tr>`;
   $("tbSt").innerHTML = h;
   const notes = [];
@@ -2427,7 +2524,7 @@ function renderDetect(show) {
   const e = DET.epi, falseAlarm = DET.false_alarm;
   const alert = DET.first_alarm == null ? "none: no station triggered" : falseAlarm ? `<b class="fail">false alarm</b>, set off by noise` : `${fmt(DET.first_alarm)} s after the earthquake began`;
   $("kvD").innerHTML = kvHtml([["First alert", alert]].concat(e
-    ? [["Stations used", e.n], ["Epicentre error", fmt(e.err_km) + " km"], [e.n > 3 ? "Condition number (normal equations)" : "Condition number", fmt(e.cond, 3)], ["Distance misfit (rms)", fmt(e.rms) + " km"], ["Magnitude", fmt(e.ml_mean, 3) + " ± " + fmt(e.ml_std, 2)], ["Method", e.n > 3 ? "least squares" : "Gauss elimination"]]
+    ? [["Stations used", e.n], ["Epicentre error", fmt(e.err_km) + " km"], [e.n > 3 ? "Condition number (normal equations)" : "Condition number", fmt(e.cond, 3)], ["Typical distance mismatch", fmt(e.rms) + " km"], ["Magnitude", fmt(e.ml_mean, 3) + " ± " + fmt(e.ml_std, 2)], ["Method", e.n > 3 ? "least squares" : "Gauss elimination"]]
     : [["Epicentre", esc(DET.epi_note || "not found")]]));
   // after a false alarm the alert time means nothing, so no warning time is shown
   const warnCell = r => falseAlarm ? `<td class="n fail">false alarm</td>` : `<td class="n ${r.warn != null && r.warn > 0 ? "pass" : "fail"}">${r.warn == null ? "no alert" : r.warn > 0 ? fmt(r.warn, 3) : "none"}</td>`;
@@ -2456,6 +2553,9 @@ $("cvMap").addEventListener("click", e => {
 });
 for (const id of ["eqLat", "eqLon"]) $(id).addEventListener("change", () => { const la = parseFloat($("eqLat").value), lo = parseFloat($("eqLon").value); moveQuake(isFinite(la) ? la : EQ.lat, isFinite(lo) ? lo : EQ.lon); });
 $("iran").addEventListener("change", e => { S.iran = e.target.checked; fillStations(); requestDetect(); });
+$("site").addEventListener("change", e => { S.site = e.target.value; requestDetect(); });
+$("link").addEventListener("change", e => { S.link = e.target.checked; syncLink(); refresh(); });
+$("btnLink").addEventListener("click", () => { S.link = true; syncLink(); refresh(); goTab("shake"); });
 function dropUpload() { upload = null; $("recOut").textContent = ""; $("btnSynth").hidden = true; }
 $("showSt").addEventListener("change", () => { dropUpload(); requestDetect(); });
 $("btnSynth").addEventListener("click", () => { dropUpload(); requestDetect(); });      // back to the synthetic recording
@@ -2543,7 +2643,7 @@ onClick("btnCal", async () => {
   await analyse(); await runReg();
   $("regOut").innerHTML += `<br>Calibrated: stiffness ×${fmt(d.scale, 4)} in ${d.it} bisection steps (target ${fmt(T)} s). Applied, rounded to the sliders: ${done.text}.${done.capped}`;
 });
-function markLabStale() { $("labStale").hidden = !(labStamp && labStamp !== structureKey(params())); }
+function markLabStale() { $("labStale").hidden = labStamp === structureKey(params()); }       // shown until the cards match the sliders
 function drawK(K, n) {
   const cv = $("cvK"), [c, W, H] = prep(cv), sz = Math.min((W - 20) / n, (H - 10) / n);
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
@@ -2554,13 +2654,25 @@ function drawK(K, n) {
   }
   c.globalAlpha = 1;
 }
-onClick("btnLab", async () => {
+// The Lab has no "run" button. It fills itself when its tab is opened, and again whenever the building has changed.
+async function runLab() {
+  const p = params(), stamp = structureKey(p);
+  labBusyFor = stamp;
+  try { await fillLab(p, stamp); } finally { labBusyFor = null; }
+}
+const requestLab = latest(runLab);
+function labIfNeeded() {
+  if (!solverReady || !tabOn("lab")) return;
+  const now = structureKey(params());
+  if (labStamp !== now && labBusyFor !== now) requestLab();
+}
+async function fillLab(p, stamp) {
   await freshAnalysis();                    // the picture of K below must be of the same building as the rest
-  const p = params(), stamp = structureKey(p), {K, N: n, tri, condK} = R;      // K is the structure's own matrix: no base slab, no damper
+  const {K, N: n, tri, condK} = R;          // K is the structure's own matrix: no base slab, no damper
   // 1. the same static problem by every linear solver
   const race = await solver.must("race", p);
   retained($("cvK"), () => drawK(K, n));
-  $("kNote").textContent = `${n} × ${n}. Terracotta is positive, teal is negative, the faint squares are zero. ${tri ? "Only three diagonals are filled, so the Thomas algorithm applies." : "The matrix is full, so Cholesky is used."} Condition number: ${fmt(condK, 3)}.`;
+  $("kNote").textContent = `Each square is one number of the ${n} × ${n} matrix: terracotta is positive, teal is negative, faint is zero. ${tri ? "Only three diagonals are filled, so the fast Thomas algorithm can be used." : "The matrix is full, so Cholesky is used."} Condition number: ${fmt(condK, 3)}.`;
   const diverged = r => r.it != null && (r.bad || r.resid == null || r.resid > 100), capped = r => r.it != null && !diverged(r) && r.it >= race.cap;
   const itText = r => r.it == null ? "direct" : diverged(r) ? r.it + " (diverged)" : r.it + (capped(r) ? " (stopped at cap)" : "");
   $("tbRace").innerHTML = `<tr><th>Method</th><th class="n">Iterations</th><th class="n">Work (operations, approx.)</th><th class="n">Residual</th><th class="n">Difference from Gauss</th></tr>`
@@ -2586,22 +2698,23 @@ onClick("btnLab", async () => {
   else {
     plot($("cvRoot"), histSeries(ds), {logy: true, xl: "iteration", yl: "approx. relative error"});
     const b = ds.bisection.s, agree = [ds.false_position, ds.fixed_point].every(r => Math.abs(r.s - b) <= 1e-4 * Math.abs(b));
-    $("rootOut").textContent = (agree ? `All three find the stiffness multiplier ${fmt(b, 6)}` : `Bisection finds the stiffness multiplier ${fmt(b, 6)}, but false position gives ${fmt(ds.false_position.s, 6)} and fixed-point ${fmt(ds.fixed_point.s, 6)}`)
-      + `, starting from the bracket ${fmt(ds.bracket[0], 3)} to ${fmt(ds.bracket[1], 3)}. Steps needed: bisection ${stepsOf(ds.bisection)}, false position ${stepsOf(ds.false_position)}, fixed-point ${stepsOf(ds.fixed_point)}. Bisection halves the bracket every step. False position keeps one end fixed on a curved function, so its speed depends on the bracket. `
-      + (ds.fixed_point.capped ? "Fixed-point iteration is too slow here. Each update removes only a small part of the error, which happens when bracing (which the multiplier does not scale) carries most of the load." : "Fixed-point works here because each update shrinks the error.");
+    $("rootOut").textContent = "Each line is one method closing in on the answer: lower is closer. "
+      + (agree ? `All three find the same stiffness multiplier, ${fmt(b, 6)}` : `Bisection finds the stiffness multiplier ${fmt(b, 6)}, but false position gives ${fmt(ds.false_position.s, 6)} and fixed-point ${fmt(ds.fixed_point.s, 6)}`)
+      + `, searching between ${fmt(ds.bracket[0], 3)} and ${fmt(ds.bracket[1], 3)}. Steps: bisection ${stepsOf(ds.bisection)}, false position ${stepsOf(ds.false_position)}, fixed-point ${stepsOf(ds.fixed_point)}. Bisection is the slowest but cannot fail. `
+      + (ds.fixed_point.capped ? "Fixed-point iteration is too slow here, because bracing carries most of the load and it does not change with the multiplier." : "The other two are quicker here because the problem is well behaved.");
   }
   // 4. Euler's method
   const eu = await solver.must("euler", p), eulerColours = ["--bad", "--acc2", "--ok"], fine = eu.runs[2], perT = r => `period ÷ ${Math.round(1 / r.frac)}`;
   plot($("cvEuler"), eu.runs.map((r, i) => ({x: r.t, y: r.energy, color: eulerColours[i], label: "step = " + perT(r)})), {logy: true, xl: "time (s)", yl: "energy ÷ starting energy"});
   plot($("cvEuler2"), [{x: eu.exact_t, y: eu.exact, color: "--mut", dash: [4, 3], label: "exact"}, {x: fine.t, y: fine.roof, color: eulerColours[2], label: "Euler, " + perT(fine)}],
     {xl: "time (s)", yl: "roof position (m)", ylim: [-0.15, 0.15]});      // the start is 0.05 m; a run that blows up is cut off at three times that
-  $("eulerOut").textContent = `With no damping the energy should stay at 1. Euler multiplies it by (1 + ω²h²) every step. The smallest step ${fine.stopped != null ? `was stopped at ${fmt(fine.stopped)} s with its energy at` : "ends at"} ${fmt(fine.energy.at(-1), 4)}, and the formula for the first mode alone predicts ${fmt(fine.predicted, 4)} at the end. `
+  $("eulerOut").textContent = `With no damping the energy should stay level at 1. Any rise is Euler's error. The smallest step ${fine.stopped != null ? `was stopped at ${fmt(fine.stopped)} s with its energy at` : "ends at"} ${fmt(fine.energy.at(-1), 4)}; the formula, (1 + ω²h²) per step, predicts ${fmt(fine.predicted, 4)}. `
     + (p.N === 1 ? "A one-storey building has a single mode, so all three runs follow that formula exactly."
-      : `The larger steps grow far faster than that formula, because the starting shape is only approximately mode 1: small errors from the eigenvalue iteration and round-off leave a trace of the highest mode (${fmt(eu.w_max, 4)} rad/s, found by power iteration${eu.power_capped ? `, which was cut off at its cap of ${eu.power_iters} steps and is good to about 5 figures` : ` in ${eu.power_iters} steps`}) in it, and Euler amplifies that mode most.`)
-    + (eu.runs.some(r => r.stopped != null) ? ` A run is stopped once its energy has grown by a factor of ${eu.stop.toExponential(0)}.` : "");
+      : `The bigger steps blow up much sooner, because Euler makes the fastest vibration of the building grow most (${fmt(eu.w_max, 4)} rad/s, found by power iteration${eu.power_capped ? `, cut off at its cap of ${eu.power_iters} steps` : ` in ${eu.power_iters} steps`}).`)
+    + (eu.runs.some(r => r.stopped != null) ? ` A run is stopped once its energy has grown ${eu.stop.toExponential(0)} times.` : "");
   await runReg();
   labStamp = stamp; markLabStale();
-});
+}
 onClick("btnVerify", async () => {
   const v = await solver.must("verify"), bad = v.filter(r => !r.ok).length;
   $("verSum").innerHTML = `<b class="${bad ? "fail" : "pass"}">${v.length - bad} of ${v.length} checks passed</b>`;
@@ -2620,7 +2733,7 @@ function showTab(t, opt = {}) {
   }
   for (const s of document.querySelectorAll(".tab")) s.classList.toggle("on", s.id === "t-" + t);
   if (opt.link && location.hash !== "#" + t) history.replaceState(null, "", "#" + t);       // so the address bar can be shared
-  redrawVisible(); drawNow(); markLabStale();
+  redrawVisible(); drawNow(); markLabStale(); labIfNeeded();
 }
 // Going to another tab from inside a tab (a headline button, a card): the button that was pressed is about
 // to be hidden, so the keyboard focus moves to the new tab's own button and the page goes back to the top.
@@ -2641,7 +2754,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { th
 stillOnly.addEventListener("change", () => { drawNow(); animate(); });
 
 // the controls that need the solver; the rest (tabs, views, pinning) keep working without it
-const SOLVER_CONTROLS = ["btnDesign", "btnRule", "btnTmd", "btnIso", "btnDamage", "btnReg", "btnCal", "btnLab", "btnVerify", "btnPhone", "csv"];
+const SOLVER_CONTROLS = ["btnDesign", "btnRule", "btnTmd", "btnIso", "btnDamage", "btnReg", "btnCal", "btnVerify", "btnPhone", "csv"];
 function lockSolverControls(locked) { for (const id of SOLVER_CONTROLS) $(id).disabled = locked; }
 function bootNote(html) { $("bootNote").hidden = html == null; $("bootNote").innerHTML = html || ""; }
 let started = false;           // true once the solver has run at least once in this visit
@@ -2665,6 +2778,7 @@ async function boot() {
 }
 
 for (const cv of document.querySelectorAll("canvas")) cv.style.height = cv.dataset.h + "px";
+$("site").innerHTML = CITIES.map(c => `<option>${esc(c[0])}</option>`).join(""); $("site").value = S.site;
 lockSolverControls(true); fillStations(); setView("static"); applyPreset("apartment");
 showTab(location.hash.slice(1));
 animate(); boot();
