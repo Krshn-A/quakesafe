@@ -6,15 +6,15 @@
 <style>
 @page { size: A4; margin: 13mm 13mm 14mm; }
 * { box-sizing: border-box; }
-body { font: 9.4pt/1.36 "Segoe UI", Arial, sans-serif; color: #17212b; margin: 0; }
+body { font: 10.3pt/1.45 "Segoe UI", Arial, sans-serif; color: #17212b; margin: 0; }
 h1 { font-size: 21pt; margin: 0 0 2pt; }
 thead { display: table-header-group; }
-h2 { font-size: 12.5pt; margin: 11pt 0 4pt; padding-bottom: 2pt; border-bottom: 1.4pt solid #c2410c; color: #0b3a66; break-after: avoid; }
-h3 { font-size: 10pt; margin: 7pt 0 2pt; color: #0b3a66; break-after: avoid; }
-p { margin: 0 0 4pt; }
+h2 { font-size: 14pt; margin: 14pt 0 5pt; padding-bottom: 2pt; border-bottom: 1.4pt solid #c2410c; color: #0b3a66; break-after: avoid; }
+h3 { font-size: 11pt; margin: 9pt 0 3pt; color: #0b3a66; break-after: avoid; }
+p { margin: 0 0 5.5pt; }
 ul, ol { margin: 0 0 4pt; padding-left: 14pt; }
-li { margin: 0 0 1.5pt; }
-table { border-collapse: collapse; width: 100%; margin: 3pt 0 6pt; font-size: 8.5pt; }
+li { margin: 0 0 2.5pt; }
+table { border-collapse: collapse; width: 100%; margin: 3pt 0 7pt; font-size: 8.9pt; }
 th, td { border: 0.6pt solid #b9c3cd; padding: 2.2pt 4pt; text-align: left; vertical-align: top; }
 th { background: #e8eef4; }
 tr { break-inside: avoid; }
@@ -22,7 +22,7 @@ code { font: 8.4pt Consolas, monospace; background: #eef1f4; padding: 0 2pt; bor
 .sub { color: #51606e; font-size: 9pt; }
 .box { border: 0.8pt solid #c2410c; background: #fff6ef; padding: 4pt 7pt; margin: 4pt 0 6pt; break-inside: avoid; }
 .two { columns: 2; column-gap: 14pt; }
-.qa { break-inside: avoid; margin: 0 0 4.2pt; }
+.qa { break-inside: avoid; margin: 0 0 4.6pt; font-size: 9.4pt; line-height: 1.36; }
 .qa b { color: #0b3a66; }
 .f { font-family: "Cambria Math", Cambria, serif; font-size: 9.8pt; white-space: nowrap; }
 .n { text-align: right; white-space: nowrap; }
@@ -39,225 +39,251 @@ figure.side { float: right; width: 64mm; margin: 0 0 4pt 8pt; }
 </head>
 <body>
 
-<h1>QuakeSafe: study guide</h1>
-<p class="sub">Everything about the site from zero, every method, and the viva questions. Live site: https://krshn-a.github.io/quakesafe/ · Code: https://github.com/Krshn-A/quakesafe · Describes the code at commit <code>5c0cde2</code>, 28 November 2026.</p>
+<h1>QuakeSafe: the complete study guide</h1>
+<p class="sub">Written for someone who knows nothing about buildings, earthquakes or numerical methods. Live site: https://krshn-a.github.io/quakesafe/ · Code: https://github.com/Krshn-A/quakesafe · Describes the code at commit <code>5c0cde2</code>, 28 November 2026.</p>
 
-<div class="box"><b>How to use this guide.</b> Read sections 1 to 5 once. Learn sections 6 to 8 (the methods, a worked example and the code) and section 11 (numbers) well. Then practise section 13 aloud. In the viva you will be asked about the numerical code, so open <code>index.html</code>, find the solver (search for <code>id="solver"</code>) and make sure you can walk through each function named here. Every number in this guide was produced by running the solver with the page's default values.</div>
+<div class="box"><b>How to read this guide.</b> Read it in order, once, slowly. Every new word is explained the first time it appears, and nothing is used before it is explained. Parts 1 to 4 tell you what the project is about. Part 5 is the heart of it: every numerical method, explained with one tiny example that you can follow with a pen. Parts 6 to 9 cover the rest of the site. Part 10 is a list of numbers worth remembering, part 11 is a script for the demonstration, and part 12 is the viva questions. Keep the site open in another window while you read, and try each thing as you meet it. Every number in this guide was produced by running the site's own code.</div>
 
-<h2>1. What the site is, in one minute</h2>
+<h2>Part 1. What is this project?</h2>
+<p>QuakeSafe is a website. You tell it about a building: how many floors it has, how heavy each floor is and how strong its columns are. The site then answers three questions.</p>
+<ol>
+<li><b>How does this building move when the ground shakes?</b></li>
+<li><b>Is that much movement safe?</b> Building rules set a limit, and the site checks against it.</li>
+<li><b>If it is not safe, what can we do?</b> The site can make the columns stronger, or add devices that reduce the movement.</li>
+</ol>
+<p>There is also a second, smaller part. It shows how an earthquake is <b>detected</b> by measuring stations, how its position is worked out, and how many seconds of warning a city can get.</p>
+<p><b>Why is this a numerical methods project?</b> Because none of those questions can be answered with one simple formula. Each one turns into a mathematical problem that has to be solved step by step by a computer: a set of many equations, a search for a special number, a best-fit line and so on. The methods for doing that are exactly the ones taught in the course. The building and the earthquake are the story. The methods are what the project is marked on.</p>
+<p>Two more things matter. First, <b>every method is written by hand</b>, in the programming language Python. We did not use a ready-made solver. Second, <b>every result is checked</b> against an answer we already know to be right. Both points come up in every viva, and both are explained later.</p>
+
+<h2>Part 2. The ideas, from zero</h2>
+<h3>2.1 A building is weights sitting on springs</h3>
+<p>Think of a building as a stack of heavy plates, the floors, held apart by columns. When the ground moves sideways, the floors do not move as one solid block. Each floor lags behind and the columns bend a little, like a plastic ruler when you push its top end.</p>
+<p>To describe this with numbers we need only two things for each floor.</p>
 <ul>
-<li><b>QuakeSafe</b> is a one-page web tool. You describe a building, and it tells you how the building sways in an earthquake, whether that sway is allowed, and how to protect it. A second part detects and locates an earthquake from station recordings.</li>
-<li><b>It is a numerical methods project.</b> The building and the earthquake are the story; the marks are for the methods: linear systems, iterative solvers, eigenvalues, roots of equations, regression, interpolation and Euler's method.</li>
-<li><b>Every method is written by hand in Python.</b> The Python runs inside the browser, so there is no server and nothing to install.</li>
-<li><b>Every result is checked.</b> The Verify tab runs 87 checks against exact formulas, hand calculations and second methods.</li>
+<li><b>Mass (m)</b> is how heavy the floor is. In the default building each floor is 300 tonnes.</li>
+<li><b>Stiffness (k)</b> is how hard it is to push one floor sideways relative to the floor below it. In the default building it is 400 kN/mm. That means you need a force of 400 kilonewtons (about the weight of 40 tonnes) to shift one floor by one millimetre. A bendy ruler has low stiffness; a steel bar has high stiffness.</li>
 </ul>
+<p>So in our model each floor is a <b>mass</b>, and the columns of each storey act as a <b>spring</b> with a certain stiffness. This simple picture is used in real engineering as a first check, and it is example 12.4 in the course textbook (Chapra and Canale).</p>
 
-<h2>2. The ideas you need, from zero</h2>
-<table>
-<tr><th style="width:21%">Word</th><th>Meaning</th></tr>
-<tr><td>Model of the building</td><td>Each floor is a <b>mass</b> (m). Each storey's columns act as a <b>spring</b> with <b>stiffness</b> (k): the force needed to push one floor sideways by one metre relative to the floor below.</td></tr>
-<tr><td>Mass matrix <b>M</b>, stiffness matrix <b>K</b></td><td>The masses and stiffnesses of all floors written as matrices. For a frame, K is <b>tridiagonal</b> (only three diagonals are filled), <b>symmetric</b> and <b>positive definite</b>.</td></tr>
-<tr><td>Degree of freedom</td><td>One unknown sideways movement. An 8-storey building has 8; a damper or a base slab adds one each.</td></tr>
-<tr><td>Natural frequency and period</td><td>The rhythm at which the building swings by itself. Period T (seconds per swing) = 1 ÷ frequency. Found from <span class="f">K φ = ω² M φ</span>: an <b>eigenvalue</b> problem. ω² is the eigenvalue, and φ, the <b>mode shape</b>, is the eigenvector.</td></tr>
-<tr><td>Resonance</td><td>If the ground shakes at a natural frequency, the sway becomes very large.</td></tr>
-<tr><td>Damping</td><td>Energy lost in every swing. Without it the sway at resonance would be infinite. The site uses 5% by default.</td></tr>
-<tr><td>Storey drift</td><td>How far one floor moves relative to the floor below. Building codes limit it (here 2% of the storey height).</td></tr>
-<tr><td>Condition number</td><td>How sensitive the answer of <span class="f">A x = b</span> is to small errors. Large means hard to solve accurately.</td></tr>
-<tr><td>P wave, S wave</td><td>An earthquake sends a fast, weak P wave (6.0 km/s here) and a slower, strong S wave (3.5 km/s). The gap between them grows with distance.</td></tr>
-</table>
-
-<h2>3. How the site is built</h2>
+<h3>2.2 Why matrices appear</h3>
+<p>Take a small building with three floors, where every storey has stiffness 1. Push the floors sideways with forces F₁, F₂ and F₃, and call the distances they move u₁, u₂ and u₃. Each floor must be in balance: the springs pulling on it must equal the force pushing it.</p>
 <ul>
-<li><b>One file, <code>index.html</code>, in three parts:</b> the page (sliders, tables, charts), the <b>solver</b> (all the Python) and the page script (JavaScript that reads the sliders, asks the solver and draws).</li>
-<li><b>Pyodide</b> (version 0.27.7) is Python compiled to run in a browser. It runs in a <b>web worker</b>, a background thread, so the page does not freeze.</li>
-<li><b>One door:</b> the page calls <code>api(name, json)</code>, for example <code>analyse</code>, <code>race</code>, <code>detect</code>, <code>verify</code>. Numbers come back rounded to 7 significant figures.</li>
-<li><b>numpy</b> only stores arrays and does element-by-element arithmetic. No <code>numpy.linalg</code> routine is called, and a test fails if one ever is.</li>
-<li><b>Hosting:</b> GitHub Pages serves the file. The three test scripts run on GitHub at every push.</li>
+<li>The top floor is held only by the spring below it, which is stretched by u₃ − u₂. So: <span class="f">u₃ − u₂ = F₃</span>.</li>
+<li>The middle floor has a spring below it and one above it: <span class="f">−u₁ + 2u₂ − u₃ = F₂</span>.</li>
+<li>The first floor has a spring to the ground and one above it: <span class="f">2u₁ − u₂ = F₁</span>.</li>
 </ul>
+<p>That is three equations with three unknowns. Writing only the numbers in front of the unknowns gives a grid of numbers called a <b>matrix</b>:</p>
+<p class="m">      [  2  −1   0 ]         [ u₁ ]        [ F₁ ]
+  K = [ −1   2  −1 ]     u = [ u₂ ]    F = [ F₂ ]       and the three equations are written  K u = F
+      [  0  −1   1 ]         [ u₃ ]        [ F₃ ]</p>
+<p><b>K is called the stiffness matrix.</b> "Solving K u = F" simply means: find the three movements that satisfy all three equations at once. A 40-storey building gives 40 equations, which is why we need a computer and a method.</p>
+<p>Three words describe this particular matrix, and you will use them often.</p>
+<ul>
+<li><b>Tridiagonal:</b> only the main diagonal and the two lines beside it are filled. Everything else is zero. This happens because each floor touches only the floor above and the floor below.</li>
+<li><b>Symmetric:</b> the matrix is a mirror image across its diagonal. Floor 1 pulls on floor 2 exactly as hard as floor 2 pulls on floor 1.</li>
+<li><b>Positive definite:</b> however you deform the building, the springs store energy, never give it out. In practice it means the equations always have exactly one sensible answer.</li>
+</ul>
+<p>A second matrix, the <b>mass matrix M</b>, simply holds the mass of each floor on its diagonal.</p>
 
-<div style="break-inside:avoid"><h2>4. What each tab does</h2>
-<table>
-<tr><th style="width:11%">Tab</th><th style="width:36%">What you set</th><th>What it shows</th></tr>
-<tr><td><b>Building</b></td><td>Storeys (1 to 40), storey height, mass per floor, column stiffness, system (frame, wall/core, frame + core), bracing, one floor made heavier or one storey weaker, code load values. Five ready-made buildings.</td><td>Natural periods and animated mode shapes; sideways forces of the code check as arrows; sway and drift of every storey, coloured green, amber or red; pass or fail; a button that finds the <b>minimum stiffness that passes</b>.</td></tr>
-<tr><td><b>Shake</b></td><td>Damping, shaking strength, shaking frequency. Protection: <b>tuned mass damper</b>, <b>base isolation</b>, <b>shock-absorber dampers</b> between floors.</td><td>Roof sway against shaking frequency (the resonance curve); the building moving at the chosen frequency with the ground moving under it; condition number of the undamped system; design buttons for the damper and the isolator; a <b>sweep</b> button; a <b>skyline</b> of eight building heights under the same shaking.</td></tr>
-<tr><td><b>Detect</b></td><td>Earthquake position (click the map), magnitude, noise, trigger threshold, processing delay, an extra station.</td><td>Each station's recording and trigger; distance from the P-to-S gap; the epicentre; magnitude; warning time for each city; a <b>play</b> button that spreads the waves over the map; a damage check from a changed period.</td></tr>
-<tr><td><b>Lab</b></td><td>Nothing: it uses the building from the Building tab.</td><td>The same problem by every linear solver; error per iteration; the SOR scan; natural frequencies as roots of a determinant; three root-finders compared; a <b>replay</b> of the solvers closing in; Euler's energy growth; regression.</td></tr>
-<tr><td><b>Verify</b></td><td>One button.</td><td>87 checks, each with the solver's value, the expected value and the error.</td></tr>
-<tr><td><b>Limits</b></td><td>Nothing.</td><td>What the model is, where it stops being valid, what is synthetic, and the sources.</td></tr>
-</table></div>
+<h3>2.3 Every building has its own rhythm</h3>
+<p>Pull the top of a building sideways and let go. It swings back and forth, like a ruler twanged on the edge of a desk. The time for one complete swing, there and back, is called the <b>period</b> (T), measured in seconds. The number of swings per second is the <b>frequency</b>. One is just the other turned upside down: a period of 0.5 s is a frequency of 2 swings per second (2 hertz, written 2 Hz).</p>
+<ul>
+<li>A <b>heavier</b> building swings more <b>slowly</b>.</li>
+<li>A <b>stiffer</b> building swings more <b>quickly</b>.</li>
+<li>A <b>taller</b> building swings more slowly. Our 8-storey building has a period of 0.93 s; a 30-storey one made of the same floors has 3.34 s.</li>
+</ul>
+<p>For a single floor on a single spring there is a formula, <span class="f">T = 2π√(m/k)</span>. For many floors there is no simple formula, and that is where one of our methods comes in.</p>
+<p>A building with several floors can swing in several different patterns. In the simplest pattern all floors lean the same way, like a tree in the wind. In the next one the top goes one way while the middle goes the other, like a snake. Each pattern is called a <b>mode</b>, its shape is the <b>mode shape</b>, and each has its own period. The first mode, the simple lean, is the slowest and the most important.</p>
+<p><b>The technical words.</b> Finding these patterns means solving <span class="f">K φ = ω² M φ</span>. This is called an <b>eigenvalue problem</b>. The number ω² is an <b>eigenvalue</b> and the pattern φ is its <b>eigenvector</b>. Here ω (omega) is the swinging speed in radians per second, and the period is <span class="f">T = 2π/ω</span>. So when someone asks "what does an eigenvalue mean in your project?", the answer is: it is the square of a natural frequency of the building, and its eigenvector is the shape the building takes when it swings at that frequency.</p>
+
+<h3>2.4 Resonance: why the rhythm matters</h3>
+<p>Think of pushing a child on a swing. If you push at just the right moment each time, in step with the swing, small pushes build up into a huge swing. Push at the wrong rhythm and nothing much happens.</p>
+<p>A building is the same. If the ground shakes at the building's own rhythm, the sway builds up and becomes very large. This is called <b>resonance</b>, and it is the main danger in an earthquake. It also explains something surprising: an earthquake with slow shaking can damage tall buildings and leave short ones alone, while quick shaking does the opposite.</p>
+<p><b>Damping</b> is what stops the sway growing for ever. It is the energy a building loses in every swing through friction and small movements, like a swing that slowly comes to rest when you stop pushing. We describe it as a percentage; real buildings have a few percent, and the site uses 5% unless you change it.</p>
+
+<h3>2.5 Drift: the number that decides pass or fail</h3>
+<p><b>Storey drift</b> is how far one floor moves sideways compared with the floor directly below it. It matters more than the total movement, because it is the difference between two floors that bends the columns and cracks the walls between them.</p>
+<p>Building rules, called <b>codes</b>, set a limit on drift. The site uses 2% of the height of a storey. A storey 3.2 m high may therefore drift 64 mm at most. If every storey is under the limit the building <b>passes</b>; if any storey is over, it <b>fails</b>.</p>
+<p>One special case is the <b>soft storey</b>: a storey much weaker than the ones above it, such as an open car park under a block of flats. Almost all the drift collects in that one weak storey. It is a well-known cause of real collapses, and the site has a ready-made example of it.</p>
+
+<h2>Part 3. What is a numerical method?</h2>
+<p>A numerical method is a recipe of simple arithmetic steps that a computer repeats until it reaches an answer. We need such recipes because most real problems have no neat formula.</p>
+<p>There are two kinds, and the difference matters throughout the project.</p>
+<ul>
+<li>A <b>direct method</b> follows a fixed number of steps and then stops with the answer. Solving three equations by eliminating unknowns one at a time is a direct method.</li>
+<li>An <b>iterative method</b> starts from a guess and improves it again and again. Each round is called an <b>iteration</b>. It stops when the answer has almost stopped changing.</li>
+</ul>
+<p>Because a computer stores only about 16 digits of any number, and because iterative methods stop before they are perfect, every answer has a small <b>error</b>. Three terms describe this.</p>
+<ul>
+<li><b>Round-off error</b> comes from the computer keeping only 16 digits.</li>
+<li><b>Truncation error</b> comes from the method itself cutting something short, for example taking steps in time that are too large.</li>
+<li><b>Tolerance</b> is how small we ask the change between two rounds to be before we stop. A typical value in our code is 0.0000001 (written 10⁻⁷).</li>
+</ul>
+<p>The rule our iterative methods use to decide when to stop is the <b>approximate relative error</b>: how much the answer changed in the last round, divided by the size of the answer. Remember one warning, because examiners like it: a small change in the last round does <b>not</b> prove the answer is close to the truth. A method that is crawling forward also changes very little each round. The site shows the true error next to the approximate one so that you can see the difference.</p>
+
+<h2>Part 4. A tour of the site</h2>
+<p>The site has six tabs across the top. Open it and follow along.</p>
+<h3>4.1 Building</h3>
+<p>This is where you describe the building, using sliders on the left: the number of storeys (1 to 40), the storey height, the mass of each floor and the stiffness of each storey. There are five ready-made buildings to pick from, including the one with an open ground floor.</p>
+<p>You can also choose how the building resists sideways force, called its <b>structural system</b>.</p>
+<ul>
+<li><b>Frame:</b> floors on columns. This is the spring model of Part 2.</li>
+<li><b>Wall or core:</b> a tall concrete wall, like a lift shaft, that bends like a flagpole.</li>
+<li><b>Frame + core:</b> both together, as in most towers.</li>
+</ul>
+<p>The drawing in the middle shows the building leaning under the earthquake load. The blue arrows are the sideways forces on each floor. Each storey is coloured green if it is safe, amber if it is above 70% of the limit and red if it fails, and the percentage beside it is its share of the limit. The buttons above the drawing switch to an animation of mode 1, 2 or 3.</p>
+<p>On the right are the answers: the period, the largest drift, the roof movement and a clear pass or fail. A button below, <i>Find the minimum stiffness that passes</i>, works out how strong the columns need to be.</p>
+<p>Whenever you move a slider, the drawing keeps the old shape for about three seconds as a dashed outline marked BEFORE, and shows how much the roof movement went up or down. This lets you see the effect of each change.</p>
 <div class="figs">
 <figure><img src="guide-img/build.png" alt=""><figcaption><b>Figure 1. Building tab.</b> Arrows: the code force on each floor. Percentages: each storey's drift as a share of the limit. Dashed box: the building at rest.</figcaption></figure>
 <figure><img src="guide-img/sweep.png" alt=""><figcaption><b>Figure 2. Shake tab, the resonance curve.</b> Roof sway against shaking frequency. The peak is the first natural frequency. The dashed line is the same building with no damping. Shaded: the slow-shaking bands.</figcaption></figure>
 <figure><img src="guide-img/shake.png" alt=""><figcaption><b>Figure 3. Shake tab, the motion.</b> The building near resonance. The ground moves too, and the line above the roof is the path the roof has drawn.</figcaption></figure>
 </div>
-<p><b>The tabs share one building and one earthquake.</b> When a slider brings a new result, the drawing keeps the old shape for about three seconds as a dashed outline marked BEFORE, with the change in the number beside it.</p>
 
-<h2>5. The models and their formulas, as coded</h2>
-<h3>5.1 The building</h3>
+<h3>4.2 Shake</h3>
+<p>The Building tab pushes the building with a steady force. The Shake tab does something different: it shakes the ground back and forth at one steady rhythm and shows how the building responds.</p>
+<p>The main chart is the <b>resonance curve</b>. Along the bottom is the shaking frequency, from slow on the left to fast on the right. The height of the curve is how far the roof sways. The tall peak is resonance: the frequency that matches the building's own rhythm.</p>
+<p>A slider picks one frequency, and the drawing on the right shows the building moving at that frequency, in slow motion. The ground moves too, and a glowing line above the roof traces the path the roof has drawn.</p>
+<p>This tab also holds the three protection devices, which are explained in Part 6, and three extras.</p>
 <ul>
-<li><b>Frame:</b> storey springs in a chain, so K is tridiagonal: diagonal <span class="f">k<sub>i</sub> + k<sub>i+1</sub></span>, off-diagonals <span class="f">−k<sub>i+1</sub></span>. Function <code>frame_matrix</code>.</li>
-<li><b>Wall or core:</b> a cantilever beam. The <b>flexibility matrix</b> gives the deflection at floor i from a unit force at floor j: <span class="f">f<sub>ij</sub> = a²(3c − a) / 6EI</span>, where a is the lower of the two heights and c the higher. The stiffness matrix is its <b>inverse</b>. Function <code>wall_flexibility</code>.</li>
-<li><b>Frame + core:</b> the two stiffness matrices added. <b>Bracing:</b> adds <span class="f">EA/L · cos²θ</span> to every storey's stiffness.</li>
+<li>The <b>Sweep</b> button moves the frequency slider from one end to the other by itself, so you can watch the building pass through resonance.</li>
+<li>The <b>skyline</b> shows eight buildings of different heights under the same shaking. The one whose own rhythm matches the shaking sways most.</li>
+<li>A chart of the <b>condition number</b>, which is explained in section 5.6.</li>
 </ul>
-<h3>5.2 The static code check (equivalent lateral force, in the style of ASCE 7, simplified)</h3>
+<h3>4.3 Detect</h3>
+<p>This tab is about the earthquake itself. A map shows measuring stations and cities around the Gulf. You click the map to place an earthquake and choose its strength. The site then shows what each station records, works out where the earthquake was, and lists how many seconds of warning each city gets. A <i>Play the earthquake</i> button animates the waves spreading across the map. Part 7 explains how all of this works.</p>
+<h3>4.4 Lab</h3>
+<p>The Lab is where the numerical methods are put side by side. It takes the building from the Building tab and solves the same problem with every method, so that you can compare how much work each one needs and how accurate it is. A <i>Replay the solvers</i> button shows the iterative methods closing in on the answer step by step. This is the tab to show an examiner who asks about the methods.</p>
+<h3>4.5 Verify</h3>
+<p>One button runs 87 checks. Each check compares something the site computes with an answer known to be correct, and shows both numbers and the difference.</p>
+<h3>4.6 Limits</h3>
+<p>This tab lists honestly what the model leaves out and which data are made up. Read it before the viva. Saying these things yourself, before you are asked, earns credit.</p>
+
+<h2>Part 5. The numerical methods, one at a time</h2>
+<p>To keep things simple we use <b>one small example</b> for every method: the three-floor building of section 2.2, pushed by forces of 1, 2 and 3 on its floors. So we want to solve:</p>
+<p class="m">  2u₁ −  u₂        = 1
+ −u₁  + 2u₂ −  u₃  = 2          The answer is  u₁ = 6,  u₂ = 11,  u₃ = 14.
+       −  u₂ +  u₃  = 3</p>
+<p><b>We can check that answer with common sense.</b> The top storey carries only the top force, 3. The middle storey carries 3 + 2 = 5. The bottom storey carries all of it, 6. Since the stiffness is 1, the storeys stretch by 6, 5 and 3. So the first floor moves 6, the second 6 + 5 = 11, and the third 11 + 3 = 14. Every method below must give 6, 11, 14, and every number shown was produced by the site's own functions.</p>
+
+<h3>5.1 Gauss elimination</h3>
+<p><b>The problem it solves:</b> several equations with several unknowns.</p>
+<p><b>The idea:</b> this is the method from school. Use one equation to remove an unknown from the others, then repeat, until the last equation has only one unknown left. Solve that one, then work backwards.</p>
 <ol>
-<li>Find the first period T₁ (inverse iteration).</li>
-<li>Load factor: <span class="f">C<sub>s</sub> = S<sub>DS</sub> / R</span>. If <span class="f">T₁ &gt; S<sub>D1</sub>/S<sub>DS</sub></span>, use <span class="f">C<sub>s</sub> = S<sub>D1</sub> / (T₁ R)</span>. Never below <span class="f">max(0.044 S<sub>DS</sub>, 0.01)</span>.</li>
-<li>Total sideways force <span class="f">V = C<sub>s</sub> W</span>, where W is the building's weight.</li>
-<li>Share V between the floors in proportion to <span class="f">w<sub>x</sub> h<sub>x</sub><sup>k</sup></span>. The exponent k is 1 for T₁ ≤ 0.5 s, 2 for T₁ ≥ 2.5 s, and <b>interpolated</b> in between.</li>
-<li>Solve <span class="f">K u = F</span> for the sway u of every floor: <b>Thomas</b> for a frame, <b>Cholesky</b> otherwise.</li>
-<li>Drift of a storey = <span class="f">C<sub>d</sub> (u<sub>i</sub> − u<sub>i−1</sub>)</span>. It passes if it is at most 2% of the storey height.</li>
+<li>Add half of equation 1 to equation 2. The u₁ disappears and equation 2 becomes <span class="f">1.5u₂ − u₃ = 2.5</span>.</li>
+<li>Add two-thirds of the new equation 2 to equation 3. The u₂ disappears and equation 3 becomes <span class="f">⅓u₃ = 4.667</span>.</li>
+<li>Now solve from the bottom up. u₃ = 4.667 ÷ ⅓ = 14. Then u₂ = (2.5 + 14) ÷ 1.5 = 11. Then u₁ = (1 + 11) ÷ 2 = 6.</li>
 </ol>
-<p>A storey is flagged as <b>soft</b> if its stiffness is below 70% of the storey above. The page warns that the check is for reference only above about 48 m.</p>
-<h3>5.3 The default building, worked through</h3>
-<p>8 storeys of 3.2 m, 300 t per floor, 400 kN/mm per storey, S<sub>DS</sub> = 0.8, S<sub>D1</sub> = 0.4, R = 5, C<sub>d</sub> = 4.5.</p>
-<ol>
-<li><b>Period.</b> Inverse iteration gives ω₁ = 6.738 rad/s, so T₁ = 2π/ω₁ = <b>0.932 s</b>.</li>
-<li><b>Load factor.</b> S<sub>D1</sub>/S<sub>DS</sub> = 0.5 s and T₁ is longer, so C<sub>s</sub> = 0.4 / (0.932 × 5) = <b>0.0858</b>. The lower limit, 0.044 × 0.8 = 0.035, does not govern.</li>
-<li><b>Weight and force.</b> W = 8 × 300,000 kg × 9.81 = 23,544 kN. V = 0.0858 × 23,544 = <b>2,020 kN</b>.</li>
-<li><b>Height exponent.</b> Interpolating between (0.5 s, 1) and (2.5 s, 2): k = 1 + (0.932 − 0.5)/2 = <b>1.216</b>.</li>
-<li><b>Forces, sway and drift.</b> The Thomas algorithm solves K u = F:</li>
-</ol>
-<table>
-<tr><th>Storey</th><th class="n">Height (m)</th><th class="n">Force F (kN)</th><th class="n">Sway u (mm)</th><th class="n">u<sub>i</sub> − u<sub>i−1</sub> (mm)</th><th class="n">Drift × C<sub>d</sub> (mm)</th><th class="n">Share of the 64 mm limit</th></tr>
-<tr><td>8 (roof)</td><td class="n">25.6</td><td class="n">490.5</td><td class="n">29.53</td><td class="n">1.23</td><td class="n">5.5</td><td class="n">8.6%</td></tr>
-<tr><td>7</td><td class="n">22.4</td><td class="n">417.0</td><td class="n">28.31</td><td class="n">2.27</td><td class="n">10.2</td><td class="n">16.0%</td></tr>
-<tr><td>6</td><td class="n">19.2</td><td class="n">345.7</td><td class="n">26.04</td><td class="n">3.13</td><td class="n">14.1</td><td class="n">22.0%</td></tr>
-<tr><td>5</td><td class="n">16.0</td><td class="n">276.9</td><td class="n">22.91</td><td class="n">3.83</td><td class="n">17.2</td><td class="n">26.9%</td></tr>
-<tr><td>4</td><td class="n">12.8</td><td class="n">211.1</td><td class="n">19.08</td><td class="n">4.35</td><td class="n">19.6</td><td class="n">30.6%</td></tr>
-<tr><td>3</td><td class="n">9.6</td><td class="n">148.8</td><td class="n">14.73</td><td class="n">4.73</td><td class="n">21.3</td><td class="n">33.2%</td></tr>
-<tr><td>2</td><td class="n">6.4</td><td class="n">90.9</td><td class="n">10.00</td><td class="n">4.95</td><td class="n">22.3</td><td class="n">34.8%</td></tr>
-<tr><td>1</td><td class="n">3.2</td><td class="n">39.1</td><td class="n">5.05</td><td class="n">5.05</td><td class="n">22.7</td><td class="n">35.5%</td></tr>
-</table>
-<p><b>How to read it.</b> The forces grow with height, but the drift is largest at the bottom: the first storey carries the forces of all eight floors (2,020 kN ÷ 400 kN/mm = 5.05 mm). The limit is 2% of 3,200 mm = 64 mm, so the worst storey uses 35.5% of it and the building passes.</p>
+<p>Steps 1 and 2 are called <b>forward elimination</b> and step 3 is <b>back substitution</b>. The number you divide by at each stage (the 2, then the 1.5) is the <b>pivot</b>.</p>
+<p><b>Partial pivoting.</b> If a pivot happens to be zero, or very small, dividing by it gives nonsense or magnifies round-off error. So before each stage the method looks down the column and swaps in the equation with the largest number there. Our code does this every time.</p>
+<p><b>Singular matrix.</b> Sometimes the equations have no single answer, for example when two of them say the same thing. Then a pivot comes out as zero even after swapping, and the matrix is called <b>singular</b>. Our code treats a pivot as zero if it is smaller than 10⁻¹⁴ of the largest number in its own row, and reports an error.</p>
+<p><b>Where the site uses it:</b> in the Shake tab, where the equations are not symmetric and no shortcut applies; as the reference answer in the Lab; and to find the earthquake's position from three stations. The function is <code>gauss_solve</code>.</p>
+<p><b>Cost:</b> for n equations it takes roughly 2n³/3 arithmetic operations. For our 8-storey building that is 341. Doubling the number of equations makes it eight times more work.</p>
 
-<h3>5.4 Steady shaking (the Shake tab)</h3>
-<ul>
-<li>Equation of motion: <span class="f">M ü + C u̇ + K u = −M a<sub>g</sub> cos Ωt</span>, with damping <span class="f">C = (2ζ/ω₁) K</span>.</li>
-<li>The steady answer is <span class="f">u = a cos Ωt + b sin Ωt</span>. Putting that in gives one real system of twice the size:
-<span class="f">(K − Ω²M) a + ΩC b = F</span> and <span class="f">−ΩC a + (K − Ω²M) b = 0</span>. It is not symmetric, so it is solved by <b>Gauss elimination with partial pivoting</b>. Function <code>harmonic_solve</code>.</li>
-<li>Roof sway = <span class="f">√(a² + b²)</span>. This is solved at 177 frequencies for the default building to draw the curve.</li>
-<li><b>Tuned mass damper:</b> one extra mass on the roof, on a spring and a shock absorber. Its mass is a share μ of the first mode's moving mass. Textbook rule (Den Hartog): tuning <span class="f">1/(1+μ)</span>, damping <span class="f">√(3μ / 8(1+μ))</span>.</li>
-<li><b>Base isolation:</b> one extra degree of freedom, a base slab on soft bearings with 15% damping. It lengthens the period.</li>
-<li><b>Shock-absorber dampers:</b> extra entries in C, in the same pattern as K.</li>
-</ul>
-<h3>5.5 Detection (the Detect tab)</h3>
-<figure class="side"><img src="guide-img/map.png" alt=""><figcaption><b>Figure 4. The earthquake being played.</b> Blue ring: P wave. Red ring: S wave. Triangles: stations, ringed once they have triggered. Green numbers: seconds each city has left. Thin circles: each station's distance estimate; they cross at the epicentre.</figcaption></figure>
-<ul>
-<li><b>Recordings are synthetic:</b> noise, a P wave, then an S wave three times larger.</li>
-<li><b>Trigger (STA/LTA):</b> the mean of the squared signal over the last 1 s divided by its mean over the 15 s before that. An arrival is declared when the ratio passes the threshold (5 by default).</li>
-<li><b>Distance:</b> <span class="f">d = Δt · v<sub>p</sub>v<sub>s</sub> / (v<sub>p</sub> − v<sub>s</sub>)</span> = 8.4 km for every second between the P and S picks.</li>
-<li><b>Epicentre:</b> each station gives a circle <span class="f">(x − x<sub>i</sub>)² + (y − y<sub>i</sub>)² = d<sub>i</sub>²</span>. Subtracting the first circle from the others removes x² and y², leaving <b>linear</b> equations. Three stations: Gauss elimination. More: <b>least squares</b>.</li>
-<li><b>Magnitude:</b> <span class="f">M<sub>L</sub> = log₁₀A + 1.110 log₁₀(r/100) + 0.00189 (r − 100) + 3.0</span>, then the mean and standard deviation over the stations.</li>
-<li><b>Warning time</b> for a city = S-wave travel time − (first trigger + processing delay).</li>
-</ul>
-
-<h2>6. Every numerical method</h2>
-<table>
-<tr><th style="width:15%">Method</th><th style="width:27%">The idea</th><th style="width:25%">Where the site uses it</th><th style="width:21%">Why this one</th><th>Function</th></tr>
-<tr><td><b>Gauss elimination with partial pivoting</b></td><td>Subtract multiples of rows to make zeros below the diagonal, then solve from the bottom up (back substitution). Pivoting swaps in the row with the largest entry.</td><td>The damped shaking system; the reference answer in the Lab; the epicentre with three stations.</td><td>Works for any matrix that is not singular. The shaking matrix is not symmetric.</td><td><code>gauss_solve</code></td></tr>
-<tr><td><b>LU decomposition</b></td><td>Split A into a lower and an upper triangle once. Each new right-hand side then costs only two quick substitutions.</td><td>Inverse iteration, which solves with the same K many times; the determinant.</td><td>Reuse: factor once, solve many times.</td><td><code>lu_decompose</code>, <code>lu_solve</code>, <code>lu_det</code></td></tr>
-<tr><td><b>Gauss–Jordan inverse</b></td><td>Eliminate above and below the diagonal on [A | I]; what is left on the right is A⁻¹.</td><td>Wall stiffness = inverse of the flexibility matrix; every condition number.</td><td>Here the inverse itself is needed, not just a solution.</td><td><code>gauss_jordan_inverse</code></td></tr>
-<tr><td><b>Cholesky</b></td><td>For a symmetric positive definite matrix, A = L Lᵀ. Half the work of Gauss.</td><td>Static sway of wall and frame + core buildings; the regression's normal equations.</td><td>K is symmetric positive definite.</td><td><code>cholesky</code>, <code>cholesky_solve</code></td></tr>
-<tr><td><b>Thomas algorithm</b></td><td>Gauss elimination for a tridiagonal matrix: one forward pass, one backward pass.</td><td>Static sway of frame buildings.</td><td>Work grows with n, not n³.</td><td><code>thomas</code></td></tr>
-<tr><td><b>Norm and condition number</b></td><td>Row-sum norm: the largest sum of absolute values in a row. Condition number = ‖A‖ × ‖A⁻¹‖.</td><td>K (soft storeys, walls); the spikes at resonance; the station layout; the regression.</td><td>Says how far to trust a solution.</td><td><code>norm_inf</code>, <code>cond_inf</code></td></tr>
-<tr><td><b>Jacobi</b></td><td>Guess, then update every unknown from the old guess. Repeat.</td><td rowspan="3">The Lab solves the static problem K u = F with all three and compares them, with a scan of ω for SOR. The replay shows them closing in.</td><td rowspan="3">To compare iterative methods with direct ones on the same problem.</td><td><code>jacobi</code></td></tr>
-<tr><td><b>Gauss–Seidel</b></td><td>The same, but each new value is used at once.</td><td><code>gauss_seidel</code></td></tr>
-<tr><td><b>SOR</b></td><td>Gauss–Seidel with each step stretched by a factor ω between 1 and 2.</td><td><code>sor</code></td></tr>
-<tr><td><b>Power iteration</b></td><td>Multiply a vector by the matrix again and again; it turns into the eigenvector of the <b>largest</b> eigenvalue.</td><td>The highest natural frequency, which sets how fast Euler's method goes wrong.</td><td>Simple; needs only multiplication.</td><td><code>power_iteration</code></td></tr>
-<tr><td><b>Inverse iteration with deflation</b></td><td>Solve with K instead of multiplying: this finds the <b>smallest</b> eigenvalue. Remove modes already found from the guess (deflation) to get the next one.</td><td>The first three natural periods and mode shapes of every building.</td><td>The lowest modes are the ones that matter for a building.</td><td><code>inverse_iteration</code></td></tr>
-<tr><td><b>Bisection</b></td><td>Keep a bracket with a sign change and halve it.</td><td>Minimum stiffness; damper mass; isolator stiffness; calibration; damage factor; roots of det(K − λM).</td><td>Cannot fail once a sign change is bracketed, and its error is a true bound.</td><td><code>bisection</code></td></tr>
-<tr><td><b>False position</b></td><td>Like bisection, but the new point is where the straight line through the two ends crosses zero.</td><td rowspan="2">Minimum stiffness, compared with bisection in the Lab.</td><td rowspan="2">To compare speed and behaviour.</td><td><code>false_position</code></td></tr>
-<tr><td><b>Fixed-point iteration</b></td><td>Rewrite the problem as x = g(x) and repeat. Here: new stiffness = old stiffness × (drift ÷ limit).</td><td><code>fixed_point</code></td></tr>
-<tr><td><b>Linear regression (least squares)</b></td><td>The line that makes the sum of squared errors smallest. Solved through the normal equations <span class="f">XᵀX a = Xᵀy</span>.</td><td>Period against height, <span class="f">T = C hˣ</span>, fitted as a straight line in log-log; the epicentre with more than three stations.</td><td>More equations than unknowns.</td><td><code>least_squares</code>, <code>fit_power_law</code></td></tr>
-<tr><td><b>Linear interpolation</b></td><td>A straight line between two known points.</td><td>The height exponent k of the code load; putting unevenly timed recordings on an even time grid.</td><td>A value is needed between table entries.</td><td><code>interp_linear</code>, <code>resample_uniform</code></td></tr>
-<tr><td><b>Mean and standard deviation</b></td><td>Average, and spread around it (sample form, n − 1).</td><td>The trigger; magnitude across stations; the hold-out error of the regression.</td><td>—</td><td><code>mean</code>, <code>std</code></td></tr>
-<tr><td><b>Euler's method</b></td><td>Step forward in time using the slope at the start of the step.</td><td>Free vibration with no damping, to show <b>error growth</b>.</td><td>It is the simplest time-stepping method, and its error is easy to see.</td><td><code>euler_free</code></td></tr>
-</table>
-
-<h3>Details worth knowing</h3>
-<ul>
-<li><b>Stopping rule.</b> The iterative methods stop when the <b>approximate relative error</b>, the size of the last step divided by the size of the answer, falls below a tolerance. That is the size of the last step, not the distance to the true answer.</li>
-<li><b>Singular matrix.</b> In <code>gauss_solve</code> a pivot counts as zero if it is below 10⁻¹⁴ of the largest entry of its own row. The test is per row because rows of K can differ in size by 10¹¹.</li>
-<li><b>Divergence.</b> A run of Jacobi or SOR is given up once its answer is 10¹² times larger than its first step.</li>
-<li><b>Sign test.</b> Bisection uses <code>same_sign(u, v)</code>, not <span class="f">u·v &gt; 0</span>, because the product of two tiny numbers underflows to zero.</li>
-<li><b>Rayleigh quotient.</b> Both eigenvalue methods estimate <span class="f">λ = (yᵀK y) / (yᵀM y)</span>, which is more accurate than the vector itself.</li>
-<li><b>Euler's energy.</b> With no damping the energy should stay constant. Euler multiplies it by <span class="f">(1 + ω²h²)</span> at every step, so it always grows.</li>
-<li><b>Nested methods.</b> "Minimum stiffness" is a root problem whose function runs an eigenvalue solve and a linear solve at every evaluation.</li>
-</ul>
-
-<h2>7. One small problem solved by every method</h2>
-<p>A 3-storey frame with every stiffness equal to 1 and every mass equal to 1, pushed by forces 1, 2 and 3 on its floors. It is small enough to do by hand, and every number below came from the site's own functions.</p>
-<p class="m">      [  2  −1   0 ]        [ 1 ]
-  K = [ −1   2  −1 ]    F = [ 2 ]      Solve K u = F.   Answer: u = (6, 11, 14).
-      [  0  −1   1 ]        [ 3 ]</p>
-<p><b>Check by physics:</b> the top storey carries 3, the middle 3 + 2 = 5, the bottom 6. With stiffness 1 the storeys stretch by 6, 5 and 3, so the floors move 6, 6 + 5 = 11 and 11 + 3 = 14.</p>
-
-<h3>Gauss elimination</h3>
-<ol>
-<li>Row 2 + ½ × row 1 → (0, 1.5, −1 | 2.5). The ½ is the <b>factor</b>; the 2 is the <b>pivot</b>.</li>
-<li>Row 3 + ⅔ × row 2 → (0, 0, ⅓ | 4.667).</li>
-<li>Back substitution: u₃ = 4.667 ÷ ⅓ = 14; u₂ = (2.5 + 14) ÷ 1.5 = 11; u₁ = (1 + 11) ÷ 2 = 6.</li>
-</ol>
-<h3>LU decomposition</h3>
-<p>The same elimination, keeping the factors. L holds the factors (with their signs changed), U is what elimination leaves:</p>
+<h3>5.2 LU decomposition</h3>
+<p><b>The problem it solves:</b> the same equations, but when you need to solve them many times with different right-hand sides.</p>
+<p><b>The idea:</b> the elimination work in Gauss depends only on the matrix, not on the forces. So do that work once and keep a record of it. It is like sorting a filing cabinet once so that every later search is quick.</p>
+<p>The record is two triangular matrices. <b>L</b> (lower) holds the multipliers used during elimination, and <b>U</b> (upper) is what elimination leaves behind. For our example:</p>
 <p class="m">      [  1      0     0 ]        [ 2  −1     0    ]
-  L = [ −0.5    1     0 ]    U = [ 0   1.5  −1    ]     det K = 2 × 1.5 × 0.333 = 1
+  L = [ −0.5    1     0 ]    U = [ 0   1.5  −1    ]         and  L × U  gives back K.
       [  0    −0.667  1 ]        [ 0   0     0.333]</p>
-<p>To solve: first L y = F (forward substitution), then U u = y (back substitution). A new F needs only these two passes.</p>
-<h3>Cholesky</h3>
-<p>K = L Lᵀ with L = <span class="m">[1.414, 0, 0; −0.707, 1.225, 0; 0, −0.816, 0.577]</span>. The first entry is √2; each later one uses the entries already found. It needs K to be symmetric positive definite, which it is.</p>
-<h3>Thomas algorithm</h3>
-<p>Exactly the two elimination steps above, but it stores only the three diagonals: sub-diagonal (−1, −1), diagonal (2, 2, 1), super-diagonal (−1, −1). One forward pass and one backward pass, whatever the size.</p>
-<h3>Inverse and condition number</h3>
-<p class="m">         [ 1  1  1 ]
-  K⁻¹ =  [ 1  2  2 ]     ‖K‖ = 4 (largest row sum),  ‖K⁻¹‖ = 6,  condition number = 4 × 6 = 24.
-         [ 1  2  3 ]</p>
-<p><b>The inverse has a meaning:</b> entry (i, j) is how far floor i moves for a unit force on floor j. It is the <b>flexibility matrix</b>. That is why the wall model starts from flexibility and inverts it.</p>
-<h3>Jacobi, Gauss–Seidel, SOR (starting from zero)</h3>
-<table>
-<tr><th>Method</th><th>After sweep 1</th><th>After sweep 2</th><th>After sweep 3</th><th class="n">Sweeps to finish</th></tr>
-<tr><td>Jacobi</td><td>(0.5, 1, 3)</td><td>(1, 2.75, 4)</td><td>(1.875, 3.5, 5.75)</td><td class="n">100</td></tr>
-<tr><td>Gauss–Seidel</td><td>(0.5, 1.25, 4.25)</td><td>(1.125, 3.688, 6.688)</td><td>(2.344, 5.516, 8.516)</td><td class="n">52</td></tr>
-<tr><td>SOR, ω = 1.5</td><td>(0.75, 2.062, 7.594)</td><td>(1.922, 7.605, 12.111)</td><td>(5.493, 10.901, 14.795)</td><td class="n">24</td></tr>
-</table>
-<ul>
-<li><b>Jacobi, sweep 1:</b> every unknown from the old values (all zero): u₁ = 1/2, u₂ = 2/2, u₃ = 3/1.</li>
-<li><b>Gauss–Seidel, sweep 1:</b> u₁ = 0.5; then u₂ = (2 + 0.5)/2 = 1.25 uses the new u₁; then u₃ = 3 + 1.25 = 4.25 uses the new u₂.</li>
-<li><b>SOR:</b> take the Gauss–Seidel value and go 1.5 times as far: u₁ = 1.5 × 0.5 = 0.75.</li>
-<li><b>Scan of ω:</b> 52 sweeps at ω = 1.0, 33 at 1.2, <b>19 at 1.4</b>, 24 at 1.5, 45 at 1.7, 71 at 1.8. There is a best value; past it the method overshoots.</li>
-</ul>
-<h3>Eigenvalues (with M = I)</h3>
-<ul>
-<li><b>Exact:</b> λ = 2 − 2 cos((2j − 1)π/7) = 0.19806, 1.55496, 3.24698.</li>
-<li><b>Power iteration</b> finds the largest: λ = 3.24698 in 14 steps.</li>
-<li><b>Inverse iteration</b> finds the smallest: λ = 0.19806 in 7 steps, with mode shape (0.445, 0.802, 1). Deflation then gives 1.55496 and 3.24698.</li>
-<li>The natural frequency is ω = √λ, and the period is 2π/ω.</li>
-</ul>
-<h3>Roots: bisection and false position on det(K − λI) = 0</h3>
-<p>f(λ) = −λ³ + 5λ² − 6λ + 1. f(0) = 1 and f(1) = −1, so there is a root between 0 and 1.</p>
-<table>
-<tr><th>Step</th><th>Bisection: midpoint</th><th>f</th><th>New bracket</th><th>False position: point</th><th>f</th></tr>
-<tr><td>1</td><td>0.5</td><td>−0.875</td><td>[0, 0.5]</td><td>0.5</td><td>−0.875</td></tr>
-<tr><td>2</td><td>0.25</td><td>−0.203</td><td>[0, 0.25]</td><td>0.2667</td><td>−0.263</td></tr>
-<tr><td>3</td><td>0.125</td><td>+0.326</td><td>[0.125, 0.25]</td><td>0.2111</td><td>−0.053</td></tr>
-<tr><td>4</td><td>0.1875</td><td>+0.044</td><td>[0.1875, 0.25]</td><td>0.2004</td><td>−0.010</td></tr>
-<tr><td>5</td><td>0.21875</td><td>−0.084</td><td>[0.1875, 0.21875]</td><td>0.1985</td><td>−0.002</td></tr>
-</table>
-<ul>
-<li>Both reach λ = 0.198062, the same value as inverse iteration. Bisection takes 26 steps, false position 12.</li>
-<li><b>False position's point:</b> c = b − f(b)(a − b)/(f(a) − f(b)). Step 1: 1 − (−1)(0 − 1)/(1 + 1) = 0.5.</li>
-<li>Notice that false position's lower end stays at 0 the whole time. Only one end moves.</li>
-</ul>
-<h3>Fixed-point iteration on the design problem (default building)</h3>
-<p>Stiffness multiplier s, updated by s ← s × (drift ÷ limit): 1 → 0.3551 → 0.2116 → 0.1633 → 0.14568 → 0.14568. The last jump lands exactly on the answer. By then the building is so flexible that the code load has reached its lower limit (0.044 S<sub>DS</sub>) and no longer changes with stiffness, so drift is exactly proportional to 1 ÷ stiffness.</p>
-<h3>Regression (the sample rows in the Lab)</h3>
-<p>Twelve rows of height and period. Taking logs gives a straight line; least squares gives <b>T = 0.0472 h<sup>0.884</sup></b> with r² = 0.996. Hold-out test: fitted on six rows, the error on the other six is −0.3% ± 6.3%. The condition number of the normal equations is 504.</p>
-<h3>Euler's method (one mass on a spring)</h3>
-<p>Each step: u ← u + h v and v ← v − h ω² u. The energy is multiplied by (1 + ω²h²) every step. With h = period ÷ 800 that factor is 1.0000617, and after 4,800 steps (six periods) it has grown to 1.0000617⁴⁸⁰⁰ = <b>1.34</b>, exactly what the Lab shows.</p>
+<p>To solve for any forces you then do two quick passes: one downwards through L, called forward substitution, and one upwards through U, the back substitution you already know.</p>
+<p><b>A bonus:</b> the <b>determinant</b> of the matrix, a single number that is zero exactly when the matrix is singular, is just the diagonal of U multiplied together: 2 × 1.5 × 0.333 = 1.</p>
+<p><b>Where the site uses it:</b> in finding the periods (section 5.8), which solves with the same matrix K at every step. K is split once and reused. The functions are <code>lu_decompose</code>, <code>lu_solve</code> and <code>lu_det</code>.</p>
 
-<h2>8. Four functions, line by line</h2>
-<p>These are copied from the solver. If you can explain these four, you can explain the rest: the others follow the same patterns.</p>
+<h3>5.3 Cholesky decomposition</h3>
+<p><b>The idea:</b> if a matrix is symmetric and positive definite, as our stiffness matrix is, there is a shortcut. It can be written as one triangular matrix times its own mirror image, <span class="f">K = L Lᵀ</span>. You can think of L as a kind of square root of K. Because only one triangle has to be worked out, it takes about <b>half the work</b> of Gauss: 171 operations against 341 for our 8-storey building.</p>
+<p>For our example the first entry of L is √2 = 1.414, and the whole of L is <span class="m">[1.414, 0, 0;  −0.707, 1.225, 0;  0, −0.816, 0.577]</span>.</p>
+<p><b>When it fails:</b> if the matrix is not positive definite, the method would need the square root of a negative number. Our code spots this and reports an error. That makes Cholesky a handy test of whether a matrix is positive definite.</p>
+<p><b>Where the site uses it:</b> for wall and frame + core buildings, whose stiffness matrix is full, and inside the regression of section 5.10. The functions are <code>cholesky</code> and <code>cholesky_solve</code>.</p>
+
+<h3>5.4 The Thomas algorithm</h3>
+<p><b>The idea:</b> when the matrix is tridiagonal, Gauss elimination wastes almost all its time subtracting zeros. The Thomas algorithm is Gauss elimination that knows about the zeros. It stores only the three diagonals and makes one pass down and one pass up.</p>
+<p>For our example it does exactly the two elimination steps of section 5.1 and nothing else. The saving grows quickly with size: the work is about 8n instead of 2n³/3. For 8 storeys that is 64 operations against 341. For 40 storeys it is 320 against about 43,000.</p>
+<p><b>A weakness to know:</b> it does no pivoting. That is safe for our matrices because they are positive definite, but it is not safe in general.</p>
+<p><b>Where the site uses it:</b> for the sway of every frame building under the earthquake load. The function is <code>thomas</code>.</p>
+
+<h3>5.5 The matrix inverse (Gauss–Jordan)</h3>
+<p><b>The idea:</b> the inverse of a matrix, written K⁻¹, is the matrix that undoes it. If you know K⁻¹ you get the answer by multiplying: u = K⁻¹F. To find it, write K next to the identity matrix (ones on the diagonal, zeros elsewhere) and eliminate above <i>and</i> below each pivot. When K has turned into the identity, what sits beside it is K⁻¹. That procedure is called <b>Gauss–Jordan elimination</b>.</p>
+<p class="m">         [ 1  1  1 ]
+  K⁻¹ =  [ 1  2  2 ]         Check: 1×1 + 1×2 + 1×3 = 6,   1×1 + 2×2 + 2×3 = 11,   1×1 + 2×2 + 3×3 = 14.
+         [ 1  2  3 ]</p>
+<p><b>The inverse means something here.</b> The entry in row i and column j tells you how far floor i moves when you push floor j with a force of 1. It is called the <b>flexibility matrix</b>: it measures how easily the building gives way.</p>
+<p><b>An important point for the viva:</b> you should almost never solve equations by computing the inverse, because it costs about three times as much as Gauss (1,024 operations against 341 for 8 storeys). We compute it only when we need the inverse itself. That happens in two places. For a wall, the beam formula gives the flexibility directly, so the stiffness matrix has to be its inverse. And the condition number, next, needs the inverse. The function is <code>gauss_jordan_inverse</code>.</p>
+
+<h3>5.6 The condition number</h3>
+<p><b>The idea:</b> the condition number tells you how much you can trust the answer of a set of equations. Picture two lines on paper, where the answer is the point at which they cross. If the lines cross at a wide angle, a tiny wobble in one line hardly moves the crossing point. If they are nearly parallel, the same tiny wobble moves it a long way. The first case is <b>well-conditioned</b>; the second is <b>ill-conditioned</b>.</p>
+<p><b>How it is worked out:</b> first we need a single number for the "size" of a matrix, called its <b>norm</b>. We use the row-sum norm: add up the sizes of the numbers in each row and take the largest total. The condition number is the norm of the matrix times the norm of its inverse. For our example the largest row sum of K is 1 + 2 + 1 = 4, and of K⁻¹ is 1 + 2 + 3 = 6, so the condition number is 4 × 6 = <b>24</b>.</p>
+<p><b>How to read it:</b> near 1 is perfect. As a rule of thumb, a condition number of a million means about six of the computer's sixteen digits may be lost.</p>
+<p><b>Where the site uses it</b>, each with a physical meaning:</p>
+<ul>
+<li><b>Building tab:</b> the default building has 144. A soft storey raises it. The 30-storey tower with a core has 2.4 million.</li>
+<li><b>Shake tab:</b> at each natural frequency, with no damping, the equations have no answer at all, and the condition number shoots up. The chart shows a spike at exactly each natural frequency.</li>
+<li><b>Detect tab:</b> if all the stations lie on one side of the earthquake, the position is poorly fixed. The condition number is 37.6, and it drops to 10.2 when a station is added on the far side.</li>
+</ul>
+<p>The functions are <code>norm_inf</code> and <code>cond_inf</code>.</p>
+
+<h3>5.7 Jacobi, Gauss–Seidel and SOR</h3>
+<p>These three are <b>iterative</b> methods for the same equations. They start from a guess of all zeros and improve it round after round. Each round is called a <b>sweep</b>.</p>
+<p><b>The trick they share:</b> rearrange each equation so that it gives one unknown in terms of the others. From our three equations:</p>
+<p class="m">  u₁ = (1 + u₂) / 2          u₂ = (2 + u₁ + u₃) / 2          u₃ = 3 + u₂</p>
+<p><b>Jacobi</b> works out all three new values using only the values from the previous sweep. Starting from zeros, the first sweep gives u₁ = 1/2 = 0.5, u₂ = 2/2 = 1 and u₃ = 3. It is like a team in which everyone updates their work using yesterday's notes.</p>
+<p><b>Gauss–Seidel</b> uses each new value as soon as it has it. In the first sweep u₁ = 0.5 as before. But then u₂ = (2 + 0.5 + 0)/2 = 1.25, using the new u₁. And u₃ = 3 + 1.25 = 4.25, using the new u₂. Fresher information means faster progress.</p>
+<p><b>SOR</b> stands for successive over-relaxation. It takes the step Gauss–Seidel would take and stretches it by a factor, written ω (omega), between 1 and 2. If each step is in the right direction but too timid, going further gets there sooner. With ω = 1.5 the first value becomes 1.5 × 0.5 = 0.75.</p>
+<p><b>How they compare on our example.</b> Jacobi needs 100 sweeps, Gauss–Seidel 52, and SOR with ω = 1.5 needs 24. Trying different values of ω shows there is a best one: 52 sweeps at 1.0, 33 at 1.2, <b>19 at 1.4</b>, 24 at 1.5, 45 at 1.7 and 71 at 1.8. Past the best value the method overshoots and gets slower. On the real 8-storey building the numbers are 632, 331 and 46, with a best ω of 1.70.</p>
+<p><b>Do they always work?</b> No. They are sure to converge when the matrix is <b>diagonally dominant</b>, which means that in every row the number on the diagonal is at least as big as the others in that row added together. Our frame matrix is like that. The matrix of a wall building is not, and there Jacobi <b>diverges</b>: every sweep makes the answer bigger instead of better. Our code notices when the answer has grown a million million times and gives up.</p>
+<p><b>Why bother, when Thomas is so much faster?</b> For a small building there is no practical reason. The Lab runs them so that the methods can be compared on the same problem. Iterative methods win for very large problems with millions of unknowns, where a direct method would run out of memory. The functions are <code>jacobi</code>, <code>gauss_seidel</code> and <code>sor</code>.</p>
+
+<h3>5.8 Power iteration and inverse iteration</h3>
+<p><b>The problem they solve:</b> finding the eigenvalues, and so the periods and mode shapes of the building.</p>
+<p><b>Power iteration.</b> Take any list of numbers, one per floor, and multiply it by the matrix. Then do it again, and again. Each multiplication strengthens the part of the list that belongs to the largest eigenvalue more than the rest, so after enough rounds only that part is left. It is like a contest in which the strongest player gains a little in every round until nobody else is visible. On our example it finds the largest eigenvalue, 3.247, in 14 rounds.</p>
+<p><b>Inverse iteration.</b> The largest eigenvalue is the fastest wobble, but a building's slowest swing is what matters. So we turn the idea round. Instead of multiplying by K we <i>solve</i> with K at each round, which is the same as multiplying by its inverse. The smallest eigenvalue of K is the largest of K⁻¹, so now the slowest mode wins. This is where LU decomposition earns its place: K is split once and each round is just two quick passes. On our example it finds 0.198 in 7 rounds, with the shape (0.445, 0.802, 1): all three floors lean the same way, the top one most.</p>
+<p><b>Getting the second and third modes: deflation.</b> Once the first mode is known, we remove it from the guess before every round. With the first mode taken out it cannot win again, so the next one appears. Doing this gives 1.555 and 3.247.</p>
+<p><b>The Rayleigh quotient.</b> At each round the eigenvalue is estimated by a formula called the Rayleigh quotient, <span class="f">λ = (yᵀK y) ÷ (yᵀM y)</span>. You only need to know that it gives a more accurate eigenvalue than you would get by comparing the lists directly.</p>
+<p><b>From eigenvalue to period.</b> Take the square root to get ω, then T = 2π/ω. For the default building the first eigenvalue is 45.4, so ω = 6.74 and T = 0.932 s.</p>
+<p><b>How we know it is right.</b> For a building in which all floors are the same there is an exact formula, and for our example it gives 0.19806, 1.55496 and 3.24698: the same numbers. The functions are <code>power_iteration</code> and <code>inverse_iteration</code>.</p>
+
+<h3>5.9 Finding roots: bisection, false position and fixed-point iteration</h3>
+<p><b>The problem they solve:</b> finding the value of x at which some quantity f(x) becomes zero. That value is called a <b>root</b>. Many design questions are of this kind. For example: "what stiffness makes the worst drift exactly equal to the limit?" is the same as asking where (drift ÷ limit − 1) is zero.</p>
+<p><b>Bisection</b> is the number-guessing game. Someone thinks of a number between 1 and 100; you say 50, they say "lower", you say 25, and so on. Each guess halves the range. In maths: start with two values where f has opposite signs, so the root must lie between them. That pair is called a <b>bracket</b>. Test the midpoint, keep the half in which the sign still changes, and repeat.</p>
+<p>As an example take the function whose roots are the eigenvalues of our small building, <span class="f">f(λ) = −λ³ + 5λ² − 6λ + 1</span>. At λ = 0 it is +1 and at λ = 1 it is −1, so a root lies between 0 and 1.</p>
+<ul>
+<li>Midpoint 0.5: f = −0.875, negative. The root is between 0 and 0.5.</li>
+<li>Midpoint 0.25: f = −0.203, still negative. The root is between 0 and 0.25.</li>
+<li>Midpoint 0.125: f = +0.326, positive. The root is between 0.125 and 0.25.</li>
+<li>Midpoint 0.1875: f = +0.044. The root is between 0.1875 and 0.25.</li>
+</ul>
+<p>After 26 steps it settles on 0.198062, the same eigenvalue that inverse iteration found. Bisection has two great strengths: it <b>cannot fail</b> once you have a bracket, and you always know how far you are from the answer, because the root is inside the bracket.</p>
+<p><b>False position</b> tries to be cleverer. Instead of the midpoint, it draws a straight line between the two ends of the bracket and takes the point where that line crosses zero. On the same example its points are 0.5, 0.267, 0.211, 0.200, 0.198: it gets there in 12 steps instead of 26. Its weakness is that on a curved function one end of the bracket can stay stuck for the whole run (here the end at 0 never moves), so the bracket does not shrink to nothing and it can sometimes be slower than bisection.</p>
+<p><b>Fixed-point iteration</b> rewrites the problem as "x = something that depends on x" and keeps feeding the answer back in. Our version is what an engineer does by hand: if the drift is 35% of the limit, try columns that are 35% as stiff, then check again. In symbols, new stiffness = old stiffness × (drift ÷ limit). Starting from 1, the values go 1 → 0.355 → 0.212 → 0.163 → 0.1457 and stay there, so it takes 5 steps. It only works if each round brings the value closer, which is not guaranteed in general.</p>
+<p><b>All three agree</b> on the default building: the columns need only 0.1457 of their present stiffness, about 58 kN/mm per storey. Bisection takes 23 steps, false position 10 and fixed-point 5.</p>
+<p><b>Why not the Newton–Raphson method?</b> It needs the slope of the function. Our function is the result of a whole chain of calculations, so there is no formula for its slope. The three methods above need only the value of the function.</p>
+<p><b>Where the site uses bisection:</b> for the minimum stiffness, the mass of the damper, the stiffness of the base isolators, matching the model to a target period, estimating damage, and the roots of the determinant in the Lab. Notice that each time bisection tests a value, the site has to solve a full eigenvalue problem and a full set of equations. The methods are <b>nested</b> inside one another. The functions are <code>bisection</code>, <code>false_position</code> and <code>fixed_point</code>.</p>
+
+<h3>5.10 Regression: the best line through scattered points</h3>
+<p><b>The problem it solves:</b> you have measurements that roughly follow a trend, and you want the one line that fits them best.</p>
+<p><b>The idea:</b> "best" means the line for which the gaps between the points and the line, squared and added up, are as small as possible. This is called <b>least squares</b>. Squaring makes every gap positive and punishes big misses more than small ones.</p>
+<p><b>How it is done:</b> the condition for the smallest total turns into a small set of ordinary equations called the <b>normal equations</b>, written <span class="f">XᵀX a = Xᵀy</span>. They are symmetric and positive definite, so we solve them with Cholesky. This is a nice example of one method using another.</p>
+<p><b>Where the site uses it.</b> Engineers know that taller buildings have longer periods, roughly following a curve <span class="f">T = C × hˣ</span>, where h is the height. A curve is harder to fit than a line, so we take logarithms of both sides, which turns the curve into a straight line: log T = log C + x log h. Fitting the twelve sample rows in the Lab gives <b>T = 0.0472 × h<sup>0.884</sup></b>.</p>
+<p><b>How good is the fit?</b> Two measures are shown. The first is <b>r²</b>, a number between 0 and 1, where 1 means every point lies exactly on the line; ours is 0.996. The second is a <b>hold-out test</b>: fit the line using only half the rows, then see how well it predicts the other half. The error is −0.3% on average, with a spread of 6.3%.</p>
+<p>Regression is also used in the Detect tab, as Part 7 explains. The functions are <code>least_squares</code> and <code>fit_power_law</code>.</p>
+
+<h3>5.11 Interpolation, mean and standard deviation</h3>
+<p><b>Interpolation</b> means reading a value between two known ones by drawing a straight line between them. The building code says a certain number, k, is 1 when the period is 0.5 s or less and 2 when it is 2.5 s or more. Our period is 0.932 s, which is 0.432 of the way along a 2-second range, so k = 1 + 0.432/2 = <b>1.216</b>. The site also uses interpolation to place an uploaded recording on evenly spaced times. The functions are <code>interp_linear</code> and <code>resample_uniform</code>.</p>
+<p>The <b>mean</b> is the ordinary average. The <b>standard deviation</b> measures how spread out the values are around the average: small means they agree closely. The site uses both in the earthquake trigger, in reporting the magnitude as an average with a spread across stations, and in the hold-out test above. The functions are <code>mean</code> and <code>std</code>.</p>
+
+<h3>5.12 Euler's method</h3>
+<p><b>The problem it solves:</b> following something as it changes in time, such as a building swinging.</p>
+<p><b>The idea:</b> if you know where something is and how fast it is moving right now, you can estimate where it will be a moment later: new position = old position + speed × time step. Then you update the speed the same way, and repeat. It is like walking with your eyes shut, opening them only once per step to check your direction. With small steps you stay close to the path. With large steps you drift off.</p>
+<p><b>What the site shows with it.</b> A building with no damping, once set swinging, should swing for ever with exactly the same energy. Euler's method gets this wrong in a way that can be worked out exactly: at every step it multiplies the energy by (1 + ω²h²), where h is the time step. That is always more than 1, so the energy always grows.</p>
+<ul>
+<li>With a small step, one 800th of the period, the factor is 1.0000617. After 4,800 steps (six swings) the energy has grown by 34%.</li>
+<li>With a larger step, one 50th of the period, the energy grows by a factor of 10³⁰ and the site stops the run.</li>
+</ul>
+<p>This is a clear picture of <b>truncation error</b> and of how it builds up. It is also why the fastest wobble of the building matters, and why power iteration is used to find it: Euler's error grows fastest for the fastest wobble. The function is <code>euler_free</code>.</p>
+
+<h3>5.13 Four functions, line by line</h3>
+<p>These are copied from the site's code. An examiner may open the code and point at a function. If you can explain these four, you can explain the others, because they follow the same patterns.</p>
 <table class="walk">
 <tr><th>Code</th><th>What each part does</th></tr>
 <tr><td><pre>def thomas(e, f, g, r):
@@ -327,43 +353,127 @@ for j in range(min(nm, n)):
 <td>The core of <b>inverse_iteration</b>.<br><b>K is factorised once</b>, before the loops.<br><b>Outer loop:</b> one pass per mode wanted.<br><b>Deflation:</b> subtract from the guess its part along each mode already found, so it cannot turn into that mode again.<br><b>y = lu_solve(lu, m * x)</b> solves K y = M x: the "inverse" step.<br><b>lam_new</b> is the Rayleigh quotient, the estimate of the eigenvalue.<br><b>Normalise</b> y so that yᵀM y = 1.<br><b>Stop</b> when the eigenvalue changes by less than 10⁻⁹ of itself.</td></tr>
 </table>
 
-<h2>9. The four playback features (nothing new is computed)</h2>
-<table>
-<tr><th style="width:20%">Feature</th><th>What it does</th><th style="width:36%">What it reuses</th></tr>
-<tr><td>Sweep button (Shake)</td><td>Moves the frequency slider from end to end by itself.</td><td>The 177 answers the Shake tab already has.</td></tr>
-<tr><td>Skyline (Shake)</td><td>Eight buildings of 3 to 30 storeys, with your floors and columns and no devices, under the same shaking. The one that sways most is highlighted.</td><td><code>build</code> and <code>harmonic_solve</code>, through the call <code>skyline</code>.</td></tr>
-<tr><td>Play the earthquake (Detect)</td><td>P and S rings spread from the earthquake, stations light up when they trigger, the alert goes out and each city counts down.</td><td>The arrival times, picks and alert time that <code>detect</code> returns.</td></tr>
-<tr><td>Replay the solvers (Lab)</td><td>Shows Jacobi, Gauss–Seidel and SOR after 1, 2, 3, 4, 6, 9… sweeps, and bisection's bracket shrinking.</td><td>The same solver functions run with a growing limit on sweeps, through the call <code>replay</code>.</td></tr>
-</table>
 
+
+<h2>Part 6. The building calculations in full</h2>
+<h3>6.1 The earthquake check, step by step</h3>
+<p>A real earthquake shakes back and forth, which is complicated. For ordinary buildings the codes allow a shortcut: replace the earthquake by a set of steady sideways forces, one on each floor, and see how far the building leans. This is called the <b>equivalent lateral force</b> method. The site follows the American code ASCE 7 in a simplified form. Here it is for the default building: 8 storeys of 3.2 m, 300 tonnes per floor, 400 kN/mm per storey.</p>
+<ol>
+<li><b>Find the period.</b> Inverse iteration gives T = 0.932 s.</li>
+<li><b>Find the load factor, C<sub>s</sub>.</b> This is the share of the building's weight that is applied sideways. It depends on how shaky the region is, given by two numbers called S<sub>DS</sub> and S<sub>D1</sub> (here 0.8 and 0.4), and on a factor R (here 5) that allows for the building's ability to absorb energy. For a period longer than S<sub>D1</sub>/S<sub>DS</sub> = 0.5 s the rule is C<sub>s</sub> = S<sub>D1</sub> ÷ (T × R) = 0.4 ÷ (0.932 × 5) = <b>0.0858</b>. Slower buildings get a smaller factor.</li>
+<li><b>Find the total force.</b> The weight is 8 × 300,000 kg × 9.81 = 23,544 kN. The total sideways force is 0.0858 × 23,544 = <b>2,020 kN</b>.</li>
+<li><b>Share it between the floors.</b> Higher floors get more, in proportion to (height)ᵏ, with k = 1.216 from the interpolation in section 5.11. The roof gets 490 kN and the first floor 39 kN.</li>
+<li><b>Solve K u = F.</b> The Thomas algorithm gives the movement of each floor. The roof moves <b>29.5 mm</b>.</li>
+<li><b>Work out the drift of each storey</b>, multiply by a factor C<sub>d</sub> = 4.5 that the code requires, and compare with the limit of 64 mm.</li>
+</ol>
+<table>
+<tr><th>Storey</th><th class="n">Force on the floor (kN)</th><th class="n">Movement of the floor (mm)</th><th class="n">Difference from the floor below (mm)</th><th class="n">× 4.5 = drift (mm)</th><th class="n">Share of the 64 mm limit</th></tr>
+<tr><td>8 (roof)</td><td class="n">490.5</td><td class="n">29.53</td><td class="n">1.23</td><td class="n">5.5</td><td class="n">8.6%</td></tr>
+<tr><td>7</td><td class="n">417.0</td><td class="n">28.31</td><td class="n">2.27</td><td class="n">10.2</td><td class="n">16.0%</td></tr>
+<tr><td>6</td><td class="n">345.7</td><td class="n">26.04</td><td class="n">3.13</td><td class="n">14.1</td><td class="n">22.0%</td></tr>
+<tr><td>5</td><td class="n">276.9</td><td class="n">22.91</td><td class="n">3.83</td><td class="n">17.2</td><td class="n">26.9%</td></tr>
+<tr><td>4</td><td class="n">211.1</td><td class="n">19.08</td><td class="n">4.35</td><td class="n">19.6</td><td class="n">30.6%</td></tr>
+<tr><td>3</td><td class="n">148.8</td><td class="n">14.73</td><td class="n">4.73</td><td class="n">21.3</td><td class="n">33.2%</td></tr>
+<tr><td>2</td><td class="n">90.9</td><td class="n">10.00</td><td class="n">4.95</td><td class="n">22.3</td><td class="n">34.8%</td></tr>
+<tr><td>1</td><td class="n">39.1</td><td class="n">5.05</td><td class="n">5.05</td><td class="n">22.7</td><td class="n">35.5%</td></tr>
+</table>
+<p><b>Notice the pattern.</b> The forces are biggest at the top, but the drift is biggest at the bottom. That is because the bottom storey has to carry the forces of all eight floors: 2,020 kN ÷ 400 kN/mm = 5.05 mm. The worst storey uses 35.5% of the limit, so this building <b>passes</b> easily.</p>
+<p><b>The soft-storey building.</b> If the ground storey has only a quarter of the stiffness, the same calculation gives 107% of the limit at that storey. It <b>fails</b>, and the drawing shows it pulsing red.</p>
+
+<h3>6.2 Walls, cores and bracing</h3>
+<p>A concrete wall does not behave like floors on springs. It bends as a whole, like a flagpole fixed in the ground. For a flagpole there is a textbook formula for how far any point moves when you push at any other point. Using it for every pair of floors gives the <b>flexibility matrix</b> directly. The stiffness matrix we need is its inverse, which is why the site has a matrix inverse method.</p>
+<p>The result is a <b>full</b> matrix: no zeros, because pushing any floor of a wall moves every other floor. So Thomas cannot be used, and the site switches to Cholesky. These matrices are also badly conditioned for tall buildings, which the condition number shows.</p>
+<p><b>Bracing</b> means diagonal steel members in each storey. The site treats a brace as an extra spring added to the stiffness of that storey.</p>
+
+<h3>6.3 Shaking the building</h3>
+<p>In the Shake tab the ground moves back and forth steadily, and we want to know how far each floor ends up swinging once things have settled.</p>
+<p><b>The key idea.</b> When something is shaken steadily, it ends up swinging at the same rhythm as the shaking, but it may lag behind. Its motion can be split into two parts: one that is exactly in step with the shaking, and one that is a quarter of a swing behind. We call the sizes of these two parts <b>a</b> and <b>b</b> for each floor. The total swing of a floor is then <span class="f">√(a² + b²)</span>.</p>
+<p>Putting this into the equation of motion gives two sets of equations, one for the a's and one for the b's, linked together by the damping. So an 8-storey building gives 16 equations. This larger matrix is <b>not symmetric</b>, so the shortcuts of Cholesky and Thomas are not available, and it is solved by Gauss elimination with partial pivoting. This is the main reason the project needs general Gauss elimination. The function is <code>harmonic_solve</code>.</p>
+<p>To draw the resonance curve the site repeats this at 177 different frequencies. For the default building the peak is <b>137 mm at 1.07 Hz</b>, which is one swing every 0.93 s: the building's own period, as it should be.</p>
+<p><b>An honest limit.</b> Steady shaking at one frequency is a good description of wind. A real earthquake is short and contains many frequencies at once, so this is an idealised picture of one. The site says so, and so should you.</p>
+
+<h3>6.4 Three ways to protect a building</h3>
+<p><b>The tuned mass damper.</b> This is a heavy block placed at the top of the building on springs. It is built to swing at the same rhythm as the building. When the building starts to sway, the block sways the other way and soaks up the energy. The tower Taipei 101 has a famous one: a steel ball of 660 tonnes. In the model it is simply one more mass and one more spring added to the matrices. A button finds how heavy the block must be for a chosen reduction, using bisection. For a 40% cut on the default building it needs 1.94% of the building's moving mass, and the peak sway falls from 137 mm to 82 mm.</p>
+<p><b>Base isolation.</b> The whole building is placed on soft rubber pads, called bearings. This makes the building much slower: its period becomes longer, which usually moves it away from the rhythm of the earthquake. In the model it is one more soft spring under the building. A button finds how soft the pads must be for a chosen period, again by bisection: 19.2 kN/mm gives 2.5 s. There is a catch that is worth saying aloud. For the slow shaking that arrives from distant earthquakes, a longer period can move the building <i>towards</i> the danger.</p>
+<p><b>Shock-absorber dampers.</b> These work like the shock absorbers of a car or a door closer. They are fitted between floors and resist fast movement, turning it into heat. In the model they add to the damping.</p>
+
+<h2>Part 7. Detecting an earthquake</h2>
+<h3>7.1 Two waves, like lightning and thunder</h3>
+<p>When rock breaks underground it sends out two kinds of wave. The <b>P wave</b> is fast but weak; in the site it travels at 6.0 km per second. The <b>S wave</b> is slower, 3.5 km per second, but much stronger, and it is the one that does the damage.</p>
+<p>This is just like a thunderstorm. You see the lightning first and hear the thunder later, and the longer the gap, the further away the storm is. For an earthquake, every second between the P wave and the S wave means the earthquake is <b>8.4 km</b> further away. That number comes from the two speeds: 6.0 × 3.5 ÷ (6.0 − 3.5).</p>
+<h3>7.2 Spotting the wave in a noisy recording</h3>
+<p>A station records the ground moving all the time. Most of it is background noise from traffic, wind and the sea. The computer has to decide the moment at which a real wave arrives.</p>
+<p>The method is called <b>STA/LTA</b>, which stands for short-term average over long-term average. The computer compares how strong the signal has been over the last 1 second with how strong it was, on average, over the 15 seconds before that. While only noise is arriving the two are about equal, so the ratio is about 1. When a wave arrives the short-term average jumps and the ratio shoots up. When it passes a chosen <b>threshold</b> (5 unless you change it), the computer declares an arrival. That moment is called a <b>pick</b>.</p>
+<p>If you set the threshold too low, ordinary noise will cross it and cause a <b>false alarm</b>. The site marks these in its table. Averages are all this method needs, which is where the mean of section 5.11 is used.</p>
+<h3>7.3 Finding where the earthquake was</h3>
+<p>One station knows how far away the earthquake is, but not in which direction. So all it can say is that the earthquake lies somewhere on a circle around it. A second station gives a second circle, and a third gives a third. The earthquake is at the one point where all the circles meet. Satellite navigation in a phone works on the same principle.</p>
+<p><b>The mathematical trick.</b> The equation of a circle contains x² and y², which makes it awkward. But if you subtract the equation of one circle from another, the x² and y² cancel, and what is left is an ordinary straight-line equation. With three stations this gives two such equations for the two unknowns, the position east and the position north, and Gauss elimination solves them.</p>
+<p>With more than three stations there are more equations than unknowns, and because of small timing errors they will not agree exactly. So we find the position that fits them all as well as possible. That is <b>least squares</b>, the same method as in the regression of section 5.10.</p>
+<p>For the default earthquake, with five stations, the site locates it to within <b>0.26 km</b>.</p>
+<h3>7.4 Magnitude and warning time</h3>
+<p>The <b>magnitude</b> is the size of the earthquake. It is worked out from how big the wave is on the recording, corrected for distance, since the same earthquake looks smaller from further away. Each station gives its own estimate, and the site reports the mean and the standard deviation: 5.98 ± 0.004 for an earthquake that was really 6.0.</p>
+<p><b>Warning time</b> is the most practical result. The alert is sent as soon as the nearest station detects the P wave, plus a few seconds for processing. An electronic message travels almost instantly, but the damaging S wave is still on its way. The gap is the warning a city gets. For the default earthquake the alert goes out 58.5 seconds after it begins. Abu Dhabi, 369 km away, gets 46.8 seconds of warning and Dubai gets 20.5 seconds.</p>
+<figure style="width:92mm;margin:4pt auto 6pt"><img src="guide-img/map.png" alt=""><figcaption><b>Figure 4. The earthquake being played.</b> Blue ring: P wave. Red ring: S wave. Triangles: stations, ringed once they have triggered. Green numbers: seconds each city has left. Thin circles: each station's distance estimate; they cross at the epicentre.</figcaption></figure>
+
+<h3>7.5 Two things to be honest about</h3>
+<ul>
+<li><b>The recordings are not real.</b> The site makes them up: noise, then a P wave, then a larger S wave. This is deliberate. Because we planted the earthquake ourselves we know the true answer, so we can check that the method finds it.</li>
+<li><b>The magnitude check is circular.</b> The same formula is used to make the recordings and to read the magnitude back. Getting 5.98 shows that the chain of calculations works. It does not prove the formula is right for the Gulf.</li>
+</ul>
+
+<h2>Part 8. How the website itself works</h2>
+<ul>
+<li><b>It is one file,</b> called <code>index.html</code>. Inside it are three things: the page you see (sliders, charts and text), the <b>solver</b> (all the numerical methods, in Python), and a script in JavaScript, the language of web pages, that reads the sliders, asks the solver for answers and draws the results.</li>
+<li><b>Python runs inside your browser.</b> Normally Python runs on a computer somewhere else, called a server. A tool called <b>Pyodide</b> makes it run in the browser instead. So the site needs no server, costs nothing to run and opens from a link.</li>
+<li><b>It runs in the background.</b> The solver works in a separate thread called a <b>web worker</b>, so the page does not freeze during a long calculation.</li>
+<li><b>The page and the solver talk through one door,</b> a function called <code>api</code>. The page sends the building's details and receives the results.</li>
+<li><b>About numpy.</b> numpy is a Python tool for holding lists and grids of numbers and doing simple arithmetic on them. It also contains ready-made solvers, in a part called <code>numpy.linalg</code>. <b>We never use that part.</b> Every elimination, every decomposition and every iteration is our own code, and one of the tests fails if a ready-made solver is ever called.</li>
+<li><b>It is hosted on GitHub Pages,</b> a free service that puts a file on the web. The code is stored on GitHub, where the tests run automatically whenever the code changes.</li>
+</ul>
+<p><b>The four playback features.</b> The Sweep button, the skyline, <i>Play the earthquake</i> and <i>Replay the solvers</i> compute nothing new. They show results the solver already produces, one after another. The skyline runs the ordinary shaking calculation for eight heights. The replay runs the ordinary iterative solvers for 1 sweep, then 2, then 3 and so on, and shows each answer.</p>
 <div class="figs">
 <figure style="flex:2.1"><img src="guide-img/sky.png" alt=""><figcaption><b>Figure 5. The skyline</b> at slow shaking (one swing every 2.8 s). The 25-storey building, whose own period is 2.79 s, sways most.</figcaption></figure>
 <figure><img src="guide-img/replay.png" alt=""><figcaption><b>Figure 6. Replay, iterative solvers.</b> Each line is one method's answer after 9 sweeps; the dashed line is the exact answer. SOR is nearly there.</figcaption></figure>
 <figure><img src="guide-img/root.png" alt=""><figcaption><b>Figure 7. Replay, bisection.</b> The two vertical lines are the bracket. The picture zooms in as it halves.</figcaption></figure>
 </div>
 
-<h2>10. How we know it is right, and where it stops being right</h2>
-<h3>Verification</h3>
-<ul>
-<li><b>Verify tab: 87 checks, all passing.</b> Examples: the frequencies of a uniform building against the closed form <span class="f">ω<sub>j</sub> = 2√(k/m) sin((2j−1)π / 2(2N+1))</span>; a 2-storey hand case, <span class="f">λ = (3 ∓ √5)/2 · k/m</span>; a wall's tip deflection against <span class="f">PL³/3EI</span>; the damped 1-storey sway against its exact formula; the damper against Den Hartog's result; Euler's energy against <span class="f">(1 + ω²h²)ⁿ</span>.</li>
-<li><b>Second methods agree:</b> LU, Cholesky, Thomas and the inverse against Gauss; bisection on the determinant against inverse iteration.</li>
-<li><b><code>test_solver.py</code></b> runs the same checks, compares with numpy as a referee, and calls every page function on awkward buildings (1 storey, 40 storeys, wall, soft storey).</li>
-<li><b><code>test_accuracy.py</code></b> measures how many digits are right (93 checks). <b><code>test_mutants.py</code></b> puts 56 deliberate mistakes into the solver; the checks catch 55, and the last one gives identical results.</li>
-</ul>
-<h3>Limits to state openly</h3>
-<ul>
-<li>The static check is valid only for regular low and mid-rise buildings, and it is a simplified version of the code procedure.</li>
-<li>Shaking at one steady frequency is not an earthquake. It is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies.</li>
-<li>No yielding, cracking, twisting or collapse is modelled.</li>
-<li>The frame model is poor for tall towers; the wall or frame + core model is better there.</li>
-<li>The damper rule is exact only for a one-storey building with no damping.</li>
-<li>Epicentre: flat map, fixed depth, constant wave speeds. A station nearer than about 55 km gives no distance.</li>
-<li><b>Synthetic or assumed:</b> the recordings; the building presets; the code load values; all stations except UOSS (a real station at the University of Sharjah); the regression sample rows.</li>
-<li>The magnitude formula is also the one used to make the recordings, so recovering the magnitude tests the pipeline, not the physics.</li>
-</ul>
-<div class="box"><b>Check against the source before quoting.</b> These are as coded and have not been checked line by line against the original documents: the code-load formulas and constants (ASCE 7); the 48 m height warning; the magnitude constants (Hutton and Boore 1987); the damper rule (Den Hartog); the slow-shaking bands of 1.0–1.75 s and 2.9–4.0 s (from a summary of a study of the 2005 Qeshm earthquake).</div>
 
-<h2>11. Numbers to remember (the default 8-storey apartment block)</h2>
+
+<h2>Part 9. How we know it is right, and where it stops being right</h2>
+<h3>9.1 Checking the answers</h3>
+<p>A program that gives wrong answers confidently is worse than no program. So the site checks itself in several ways.</p>
+<ul>
+<li><b>Against exact formulas.</b> For some simple cases the true answer is known. The periods of a building whose floors are all the same have an exact formula, and ours match it. A wall pushed at the top deflects by a known amount, PL³/3EI, and ours matches that too.</li>
+<li><b>Against hand calculations,</b> such as a two-storey building worked out on paper.</li>
+<li><b>Method against method.</b> Gauss, LU, Cholesky, Thomas and the inverse must all give the same sway. Bisection on the determinant must give the same periods as inverse iteration.</li>
+</ul>
+<p>The Verify tab runs <b>87 such checks</b>, and all pass. Three test programs go further.</p>
+<ul>
+<li><code>test_solver.py</code> runs the same checks and also tries awkward buildings: 1 storey, 40 storeys, a wall, a soft storey.</li>
+<li><code>test_accuracy.py</code> measures how many digits of each answer are correct.</li>
+<li><code>test_mutants.py</code> does something clever. It deliberately breaks the solver in 56 different ways and confirms that the checks notice. A check that can never fail proves nothing. It catches 55; the last one gives exactly the same results as the real code.</li>
+</ul>
+<h3>9.2 What the model leaves out</h3>
+<ul>
+<li><b>The earthquake check is for ordinary buildings.</b> Codes allow the shortcut of steady forces only for regular buildings that are not too tall. Above about 48 m the page warns that the result is for reference only.</li>
+<li><b>One steady rhythm is not a real earthquake.</b> A real one is short and contains many rhythms at once. The Shake tab is accurate for wind and an idealised picture of an earthquake.</li>
+<li><b>Nothing breaks.</b> The model has no cracking, bending out of shape, twisting or collapse.</li>
+<li><b>The spring model is poor for tall towers,</b> which bend more like a flagpole. The wall or frame + core options are better there.</li>
+<li><b>The damper rule</b> used to tune the roof damper is exact only for a one-storey building.</li>
+<li><b>The map is flat,</b> the earthquake's depth is fixed and the wave speeds are constant.</li>
+</ul>
+<h3>9.3 What is made up</h3>
+<ul>
+<li>The <b>recordings</b> at the stations.</li>
+<li>The <b>ready-made buildings</b>, which are illustrations and not real buildings.</li>
+<li>The <b>earthquake load values</b> (S<sub>DS</sub>, S<sub>D1</sub>, R, C<sub>d</sub>), which are examples.</li>
+<li>All <b>stations</b> except UOSS, which is a real station at the University of Sharjah.</li>
+<li>The <b>sample rows</b> for the regression.</li>
+</ul>
+<div class="box"><b>Check before you quote.</b> The following are written in the code as we understood them, and have not been checked line by line against the original documents: the formulas and constants of the earthquake check (ASCE 7), the 48 m warning, the magnitude formula (Hutton and Boore, 1987), the damper tuning rule (Den Hartog), and the slow-shaking periods of 1.0–1.75 s and 2.9–4.0 s reported for the UAE. If you are asked for a source, say what the site uses and that it is a simplified version.</div>
+
+<h2>Part 10. Numbers worth remembering (the default 8-storey building)</h2>
+<p>You do not need all of these by heart, but knowing the first few rows will make you sound sure of the project.</p>
 <table style="break-inside:avoid">
 <tr><th style="width:22%">Quantity</th><th class="n" style="width:28%">Value</th><th style="width:22%">Quantity</th><th class="n" style="width:28%">Value</th></tr>
 <tr><td>Inputs</td><td class="n">8 storeys · 3.2 m · 300 t per floor · 400 kN/mm</td><td>Code values</td><td class="n">S<sub>DS</sub> 0.8 · S<sub>D1</sub> 0.4 · R 5 · C<sub>d</sub> 4.5 · limit 2%</td></tr>
@@ -380,7 +490,10 @@ for j in range(min(nm, n)):
 <tr><td>Alert</td><td class="n">53.5 s + 5 s delay</td><td>Warning: Abu Dhabi · Dubai</td><td class="n">46.8 s · 20.5 s</td></tr>
 </table>
 
-<h2>12. A five-minute demonstration</h2>
+
+
+<h2>Part 11. A five-minute demonstration</h2>
+<p>Practise this order once or twice. It shows every part of the site and gives you a natural place to mention each method.</p>
 <ol>
 <li><b>Building tab.</b> "This is an 8-storey block. Its first period is 0.932 s, from inverse iteration. Under the code load the roof moves 29.5 mm and the worst storey uses 35.5% of the drift limit."</li>
 <li><b>Drag the stiffness slider down.</b> The dashed BEFORE outline shows the change, and storeys turn amber then red.</li>
@@ -394,7 +507,10 @@ for j in range(min(nm, n)):
 <li><b>Limits tab.</b> Say what the model leaves out before you are asked.</li>
 </ol>
 
-<h2 class="pb">13. Viva questions and short answers</h2>
+
+
+<h2 class="pb">Part 12. Viva questions and short answers</h2>
+<p>Cover the answer, say yours aloud, then compare. The answers are short on purpose: say them in your own words, and be ready to open the code and point.</p>
 <div class="two">
 
 <h3>The project as a whole</h3>
@@ -514,6 +630,8 @@ for j in range(min(nm, n)):
 <div class="qa"><b>What would you add next?</b> A real recorded earthquake stepped through time, measured building periods for the regression, and real station data.</div>
 <div class="qa"><b>Who wrote the code?</b> Answer honestly, and show that you understand it: pick a function such as <code>thomas</code> or <code>bisection</code> and explain it line by line.</div>
 </div>
+
+
 
 </body>
 </html>
