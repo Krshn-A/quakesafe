@@ -85,6 +85,7 @@ All three run on GitHub for every push and pull request (`.github/workflows/test
 
 The solver runs in a background thread (a web worker), so the page does not freeze while it computes. The page script and the solver talk through one function, `api(name, json)`.
 
+- [docs/QuakeSafe-Study-Guide.pdf](docs/QuakeSafe-Study-Guide.pdf) is a short study guide: the site from zero, every method, and viva questions.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the design, the list of solver calls and the known failure cases.
 - [docs/adr/](docs/adr/) records the four main design decisions and why they were made.
 - [docs/TECH_DEBT.md](docs/TECH_DEBT.md) lists what is still weak, in order of priority.
