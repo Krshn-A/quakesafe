@@ -365,6 +365,12 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <p class="note" style="margin:10px 0 0">The ground moves too, and the dashed outline is where the building stands at rest. The line above the roof is the path the roof has drawn, and a storey is tinted more the more it deforms. The building swings further when the roof sway is larger, and faster when the shaking frequency is higher. Steady shaking at one frequency is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies.</p>
   </div>
 </div>
+<div class="stage" style="margin-top:14px">
+  <div class="cap"><span>Skyline / your floors, different heights</span><span id="capSky"></span></div>
+  <canvas id="cvSky" data-h="300" role="img" aria-label="Drawing of buildings of several heights under the same shaking. The note below names the one that sways most and gives its sway."></canvas>
+  <p class="note" id="skyNote" style="margin:10px 0 0" role="status"></p>
+  <p class="note" style="margin:6px 0 0">Every building here has the floors and columns of your building, the same in every storey, with no damper, bearings or floor dampers. Only the number of storeys differs. All are drawn to one scale and move with the frequency slider above.</p>
+</div>
 </section>
 
 <!-- ============================ DETECT ============================ -->
@@ -1796,6 +1802,27 @@ def _clean(o):
     return o
 
 
+def skyline(p, heights, freqs):
+    """The Shake tab's question, asked of buildings of several heights.
+    Each one has the floors and columns of the building in p (the average mass and stiffness, the same
+    in every storey) and no damper, bearings or floor dampers. Nothing here is a new method: every
+    building is assembled by build() and shaken by harmonic_solve(), as on the Shake tab.
+    Six floors of each building are returned for the drawing; the last one is the roof."""
+    m0 = mean([float(v) for v in p["m"]]); k0 = mean([float(v) for v in p["k"]])
+    ag = float(p.get("ag", 0.05)) * G; rows = []
+    for N in heights:
+        N = int(N); q = dict(p)
+        q.update({"N": N, "m": [m0] * N, "k": [k0] * N, "tmd": {"on": False}, "iso": {"on": False}, "visc": {"on": False}})
+        mod = build(q); M = mod["M"]; F = -M * ag
+        pick = sorted(set(max(1, math.ceil(N * (i + 1) / 6.0)) - 1 for i in range(6)))
+        amp = []; A = []; B = []
+        for f in freqs:
+            a, b = harmonic_solve(M, mod["C"], mod["K"], F, 2 * math.pi * float(f))
+            amp.append(roof_amp(mod, a, b)); A.append([a[i] for i in pick]); B.append([b[i] for i in pick])
+        rows.append({"N": N, "T": 2 * math.pi / mod["w1"], "floors": [i + 1 for i in pick], "amp": amp, "A": A, "B": B})
+    return {"rows": rows, "ag": ag}
+
+
 def analyse(p):
     mod = build(p); modes = system_modes(mod, 3)
     x, m, Ks, k, tri = mod["x"], mod["m"], mod["Ks"], mod["k"], mod["tri"]
@@ -1831,6 +1858,7 @@ def api(name, payload):
         elif name == "euler": r = euler_demo(a)
         elif name == "race": r = method_race(a)
         elif name == "det": r = det_roots(a)
+        elif name == "skyline": r = skyline(a["p"], a["heights"], a["freqs"])
         elif name == "detect": r = detect(a)
         elif name == "record": r = record(a)
         elif name == "tmd_rule":
@@ -2419,12 +2447,65 @@ function drawShakeView(t) {
     trail: TRAIL.map(q => rel(ph - q)[r] + gnd(ph - q)), echo: ECHO.map(e => ({d: rel(ph - e.q), g: gnd(ph - e.q), a: e.a})),
     live: {key: "shake" + Rkey, kind: "shake", full: rel(Math.atan2(b[r], a[r])), value: R.sweep.amp[i] * 1000, unit: "mm"}});
 }
+// ---- the skyline: the Shake tab's question asked of buildings of several heights -------------------------------------
+// Working out every height at every frequency of the slider takes several seconds in the browser, so the solver is
+// asked for one frequency at a time: eight small solves. Each answer is kept (skyCache) until the building changes, and
+// requests are coalesced by latest(), so that a moving slider asks only for where it is now. The drawing shows the last
+// answer that arrived and says which frequency it is for. All the buildings are drawn to one scale, on one ground.
+const SKY_HEIGHTS = [3, 5, 8, 12, 16, 20, 25, 30];
+let SKY = null, skyText = "", skyFor = null;
+const skyCache = new Map();
+async function skyFetch() {
+  if (!R || !tabOn("shake")) return;
+  if (skyFor !== Rkey) { skyCache.clear(); skyFor = Rkey; }
+  const key = Rkey, i = fIdx(), f = R.freqs[i];
+  if (!skyCache.has(i)) {
+    const p = params(), r = await solver.must("skyline", {p, heights: [...new Set([...SKY_HEIGHTS, p.N])].sort((a, b) => a - b), freqs: [f]});
+    if (key !== Rkey) return;                                             // the building changed meanwhile: this answer is for the old one
+    skyCache.set(i, r);
+  }
+  SKY = {key, f, ...skyCache.get(i)}; drawNow();
+}
+const skyIfNeeded = latest(skyFetch);
+function drawSky(t) {
+  const cv = $("cvSky"); if (!cv.clientWidth) return;
+  const [c, W, H] = prep(cv), P = pal();
+  if (!SKY || SKY.key !== Rkey) { c.fillStyle = P.mut; c.textAlign = "center"; c.fillText("Working out the skyline…", W / 2, H / 2); return; }
+  const i = 0, rows = SKY.rows, f = SKY.f, Om = 2 * Math.PI * f, ground = H - 46, slot = (W - 28) / rows.length;      // the reply holds one frequency
+  const amps = rows.map(r => r.amp[i]), top = Math.max(...amps) || 1, best = amps.indexOf(top);
+  // one scale for all: the largest sway reaches `reach` px. The ground's own movement (ag / Ω²) is drawn at the same scale, cut off if it would not fit.
+  const reach = Math.min(34, slot * 0.36), scale = reach / top, ug = SKY.ag / (Om * Om), gPx = Math.min(ug * scale, reach * 0.6);
+  const last = rows[best].floors.length - 1, ph = t == null ? Math.atan2(rows[best].B[i][last], rows[best].A[i][last]) : swingPhase(t, shownHz(f));
+  const gs = -gPx * Math.cos(ph), storey = (ground - 44) / Math.max(30, R.N), bw = Math.min(40, slot * 0.42);
+  drawGround(c, W, H, ground, W / 2, ph, gs);
+  rows.forEach((r, k) => {
+    const cx = 14 + slot * (k + 0.5), a = r.A[i], b = r.B[i], pts = [[cx + gs, ground]], top0 = ground - r.N * storey;
+    r.floors.forEach((fl, q) => pts.push([cx + gs + (a[q] * Math.cos(ph) + b[q] * Math.sin(ph)) * scale, ground - fl * storey]));
+    c.setLineDash([3, 4]); c.strokeStyle = P.mut; c.lineWidth = 1; c.globalAlpha = 0.3; c.strokeRect(cx - bw / 2, top0, bw, r.N * storey); c.setLineDash([]); c.globalAlpha = 1;   // at rest
+    c.beginPath(); pts.forEach(([x, y], q) => q ? c.lineTo(x - bw / 2, y) : c.moveTo(x - bw / 2, y));
+    for (let q = pts.length - 1; q >= 0; q--) c.lineTo(pts[q][0] + bw / 2, pts[q][1]);
+    c.closePath(); c.fillStyle = P.facade; c.fill();
+    c.globalAlpha = 0.08 + 0.5 * amps[k] / top; c.fillStyle = P.acc; c.fill(); c.globalAlpha = 1;      // tinted by its share of the largest sway
+    c.strokeStyle = k === best ? P.acc : P.ink; c.lineWidth = k === best ? 2 : 1.2; if (k === best) glow(c, P.acc, 8); c.stroke(); glow(c, "", 0);
+    const [xr, yr] = pts[pts.length - 1];
+    c.fillStyle = P.acc; c.fillRect(xr - bw / 2 - 2, yr - 3, bw + 4, 3);
+    c.textAlign = "center"; c.font = FONT(k === best ? 11 : 9.5); c.fillStyle = k === best ? P.acc : P.mut; c.fillText(fmt(amps[k] * 1000) + (slot > 58 ? " mm" : ""), cx, top0 - 9);
+    c.font = FONT(10.5); c.fillStyle = r.N === R.N ? P.acc2 : P.ink; c.fillText(r.N + (slot > 58 ? " storeys" : ""), cx, ground + 26);
+    c.font = FONT(9.5); c.fillStyle = P.mut; c.fillText(fmt(r.T) + " s", cx, ground + 39);
+  });
+  // the words under the drawing are written from the same numbers, and only when they change
+  const b = rows[best], near = rows.reduce((q, r, k) => Math.abs(r.T - 1 / f) < Math.abs(rows[q].T - 1 / f) ? k : q, 0);
+  const text = `Shaking at ${fmt(f)} Hz, one swing every ${fmt(1 / f)} s. The ${b.N}-storey building sways most: ${fmt(top * 1000)} mm at the roof. Its own period is ${fmt(b.T)} s`
+    + (near === best ? ", the closest of all to the shaking." : `. The ${rows[near].N}-storey building's own period (${fmt(rows[near].T)} s) is closer to the shaking, but a taller building's higher modes or greater mass can outweigh that.`)
+    + ` Under each building: its number of storeys and its own period. The ground moves ± ${fmt(ug * 1000)} mm${ug * scale > gPx ? ", drawn smaller" : ""}.`;
+  if (text !== skyText) { skyText = text; $("skyNote").textContent = text; $("capSky").textContent = `${fmt(f)} Hz · largest sway ${fmt(top * 1000)} mm`; }
+}
 // The two building drawings are animated. People who ask their system for reduced motion get a still picture.
 const stillOnly = matchMedia("(prefers-reduced-motion: reduce)");
 let frameQueued = false;
 function drawViews(t) {
   if (!R) return;
-  try { if (tabOn("build")) drawBuildView(t); else if (tabOn("shake")) drawShakeView(t); } catch (e) { console.error(e); }
+  try { if (tabOn("build")) drawBuildView(t); else if (tabOn("shake")) { drawShakeView(t); drawSky(t); } } catch (e) { console.error(e); }
 }
 const drawNow = () => drawViews(stillOnly.matches ? null : performance.now());
 function frame(t) { frameQueued = false; drawViews(t); animate(); }
@@ -2443,7 +2524,7 @@ async function freshAnalysis() { if (Rkey !== JSON.stringify(params())) await an
 const requestAnalysis = latest(analyse);
 const settle = debounce(requestAnalysis, 120);
 function refresh() { if (solverReady) stageState("○ Computing…"); settle(); }
-function renderAll() { renderBuild(); renderShake(); renderSite(); drawNow(); markLabStale(); clearStale(); stageState("● Response computed"); labIfNeeded(); }
+function renderAll() { renderBuild(); renderShake(); renderSite(); drawNow(); markLabStale(); clearStale(); stageState("● Response computed"); labIfNeeded(); skyIfNeeded(); }
 const SYSTEM_NAMES = {frame: "frame", wall: "wall", dual: "frame + core"};
 function stageCaptions() {                                              // the lines above and below the two building drawings
   if (!R) return;
@@ -2566,7 +2647,7 @@ $("mMul").addEventListener("input", e => { if (sel >= 0) { mMul[sel] = +e.target
 $("kMul").addEventListener("input", e => { if (sel >= 0) { kMul[sel] = +e.target.value; custom(); syncInputs(); refresh(); } });
 $("cvB").addEventListener("click", e => { const y = e.offsetY, h = ($("cvB")._hit || []).find(r => y >= r[0] && y <= r[1]); selectFloor(h ? h[2] : -1); });
 $("viewBtns").addEventListener("click", e => { const v = e.target.dataset.v; if (v == null || e.target.disabled) return; setView(v); drawNow(); });
-$("freq").addEventListener("input", () => { if (R) { renderShake(); drawNow(); } });
+$("freq").addEventListener("input", () => { if (R) { renderShake(); drawNow(); skyIfNeeded(); } });
 // ---- the sweep button: the frequency slider moves by itself from one end to the other, once -------------------------
 // Nothing new is computed. Every position of the slider is one of the frequencies the solver has already answered for,
 // so the sweep only shows those answers one after another. It stops at the end, on a second press, when the slider
@@ -3012,7 +3093,7 @@ function showTab(t, opt = {}) {
   }
   for (const s of document.querySelectorAll(".tab")) s.classList.toggle("on", s.id === "t-" + t);
   if (opt.link && location.hash !== "#" + t) history.replaceState(null, "", "#" + t);       // so the address bar can be shared
-  redrawVisible(); drawNow(); markLabStale(); labIfNeeded();
+  redrawVisible(); drawNow(); markLabStale(); labIfNeeded(); skyIfNeeded();
 }
 // Going to another tab from inside a tab (a headline button, a card): the button that was pressed is about
 // to be hidden, so the keyboard focus moves to the new tab's own button and the page goes back to the top.

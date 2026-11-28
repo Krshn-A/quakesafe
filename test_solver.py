@@ -76,7 +76,8 @@ quake = {"lat": 27.7, "lon": 55.2, "mag": 6, "stations": st, "cities": st, "show
 calls = [("analyse", base), ("design_stiffness", base), ("design_tmd", {"p": base, "target": 0.4}), ("design_isolation", {"p": base, "T": 2.5}),
          ("calibrate", {"p": base, "T": 1.2}), ("damage", {"p": base, "T": 1.1}), ("regression", {"h": [10, 20, 30, 40, 50, 60], "T": [0.4, 0.7, 1.0, 1.3, 1.6, 1.8]}),
          ("euler", base), ("race", base), ("det", base), ("verify", {}), ("detect", quake), ("tmd_rule", {"mu": 0.03}),
-         ("record", {"x": ns["synth_seismogram"](200, 6)["x"], "fs": 20}), ("seismometer", {"f0": 1, "zeta": 0.7, "freqs": [0.5, 1, 2]})]
+         ("record", {"x": ns["synth_seismogram"](200, 6)["x"], "fs": 20}), ("seismometer", {"f0": 1, "zeta": 0.7, "freqs": [0.5, 1, 2]}),
+         ("skyline", {"p": base, "heights": [1, 3, 8, 40], "freqs": [0.3, 1.07, 3.0]})]
 variants = {"1 storey": dict(base, N=1, m=[3e5], k=[4e8]), "40-storey frame": dict(base, N=40, m=[3e5] * 40, k=[4e8] * 40),
             "wall only": dict(base, N=30, m=[4e5] * 30, k=[3e8] * 30, system="wall"), "frame + core": dict(base, N=30, m=[4e5] * 30, k=[3e8] * 30, system="dual"),
             "bracing": dict(base, brace={"on": True, "A": 0.004, "bay": 6}), "floor dampers": dict(base, visc={"on": True, "c": 5e6}),
@@ -289,6 +290,13 @@ readme = (ROOT / "README.md").read_text(encoding="utf-8")
 claimed = re.search(r"\| Verify \| (\d+) checks", readme)
 report(bool(claimed) and int(claimed.group(1)) == len(checks), "README states the real number of verification checks",
        "README says %s, the solver runs %d" % (claimed.group(1) if claimed else "nothing", len(checks)))
+
+# the skyline's 8-storey building is the plain 8-storey building of the Shake tab: the same roof sway at every frequency
+ref = json.loads(ns["api"]("analyse", json.dumps(base)))
+sky = json.loads(ns["api"]("skyline", json.dumps({"p": dict(base, tmd={"on": True, "mu": 0.03, "f": 0.97, "zd": 0.1}), "heights": [8], "freqs": ref["freqs"][::9]})))
+report(np.allclose(sky["rows"][0]["amp"], ref["sweep"]["amp"][::9], rtol=1e-6) and abs(sky["rows"][0]["T"] - ref["T_fixed"]) < 1e-9,
+       "skyline: the 8-storey building matches the Shake tab's own curve and period (devices left out)")
+report(sky["rows"][0]["floors"][-1] == 8, "skyline: the last floor returned is the roof")
 
 print("\n%d failed" % fails)
 sys.exit(1 if fails else 0)
