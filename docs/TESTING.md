@@ -109,14 +109,14 @@ Do this in a browser at 100% zoom, and once more on a phone or with the browser'
 
 **Everywhere**
 
-- [ ] Switch the system between light and dark. Charts change colour with the page.
+- [ ] Switch the system between light and dark. The page stays dark in both, and every chart keeps its colours.
 - [ ] Use Tab and the arrow keys only. Every tab and control can be reached, the focus ring is always visible, and a headline button moves the focus to the tab it opens.
 - [ ] Reload with `#lab` at the end of the address. The Lab tab opens.
 - [ ] Turn the network off and reload with an empty cache. A box explains that Python could not load and offers *Try again*.
 
 ## Colour contrast
 
-Every text colour was checked against every background it sits on, in both colour schemes, by computing WCAG contrast ratios. After the changes of November 2026 the lowest text ratio is 4.8 to 1 in the light scheme and 5.4 to 1 in the dark one (4.5 is required), and input borders and slider rails reach at least 3.3 to 1 (3 is required). If a colour variable at the top of the style sheet is changed, the ratios must be worked out again.
+Every text colour was checked against every background it sits on by computing WCAG contrast ratios. The page has one colour scheme, the dark one. In it the lowest text ratio is 6.6 to 1 (4.5 is required), and input borders and slider rails reach at least 3.3 to 1 (3 is required). If a colour variable at the top of the style sheet is changed, the ratios must be worked out again.
 
 ## What is not tested
 
