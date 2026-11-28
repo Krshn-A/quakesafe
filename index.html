@@ -361,7 +361,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <div class="cap"><span id="capS1">Motion at this frequency</span><span>Sway exaggerated · slow motion</span></div>
     <canvas id="cvS" data-h="470" role="img" aria-label="Drawing of the building moving at the chosen shaking frequency."></canvas>
     <div class="cap"><span>Ground / steady shaking</span><span id="capS2"></span></div>
-    <p class="note" style="margin:10px 0 0">The building swings further when the roof sway is larger, and faster when the shaking frequency is higher. Steady shaking at one frequency is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies.</p>
+    <p class="note" style="margin:10px 0 0">The ground moves too, and the dashed outline is where the building stands at rest. The line above the roof is the path the roof has drawn, and a storey is tinted more the more it deforms. The building swings further when the roof sway is larger, and faster when the shaking frequency is higher. Steady shaking at one frequency is accurate for wind and an idealisation for earthquakes, which are short and contain many frequencies.</p>
   </div>
 </div>
 </section>
@@ -2153,84 +2153,195 @@ function drawPlot(cv, series, o) {
 
 // ------------------------------------------------------------ 5 building drawing
 function quad(c, x1, y1, x2, y2, x3, y3, x4, y4) { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.lineTo(x3, y3); c.lineTo(x4, y4); c.closePath(); }
-// The ground: a line with hatching under it and a seismogram-style trace along it.
+const addQuad = (c, x1, y1, x2, y2, x3, y3, x4, y4) => { c.moveTo(x1, y1); c.lineTo(x2, y2); c.lineTo(x3, y3); c.lineTo(x4, y4); c.closePath(); };   // one more quad on the current path
+// The drawings run on every frame, so the colours are read from the style sheet once (the page has one look).
+let PALETTE = null;
+const pal = () => PALETTE || (PALETTE = Object.fromEntries(["ink", "mut", "core", "facade", "acc", "acc2", "win", "win-off", "stage", "bad"].map(k => [k, css("--" + k)])));
+function arrow(c, x0, y0, x1, y1, head = 5) {                           // a straight arrow from (x0, y0) to (x1, y1)
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1);
+  c.moveTo(x1 - head * Math.cos(a - 0.5), y1 - head * Math.sin(a - 0.5)); c.lineTo(x1, y1); c.lineTo(x1 - head * Math.cos(a + 0.5), y1 - head * Math.sin(a + 0.5)); c.stroke();
+}
+// The ground: a block of soil with hatching, a line on top and a seismogram-style trace along it.
 // wave = undefined draws a fixed trace (decoration only); a number is the phase of a travelling wave (steady shaking).
-function drawGround(c, W, y, cx, wave) {
-  c.strokeStyle = css("--mut"); c.lineWidth = 1; c.beginPath();
-  for (let x = 24; x < W - 12; x += 14) { c.moveTo(x, y + 3); c.lineTo(x - 7, y + 11); }
-  c.stroke();
-  c.strokeStyle = css("--acc"); c.lineWidth = 1.4; glow(c, css("--acc"), 7); c.beginPath();
+// shift = how far the ground itself has moved sideways, in px: the hatching moves with it.
+function drawGround(c, W, H, y, cx, wave, shift) {
+  const P = pal(), soil = c.createLinearGradient(0, y, 0, H);
+  soil.addColorStop(0, P.core); soil.addColorStop(1, P.stage);
+  c.globalAlpha = 0.6; c.fillStyle = soil; c.fillRect(14, y, W - 28, H - y); c.globalAlpha = 1;
+  c.save(); c.beginPath(); c.rect(14, y, W - 28, 14); c.clip();
+  c.strokeStyle = P.mut; c.lineWidth = 1; c.beginPath();
+  for (let x = 10 + ((shift % 14) + 14) % 14; x < W + 14; x += 14) { c.moveTo(x, y + 3); c.lineTo(x - 7, y + 11); }
+  c.stroke(); c.restore();
+  c.strokeStyle = P.acc; c.lineWidth = 1.4; glow(c, P.acc, 7); c.beginPath();
   for (let x = 14; x <= W - 14; x += 2) {
     const u = (x - cx) / (W / 2);
     const v = wave == null ? (Math.sin(x * 0.21) * 0.5 + Math.sin(x * 0.53 + 1.3) + Math.sin(x * 0.97 + 0.4) * 0.6) * 7 * Math.exp(-u * u * 9) : Math.sin(x * 0.09 - wave) * 4;
     x === 14 ? c.moveTo(x, y - 12 - v) : c.lineTo(x, y - 12 - v);
   }
   c.stroke(); glow(c, "", 0);
-  c.strokeStyle = css("--ink"); c.lineWidth = 1.3; c.beginPath(); c.moveTo(14, y); c.lineTo(W - 14, y); c.stroke();
+  c.strokeStyle = P.ink; c.lineWidth = 1.3; c.beginPath(); c.moveTo(14, y); c.lineTo(W - 14, y); c.stroke();
 }
-// disp: sideways offset of every degree of freedom in "floor widths"; colors: per-storey colour, or null
-// opt: {labels: text beside each storey, mark: a storey whose label is always shown, note: [small line, value line] beside the roof, wave: phase of the ground wave,
-//       reach: the largest lean of the picture at full sway, in floor widths, so that the labels can stand clear of it}
+// disp: sideways offset of every degree of freedom, measured from the ground, in "floor widths"; colors: per-storey colour, or null
+// opt, all from the solver's result unless marked as decoration:
+//   labels   text beside each storey            mark    a storey whose label is always shown
+//   note     [small line, value line] beside the roof
+//   reach    the largest lean of the picture, in floor widths, so that the labels can stand clear of it
+//   wave     phase of the ground trace
+//   ground   {shift, mm, cut}: how far the ground itself has moved (floor widths), its real size in mm, and whether it was cut to fit
+//   heat     per storey, 0 to 1: how strongly the storey is tinted (its share of the drift)
+//   over     per storey: true where the drift is over the limit; those storeys get an outline that pulses with `pulse` (0 to 1)
+//   forces   per floor, 0 to 1: length of the sideways force arrow; push (0 to 1) scales them all; forceNote is written by the top one
+//   env      the shape at full swing, drawn as a dashed envelope on both sides with its still points (nodes) marked
+//   trail    where the roof was at earlier instants (floor widths, newest first): the line the roof has drawn
+//   echo     [{d, g, a}]: earlier outlines of the building (offsets d, ground shift g, opacity a)
+//   live     {key, full, value, unit}: what this picture stands for. key names the result and the view, full is the
+//            shape at full sway, value the number beside the roof. When the key changes (a slider was moved and a new
+//            result arrived), the picture shows the shape BEFORE the change as a dashed outline and how much the
+//            number went up or down, for LIVE_MS milliseconds. This is the one thing a canvas remembers between frames.
 function drawBuilding(cv, disp, colors, opt = {}) {
-  const [c, W, H] = prep(cv);
-  const N = R.N, iso = R.base != null, wall = S.system === "wall", ground = H - 26, top = 40, slab = 4;
-  const fh = Math.min(46, (ground - top) / (N + (iso ? 0.6 : 0))), fw = Math.min(150, W * 0.34), cx = W / 2, half = 0.46 * fw;
-  const off = iso ? 1 : 0, ink = css("--ink"), mut = css("--mut"), line = css("--core"), paper = css("--facade"), acc = css("--acc"), acc2 = css("--acc2");
+  const [c, W, H] = prep(cv), P = pal();
+  const N = R.N, iso = R.base != null, wall = S.system === "wall", ground = H - 32, slab = 4, top = 84;
+  const fh = Math.min(64, (ground - top) / (N + (iso ? 0.6 : 0))), fw = Math.min(170, W * 0.34), cx = W / 2, half = 0.46 * fw;
+  const off = iso ? 1 : 0, gs = (opt.ground ? opt.ground.shift : 0) * fw, isoH = iso ? fh * 0.6 : 0;      // gs: the ground's own movement, px
   const clear = fw * Math.max(0.95, (opt.reach || 0) + 0.58), labelR = Math.min(cx + clear, W - 40), labelL = Math.max(cx - clear, 22);   // where the labels go: outside the furthest lean
-  drawGround(c, W, ground, cx, opt.wave);
-  c.setLineDash([3, 4]); c.strokeStyle = mut; c.globalAlpha = 0.45; c.beginPath(); c.moveTo(cx, top - 16); c.lineTo(cx, ground); c.stroke(); c.setLineDash([]); c.globalAlpha = 1;   // plumb line
-  let baseX = cx, baseY = ground;
-  if (iso) {                                                            // isolators and base slab
-    const bx = cx + disp[0] * fw, by = ground - fh * 0.6; c.fillStyle = acc2;
-    for (const s of [-0.38, 0, 0.38]) { quad(c, cx + s * fw - 7, ground, bx + s * fw - 7, by + 5, bx + s * fw + 7, by + 5, cx + s * fw + 7, ground); c.fill(); }
-    c.fillStyle = ink; c.fillRect(bx - half - 6, by, 2 * half + 12, 5); baseX = bx; baseY = by;
-  }
+  const topY = ground - isoH - N * fh;
+  drawGround(c, W, H, ground, cx, opt.wave, gs);
+  // the rest position: a plumb line and the outline of the building standing straight
+  c.setLineDash([3, 4]); c.strokeStyle = P.mut; c.globalAlpha = 0.45; c.beginPath(); c.moveTo(cx, topY - (opt.trail ? 70 : 18)); c.lineTo(cx, ground); c.stroke();
+  c.globalAlpha = 0.25; c.strokeRect(cx - half, topY + slab, 2 * half, ground - topY - slab); c.setLineDash([]); c.globalAlpha = 1;
   // where each floor is: X = sideways position, Y = level. Storey j runs from floor j-1 (or the base) up to floor j.
-  const X = [], Y = [];
-  for (let j = 0; j < N; j++) { X.push(cx + disp[j + off] * fw); Y.push(ground - (iso ? fh * 0.6 : 0) - (j + 1) * fh); }
-  const lowX = j => j ? X[j - 1] : baseX, lowY = j => j ? Y[j - 1] : baseY;
-  for (let j = 0; j < N; j++) {                                         // pass 1: the facade, the core and the windows
-    const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab;
-    quad(c, x0 - half, y0, x1 - half, y1, x1 + half, y1, x0 + half, y0); c.fillStyle = paper; c.fill();
-    if (S.system !== "frame") { quad(c, x0 - 8, y0, x1 - 8, y1, x1 + 8, y1, x0 + 8, y0); c.fillStyle = line; c.fill(); }
-    if (fh >= 13) {                                                     // two windows, leaning with the storey
-      const xa = x0 + (x1 - x0) * 0.3, ya = y0 + (y1 - y0) * 0.3, xb = x0 + (x1 - x0) * 0.74, yb = y0 + (y1 - y0) * 0.74, ww = fw * 0.07;
-      const lit = css("--win");                                         // most windows are lit and a few are dark, always the same ones
-      for (const s of [-0.24, 0.24]) {
-        const on = (j * 5 + (s > 0 ? 3 : 0)) % 7 > 0;
-        quad(c, xa + s * fw - ww, ya, xb + s * fw - ww, yb, xb + s * fw + ww, yb, xa + s * fw + ww, ya);
-        c.fillStyle = on ? lit : css("--win-off"); glow(c, lit, on ? 5 : 0); c.fill();
-      }
-      glow(c, "", 0);
+  const Y = []; for (let j = 0; j < N; j++) Y.push(ground - isoH - (j + 1) * fh);
+  const place = (d, g) => { const base = cx + g * fw + (iso ? d[0] * fw : 0), xs = []; for (let j = 0; j < N; j++) xs.push(cx + g * fw + d[j + off] * fw); return [base, xs]; };
+  const outline = (base, xs) => {                                         // the silhouette of the building for one set of offsets
+    c.beginPath(); c.moveTo(base - half, ground - isoH);
+    for (let j = 0; j < N; j++) c.lineTo(xs[j] - half, Y[j] + slab);
+    for (let j = N - 1; j >= 0; j--) c.lineTo(xs[j] + half, Y[j] + slab);
+    c.lineTo(base + half, ground - isoH); c.closePath();
+  };
+  let was = null, fade = 0;
+  if (opt.live && !stillOnly.matches) {
+    const now = performance.now(), m = cv._live;
+    if (m && m.key !== opt.live.key) cv._was = m.kind === opt.live.kind ? {full: m.full, value: m.value, t: now} : null;
+    cv._live = {key: opt.live.key, kind: opt.live.kind, full: opt.live.full, value: opt.live.value};
+    if (cv._was) { fade = 1 - (now - cv._was.t) / LIVE_MS; if (fade > 0) was = cv._was; else cv._was = null; }
+  }
+  if (was && was.full.length === opt.live.full.length) {                  // the shape before the last change
+    const [b, xs] = place(was.full, 0); outline(b, xs);
+    c.setLineDash([6, 4]); c.strokeStyle = P.acc2; c.lineWidth = 1.6; c.globalAlpha = Math.min(1, fade * 1.6); c.stroke(); c.setLineDash([]);
+    c.font = FONT(9.5); c.fillStyle = P.acc2; c.textAlign = "right"; c.textAlign = "center"; c.fillText("BEFORE", xs[N - 1], Y[N - 1] - 26); c.globalAlpha = 1;
+  }
+  for (const e of opt.echo || []) { const [b, xs] = place(e.d, e.g || 0); outline(b, xs); c.globalAlpha = e.a; c.fillStyle = P.acc; c.fill(); c.globalAlpha = 1; }   // where the building was a moment ago
+  if (opt.env) {                                                          // the two extremes of the swing, and the points that stay still
+    c.strokeStyle = P.acc2; c.lineWidth = 1.1; c.setLineDash([5, 4]); c.globalAlpha = 0.7;
+    for (const s of [-1, 1]) { c.beginPath(); c.moveTo(cx + (iso ? s * opt.env[0] * fw : 0), ground - isoH); for (let j = 0; j < N; j++) c.lineTo(cx + s * opt.env[j + off] * fw, Y[j] + slab); c.stroke(); }
+    c.setLineDash([]); c.globalAlpha = 1; c.font = FONT(9.5); c.textAlign = "left";
+    for (let j = 0; j < N; j++) {
+      const lo = j ? opt.env[j - 1 + off] : (iso ? opt.env[0] : 0), hi = opt.env[j + off], yLo = j ? Y[j - 1] + slab : ground - isoH;
+      if (lo * hi < 0) { const yy = yLo + (Y[j] + slab - yLo) * (lo / (lo - hi)); c.fillStyle = P.stage; c.strokeStyle = P.acc2; c.lineWidth = 1.6; c.beginPath(); c.arc(cx, yy, 4.5, 0, 7); c.fill(); c.stroke(); }
     }
+  }
+  let baseX = cx + gs, baseY = ground;
+  if (iso) {                                                              // rubber bearings that shear sideways, and the base slab on top of them
+    const bx = cx + gs + disp[0] * fw, by = ground - isoH;
+    for (const s of [-0.38, 0, 0.38]) {
+      quad(c, cx + gs + s * fw - 9, ground, bx + s * fw - 9, by + 5, bx + s * fw + 9, by + 5, cx + gs + s * fw + 9, ground); c.fillStyle = P.acc2; c.fill();
+      c.strokeStyle = P.stage; c.lineWidth = 1; c.beginPath();
+      for (const q of [0.25, 0.5, 0.75]) { const xq = cx + gs + s * fw + (bx - cx - gs) * q, yq = ground + (by + 5 - ground) * q; c.moveTo(xq - 9, yq); c.lineTo(xq + 9, yq); }
+      c.stroke();
+    }
+    c.fillStyle = P.ink; c.fillRect(bx - half - 6, by, 2 * half + 12, 5); baseX = bx; baseY = by;
+  }
+  const X = place(disp, opt.ground ? opt.ground.shift : 0)[1];
+  const lowX = j => j ? X[j - 1] : baseX, lowY = j => j ? Y[j - 1] : baseY;
+  const tint = colors ? null : P.acc;
+  for (let j = 0; j < N; j++) {                                           // pass 1: the facade, its tint and the core
+    const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab;
+    quad(c, x0 - half, y0, x1 - half, y1, x1 + half, y1, x0 + half, y0); c.fillStyle = P.facade; c.fill();
+    if (opt.heat) { c.globalAlpha = 0.06 + 0.42 * clamp(opt.heat[j], 0, 1); c.fillStyle = tint || colors[j]; c.fill(); c.globalAlpha = 1; }   // the storeys that deform most are tinted most
+    if (S.system !== "frame") { quad(c, x0 - 8, y0, x1 - 8, y1, x1 + 8, y1, x0 + 8, y0); c.fillStyle = P.core; c.fill(); }
+  }
+  if (fh >= 9) {                                                          // windows, leaning with their storey. Which ones are lit never changes (decoration).
+    const cols = fw >= 120 ? [-0.31, -0.105, 0.105, 0.31] : [-0.26, 0, 0.26], ww = fw * 0.052;
+    for (const lit of [false, true]) {
+      c.beginPath();
+      for (let j = 0; j < N; j++) {
+        const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab;
+        const xa = x0 + (x1 - x0) * 0.28, ya = y0 + (y1 - y0) * 0.28, xb = x0 + (x1 - x0) * 0.74, yb = y0 + (y1 - y0) * 0.74;
+        cols.forEach((s, k) => { if ((S.system !== "frame" && Math.abs(s) < 0.06) || (((j * 7 + k * 3) % 11) > 1) !== lit) return; addQuad(c, xa + s * fw - ww, ya, xb + s * fw - ww, yb, xb + s * fw + ww, yb, xa + s * fw + ww, ya); });
+      }
+      c.fillStyle = lit ? P.win : P["win-off"]; glow(c, P.win, lit ? 5 : 0); c.fill();
+    }
+    glow(c, "", 0);
+  }
+  if (opt.over) for (let j = 0; j < N; j++) if (opt.over[j]) {              // storeys over the drift limit: an outline that pulses
+    const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab;
+    quad(c, x0 - half - 3, y0, x1 - half - 3, y1, x1 + half + 3, y1, x0 + half + 3, y0);
+    c.strokeStyle = P.bad; c.lineWidth = 2; c.globalAlpha = 0.35 + 0.65 * (opt.pulse == null ? 1 : opt.pulse); glow(c, P.bad, 9); c.stroke(); glow(c, "", 0); c.globalAlpha = 1;
   }
   const hit = [];
   c.font = FONT(11);
-  for (let j = 0; j < N; j++) {                                         // pass 2: columns, bracing, dampers, floor slabs, labels
+  for (let j = 0; j < N; j++) {                                           // pass 2: bracing, dampers, columns, floor slabs, force arrows, labels
     const x0 = lowX(j), y0 = lowY(j), x1 = X[j], y1 = Y[j] + slab, roof = j === N - 1, picked = j === sel;
     // a wall-only building has no columns or braces in the model, so the drawing shows neither stiffness multipliers nor braces
-    if (S.brace && !wall) { c.lineWidth = 1; c.strokeStyle = mut; c.beginPath(); c.moveTo(x0 - half, y0); c.lineTo(x1 + half, y1); c.stroke(); }
-    if (S.visc) { c.strokeStyle = acc2; c.lineWidth = 2; c.beginPath(); c.moveTo(x0 + 0.2 * fw, y0); c.lineTo(x1 + 0.36 * fw, y1); c.stroke(); }
-    c.strokeStyle = colors ? colors[j] : ink; c.lineWidth = 2 * (wall ? 1 : clamp(Math.sqrt(kMul[j] || 1), 0.6, 2));                 // thicker = stiffer storey
+    if (S.brace && !wall) { c.lineWidth = 1.6; c.strokeStyle = P.mut; c.beginPath(); c.moveTo(x0 - half, y0); c.lineTo(x1 + half, y1); c.stroke(); }
+    if (S.visc) {                                                         // a shock absorber: a rod, and a barrel that the rod slides into
+      const ax = x0 + 0.08 * fw, ay = y0, bx = x1 + 0.38 * fw, by = y1, at = q => [ax + (bx - ax) * q, ay + (by - ay) * q];
+      c.strokeStyle = P.acc2; c.lineWidth = 1.5; c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+      c.lineWidth = Math.min(7, fh * 0.22); c.lineCap = "round"; c.beginPath(); c.moveTo(...at(0.36)); c.lineTo(...at(0.68)); c.stroke(); c.lineCap = "butt";
+    }
+    c.strokeStyle = colors ? colors[j] : P.ink; c.lineWidth = 2 * (wall ? 1 : clamp(Math.sqrt(kMul[j] || 1), 0.6, 2));              // thicker = stiffer storey
     for (const s of [-1, 1]) { c.beginPath(); c.moveTo(x0 + s * half, y0); c.lineTo(x1 + s * half, y1); c.stroke(); }
     const th = (roof ? 6 : 3.5) * clamp(Math.sqrt(mMul[j] || 1), 0.7, 2.2), over = roof ? 7 : 3;                               // thicker = heavier floor
-    c.fillStyle = picked ? acc2 : roof ? acc : ink; c.fillRect(x1 - half - over, y1 - th, 2 * (half + over), th);
+    c.fillStyle = picked ? P.acc2 : roof ? P.acc : P.ink; c.fillRect(x1 - half - over, y1 - th, 2 * (half + over), th);
     hit.push([Y[j] - fh * 0.2, Y[j] + fh * 0.8, j]);
-    const thin = N > 20 && (j + 1) % 5 !== 0;                           // tall buildings: number and label every fifth storey only
-    if (!thin || picked) { c.fillStyle = picked ? acc2 : mut; c.textAlign = "right"; c.fillText((picked ? "▸ " : "") + (j + 1), labelL, Y[j] + 6); }   // the arrow marks the floor being edited
-    if (opt.labels && (!thin || j === opt.mark)) { c.fillStyle = colors ? colors[j] : mut; c.textAlign = "left"; c.fillText(opt.labels[j], labelR, Y[j] + fh / 2 + 6); }
+    const thin = N > 20 && (j + 1) % 5 !== 0;                             // tall buildings: number and label every fifth storey only
+    if (opt.forces && !(thin && !roof) && opt.forces[j] > 0.02) {         // the sideways force of the code check on this floor
+      const len = (8 + 30 * opt.forces[j]) * (opt.push == null ? 1 : opt.push), xe = x1 - half - over - 4;
+      c.strokeStyle = c.fillStyle = P.acc2; c.lineWidth = 1.5; arrow(c, xe - len, y1 - th / 2, xe, y1 - th / 2, 4.5);
+      if (roof && opt.forceNote) { c.font = FONT(9.5); c.textAlign = "right"; c.fillText(opt.forceNote, xe, y1 - th - 7); c.font = FONT(11); }
+    }
+    if (!thin || picked) { c.fillStyle = picked ? P.acc2 : P.mut; c.textAlign = "right"; c.fillText((picked ? "▸ " : "") + (j + 1), labelL, Y[j] + 6); }   // the arrow marks the floor being edited
+    if (opt.labels && (!thin || j === opt.mark)) { c.fillStyle = colors ? colors[j] : P.mut; c.textAlign = "left"; c.fillText(opt.labels[j], labelR, Y[j] + fh / 2 + 6); }
   }
-  if (R.tmd != null) {                                                  // damper block riding on the roof
-    const x = cx + disp[R.tmd] * fw, y = Y[N - 1] - 13;
-    c.strokeStyle = mut; c.lineWidth = 1; c.beginPath(); c.moveTo(X[N - 1], Y[N - 1] - 2); c.lineTo(x, y + 4); c.stroke();
-    c.beginPath(); c.roundRect ? c.roundRect(x - 15, y - 5, 30, 9, 3) : c.rect(x - 15, y - 5, 30, 9);
-    c.fillStyle = paper; c.fill(); c.strokeStyle = acc; c.lineWidth = 1.6; c.stroke();
+  const xr = X[N - 1], roofTop = Y[N - 1] + slab - 6 * clamp(Math.sqrt(mMul[N - 1] || 1), 0.7, 2.2);
+  let above = roofTop;                                                    // the lowest free height above the roof
+  if (R.tmd != null) {                                                    // the damper: a mass in a frame on the roof, held by a spring on one side and a shock absorber on the other
+    const span = half * 0.9, hgt = 20, ym = roofTop - 9, xm = xr + clamp(cx + gs + disp[R.tmd] * fw - xr, -(span - 17), span - 17);
+    c.strokeStyle = P.mut; c.lineWidth = 1.2; c.beginPath(); c.moveTo(xr - span, roofTop); c.lineTo(xr - span, roofTop - hgt); c.lineTo(xr + span, roofTop - hgt); c.lineTo(xr + span, roofTop); c.stroke();
+    c.strokeStyle = P.ink; c.lineWidth = 1.1; c.beginPath(); c.moveTo(xr - span, ym);                    // the spring
+    const coils = 7, sx = (xm - 10 - (xr - span)) / coils;
+    for (let k = 0; k < coils; k++) { c.lineTo(xr - span + sx * (k + 0.25), ym - 4); c.lineTo(xr - span + sx * (k + 0.75), ym + 4); }
+    c.lineTo(xm - 10, ym); c.stroke();
+    c.strokeStyle = P.acc2; c.beginPath(); c.moveTo(xm + 10, ym); c.lineTo(xr + span, ym); c.stroke();    // the shock absorber
+    c.lineWidth = 6; c.beginPath(); c.moveTo(xr + span - 16, ym); c.lineTo(xr + span - 4, ym); c.stroke();
+    c.beginPath(); c.roundRect ? c.roundRect(xm - 10, ym - 7, 20, 14, 3) : c.rect(xm - 10, ym - 7, 20, 14);
+    c.fillStyle = P.acc; glow(c, P.acc, 8); c.fill(); glow(c, "", 0);
+    above = roofTop - hgt;
   }
-  if (opt.note) {                                                       // two lines beside the roof, kept inside the canvas
+  if (Math.abs(xr - cx) > 7) {                                            // how far the roof is from its rest position
+    c.strokeStyle = P.acc; c.lineWidth = 1.2; arrow(c, cx, above - 8, xr, above - 8, 4.5);
+    c.beginPath(); c.moveTo(xr, above - 12); c.lineTo(xr, above - 2); c.stroke();
+  }
+  if (opt.trail) {                                                        // the line the roof has drawn: newest at the roof, older further up
+    const n = opt.trail.length, y0 = above - 16, step = 54 / n;
+    c.lineWidth = 1.6; c.strokeStyle = P.acc; glow(c, P.acc, 6);
+    for (let k = 1; k < n; k++) { c.globalAlpha = 0.9 * (1 - k / n); c.beginPath(); c.moveTo(cx + opt.trail[k - 1] * fw, y0 - (k - 1) * step); c.lineTo(cx + opt.trail[k] * fw, y0 - k * step); c.stroke(); }
+    c.globalAlpha = 1; c.fillStyle = P.acc; c.beginPath(); c.arc(cx + opt.trail[0] * fw, y0, 3, 0, 7); c.fill(); glow(c, "", 0);
+  }
+  if (opt.ground) {                                                       // the ground's own movement, in words
+    c.font = FONT(9.5); c.fillStyle = P.mut; c.textAlign = "center";
+    c.fillText(`GROUND MOVES ± ${fmt(opt.ground.mm)} MM${opt.ground.cut ? " · DRAWN SMALLER" : ""}`, cx, H - 7);
+  }
+  if (opt.note) {                                                         // two lines beside the roof, kept inside the canvas
     const yr = Y[N - 1], put = (text, size, col, y) => { c.font = FONT(size); c.fillStyle = col; c.textAlign = "left"; c.fillText(text, Math.min(labelR, W - 6 - c.measureText(text).width), y); };
-    put(opt.note[0], 9.5, mut, yr - 15); put(opt.note[1], 11.5, ink, yr - 2);
+    put(opt.note[0], 9.5, P.mut, yr - 15); put(opt.note[1], 11.5, P.ink, yr - 2);
+    if (was && was.value != null) {                                       // how much the number moved with the last change
+      const dv = opt.live.value - was.value;
+      if (Math.abs(dv) > 1e-3 * Math.max(Math.abs(was.value), 1e-9)) { c.globalAlpha = Math.min(1, fade * 1.6); put(`${dv > 0 ? "▲ +" : "▼ −"}${fmt(Math.abs(dv))} ${opt.live.unit}`, 11, dv > 0 ? P.acc : P.acc2, yr - 31); put(`WAS ${fmt(was.value)}`, 9.5, P.mut, yr - 45); c.globalAlpha = 1; }
+    }
   }
-  cv._hit = hit;                                                        // rows of [y from, y to, floor] for clicks
+  cv._hit = hit;                                                          // rows of [y from, y to, floor] for clicks
 }
 const driftColor = r => Math.abs(r) > 1 ? css("--bad") : Math.abs(r) > 0.7 ? css("--warn") : css("--ok");
 const tabOn = t => $("t-" + t).classList.contains("on");
@@ -2256,6 +2367,18 @@ function swingPhase(t, hz) {
   swing.t = t; return swing.phase;
 }
 
+// What the moving pictures add, all worked out from the phase of the swing (nothing is remembered between frames):
+//   TRAIL  how far back, in radians of the swing, each point of the roof's line is (a little over one full swing)
+//   ECHO   two fainter outlines of the building a moment earlier
+const LIVE_MS = 3200;                                                    // how long the "before" outline and the change stay on screen
+const TRAIL = Array.from({length: 44}, (_, k) => k * 0.16), ECHO = [{q: 0.3, a: 0.1}, {q: 0.6, a: 0.05}], GROUND_MAX = 0.4;
+// Each storey's share of the largest storey deformation, 0 to 1. Give either the signed offsets of every degree of
+// freedom (the difference between neighbours is taken), or `drift`, the size of each one's difference from the one below.
+function storeyShare(signed, drift) {
+  const off = R.base != null ? 1 : 0, out = [];
+  for (let j = 0; j < R.N; j++) { const k = j + off; out.push(drift ? drift[k] : Math.abs(signed[k] - (k ? signed[k - 1] : 0))); }
+  const mx = Math.max(...out) || 1; return out.map(v => v / mx);
+}
 // t = time in ms for the animation, or null for one still picture at full sway
 function drawBuildView(t) {
   const off = R.base != null ? 1 : 0, d = new Array(R.ndof).fill(0), st = R.static;
@@ -2265,19 +2388,33 @@ function drawBuildView(t) {
     for (let j = 0; j < R.N; j++) d[j + off] = st.u[j] / mx * lean * g;
     if (R.tmd != null) d[R.tmd] = d[R.roof];           // the static check has no dynamics: the damper simply sits on the roof
     const worst = st.ratio.reduce((best, r, j) => Math.abs(r) > Math.abs(st.ratio[best]) ? j : best, 0);
-    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), mark: worst, reach: lean, note: ["ROOF ↗", fmt(Math.abs(st.u[R.N - 1]) * 1000) + " mm"]});
+    const fmax = Math.max(...st.F.map(Math.abs)) || 1;
+    drawBuilding($("cvB"), d, st.ratio.map(driftColor), {labels: st.ratio.map(r => (Math.abs(r) * 100).toFixed(0) + "%"), mark: worst, reach: lean, note: ["ROOF ↗", fmt(Math.abs(st.u[R.N - 1]) * 1000) + " mm"],
+      heat: st.ratio.map(r => Math.min(1, Math.abs(r)) * g), over: st.ratio.map(r => Math.abs(r) > 1), pulse: t == null ? 1 : 0.5 + 0.5 * Math.sin(t / 260),
+      forces: st.F.map(f => Math.abs(f) / fmax), push: g, forceNote: "CODE FORCE " + fmt(st.F[R.N - 1] / 1000) + " kN",
+      live: {key: "static" + Rkey, kind: "static", full: d.map((_, k) => { const j = k === R.tmd ? R.N - 1 : k - off; return j >= 0 && j < R.N ? st.u[j] / mx * lean : 0; }), value: Math.abs(st.u[R.N - 1]) * 1000, unit: "mm"}});
   } else {
-    const mo = R.modes[+view], s = t == null ? 1 : Math.sin(swingPhase(t, shownHz(mo.f)));      // a mode has a shape and a speed, but no size of its own
+    const mo = R.modes[+view], ph = t == null ? Math.PI / 2 : swingPhase(t, shownHz(mo.f)), s = Math.sin(ph);      // a mode has a shape and a speed, but no size of its own
     const mx = Math.max(...withoutDamper(mo.shape).map(Math.abs)) || 1;
-    for (let i = 0; i < R.ndof; i++) d[i] = mo.shape[i] / mx * MODE_LEAN * s;
-    drawBuilding($("cvB"), keepDamperIn(d), null, {reach: MODE_LEAN, note: ["MODE SHAPE", `φ${+view + 1}(z)`]});
+    const full = keepDamperIn(mo.shape.map(v => v / mx * MODE_LEAN)), at = q => full.map(v => v * Math.sin(q));
+    drawBuilding($("cvB"), at(ph), null, {reach: MODE_LEAN, note: ["MODE SHAPE", `φ${+view + 1}(z)`], env: full, heat: storeyShare(full).map(v => v * Math.abs(s)),
+      trail: TRAIL.map(q => full[R.roof] * Math.sin(ph - q)), echo: ECHO.map(e => ({d: at(ph - e.q), a: e.a})),
+      live: {key: "mode" + view + Rkey, kind: "mode" + view, full, value: mo.T, unit: "s period"}});
   }
 }
 function drawShakeView(t) {
   const i = fIdx(), a = R.sweep.A[i], b = R.sweep.B[i], r = R.roof;
   const ph = t == null ? Math.atan2(b[r], a[r]) : swingPhase(t, shownHz(R.freqs[i]));      // still picture: the moment of largest roof sway
   const mx = Math.max(...withoutDamper(a.map((v, k) => Math.hypot(v, b[k])))) || 1, lean = leanOf(mx);
-  drawBuilding($("cvS"), keepDamperIn(a.map((v, k) => (v * Math.cos(ph) + b[k] * Math.sin(ph)) / mx * lean)), null, {wave: ph, reach: lean, note: ["ROOF ↗", fmt(R.sweep.amp[i] * 1000) + " mm"]});
+  // The solver gives the sway measured from the ground. The ground itself moves by ag / Ω² (opposite in sign to its
+  // acceleration). It is drawn at the same scale as the sway, and cut off at GROUND_MAX floor widths so that it stays in the picture.
+  const Om = 2 * Math.PI * R.freqs[i], ug = R.ag / (Om * Om), gFull = ug / mx * lean, gDraw = Math.min(gFull, GROUND_MAX);
+  const rel = q => keepDamperIn(a.map((v, k) => (v * Math.cos(q) + b[k] * Math.sin(q)) / mx * lean)), gnd = q => -gDraw * Math.cos(q);
+  const drift = a.map((v, k) => k === 0 ? Math.hypot(v, b[k]) : Math.hypot(v - a[k - 1], b[k] - b[k - 1]));      // size of each storey's deformation
+  drawBuilding($("cvS"), rel(ph), null, {wave: ph, reach: lean + gDraw, note: ["ROOF ↗", fmt(R.sweep.amp[i] * 1000) + " mm"],
+    ground: {shift: gnd(ph), mm: ug * 1000, cut: gFull > GROUND_MAX}, heat: storeyShare(null, drift),
+    trail: TRAIL.map(q => rel(ph - q)[r] + gnd(ph - q)), echo: ECHO.map(e => ({d: rel(ph - e.q), g: gnd(ph - e.q), a: e.a})),
+    live: {key: "shake" + Rkey, kind: "shake", full: rel(Math.atan2(b[r], a[r])), value: R.sweep.amp[i] * 1000, unit: "mm"}});
 }
 // The two building drawings are animated. People who ask their system for reduced motion get a still picture.
 const stillOnly = matchMedia("(prefers-reduced-motion: reduce)");
@@ -2343,7 +2480,7 @@ function setView(v) {
   view = v;
   for (const b of $("viewBtns").children) { const on = b.dataset.v === v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); }
   $("legendB").hidden = v !== "static";
-  $("viewNote").textContent = v === "static" ? "Numbers on the right are each storey's drift as a share of the limit. The building leans further when it sways more."
+  $("viewNote").textContent = v === "static" ? "Numbers on the right are each storey's drift as a share of the limit. Arrows are the sideways force on each floor, and a storey is tinted more the closer it is to the limit. The building leans further when it sways more."
     : "A mode shape is an eigenvector of the system. The building sways in this shape when shaken at this frequency. A heavier or stiffer building swings slower or faster in the same shape; changing one floor changes the shape.";
   stageCaptions();
 }
