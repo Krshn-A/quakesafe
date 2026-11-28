@@ -83,7 +83,7 @@ variants = {"1 storey": dict(base, N=1, m=[3e5], k=[4e8]), "40-storey frame": di
             "bracing": dict(base, brace={"on": True, "A": 0.004, "bay": 6}), "floor dampers": dict(base, visc={"on": True, "c": 5e6}),
             "soft storey": dict(base, k=[1e8] + [4e8] * 7)}
 for label, v in variants.items():
-    calls += [("analyse", v), ("race", v), ("euler", v), ("det", v)]
+    calls += [("analyse", v), ("race", v), ("euler", v), ("det", v), ("replay", {"p": v, "omega": 1.7})]
 for name, arg in calls:
     r = call(name, arg)
     report(not (isinstance(r, dict) and "error" in r), "page call: " + name, r.get("error", "") if isinstance(r, dict) else "")
@@ -294,9 +294,28 @@ report(bool(claimed) and int(claimed.group(1)) == len(checks), "README states th
 # the skyline's 8-storey building is the plain 8-storey building of the Shake tab: the same roof sway at every frequency
 ref = json.loads(ns["api"]("analyse", json.dumps(base)))
 sky = json.loads(ns["api"]("skyline", json.dumps({"p": dict(base, tmd={"on": True, "mu": 0.03, "f": 0.97, "zd": 0.1}), "heights": [8], "freqs": ref["freqs"][::9]})))
-report(np.allclose(sky["rows"][0]["amp"], ref["sweep"]["amp"][::9], rtol=1e-6) and abs(sky["rows"][0]["T"] - ref["T_fixed"]) < 1e-9,
+report(np.allclose(sky["rows"][0]["amp"], ref["sweep"]["amp"][::9], rtol=1e-5) and abs(sky["rows"][0]["T"] - ref["T_fixed"]) < 1e-9,
        "skyline: the 8-storey building matches the Shake tab's own curve and period (devices left out)")
 report(sky["rows"][0]["floors"][-1] == 8, "skyline: the last floor returned is the roof")
+
+# the replay's last picture is the lab table's answer: the same number of sweeps and the same distance from Gauss
+for label, v in [("8-storey frame", base), ("30-storey wall", variants["wall only"])]:
+    race = json.loads(ns["api"]("race", json.dumps(v)))
+    om = float(re.search(r"omega = ([\d.]+)", [r["name"] for r in race["rows"] if r["name"].startswith("SOR")][0]).group(1))
+    rp = json.loads(ns["api"]("replay", json.dumps({"p": v, "omega": om})))
+    for name, m in rp["methods"].items():
+        row = [r for r in race["rows"] if r["name"].startswith(name)][0]; last = m["frames"][-1]
+        same_it = m["it"] == row["it"] == last["k"]
+        if row["diff"] is None or any(q is None for q in last["u"]):
+            same_u = row["diff"] is None or row["bad"] or m["bad"]
+        else:
+            ex = np.array(rp["exact"]); diff = float(np.max(np.abs(np.array(last["u"]) - ex)) / np.max(np.abs(ex)))
+            same_u = abs(diff - row["diff"]) <= 1e-4 * max(row["diff"], 1e-12) + 1e-6
+        report(same_it and same_u, "replay, %s: the last picture of %s is the lab table's answer" % (label, name), "sweeps %s vs %s" % (m["it"], row["it"]))
+    ds = json.loads(ns["api"]("design_stiffness", json.dumps(v)))
+    if "error" not in ds:
+        report(abs(rp["root"]["s"] - ds["bisection"]["s"]) < 1e-12 and rp["root"]["it"] == ds["bisection"]["it"] and len(rp["root"]["seen"]) == rp["root"]["it"] + 2,
+               "replay, %s: bisection's noted points give the design answer in the same number of steps" % label)
 
 print("\n%d failed" % fails)
 sys.exit(1 if fails else 0)

@@ -448,6 +448,8 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
   <div class="card"><p class="eyebrow">Iterative methods</p><h3>SOR: iterations against the relaxation factor ω</h3><canvas id="cvSor" data-h="240" role="img" aria-label="Chart: SOR iterations needed against the relaxation factor."></canvas><p class="note">How many rounds SOR needs for each setting of ω. The lowest point is the best setting.</p></div>
   <div class="card"><p class="eyebrow">Eigenvalues</p><h3>Natural frequencies as roots of det(K − λM) = 0</h3><canvas id="cvDet" data-h="240" role="img" aria-label="Chart: the determinant against lambda, with its roots marked. The roots are listed below."></canvas><p class="note">Every place where the curve crosses zero is a natural frequency of the building.</p><div id="detOut" class="note"></div></div>
   <div class="card"><p class="eyebrow">Roots of equations</p><h3>Root finding: three methods on the design problem</h3><canvas id="cvRoot" data-h="240" role="img" aria-label="Chart: error per iteration for the three root-finding methods."></canvas><div id="rootOut" class="note"></div></div>
+  <div class="card"><p class="eyebrow">Iterative methods</p><h3>Watch the iterative solvers close in</h3><canvas id="cvPlayIter" data-h="240" role="img" aria-label="Chart: the sway of every floor as Jacobi, Gauss-Seidel and SOR have it after a number of sweeps, against the exact answer."></canvas><button class="b" id="btnReplay">▶ Replay the solvers</button><p class="note" id="playIterNote" role="status">Press the button. Each line is one method's answer so far for the sway of every floor. The dashed line is the exact answer from Gauss elimination.</p></div>
+  <div class="card"><p class="eyebrow">Roots of equations</p><h3>Watch bisection close in</h3><canvas id="cvPlayRoot" data-h="240" role="img" aria-label="Chart: the design function against the stiffness multiplier, with the two ends of the bisection bracket."></canvas><p class="note" id="playRootNote" role="status">The curve is drift ÷ limit − 1 against the stiffness multiplier. The answer is where it crosses zero. The two lines are the ends of the bracket, which bisection halves at every step.</p></div>
   <div class="card"><p class="eyebrow">Error growth</p><h3>Euler's method: energy that should stay constant</h3><canvas id="cvEuler" data-h="240" role="img" aria-label="Chart: energy against time for three Euler step sizes."></canvas><div id="eulerOut" class="note"></div></div>
   <div class="card"><p class="eyebrow">Error growth</p><h3>Euler's method: roof motion against the exact answer</h3><canvas id="cvEuler2" data-h="240" role="img" aria-label="Chart: roof position from Euler's method against the exact answer."></canvas><p class="note">The dashed line is the exact motion. Euler's line slowly swings too far, because its small errors add up.</p></div>
   <div class="card">
@@ -1272,6 +1274,42 @@ def method_race(p):
     return {"rows": rows, "scan": scan, "hists": hists, "n": n, "cond": cond_inf(Ks), "cap": cap}
 
 
+def replay(p, omega):
+    """Frames for the Lab card that shows the solvers at work. Nothing here is a new method.
+    Iterative solvers: Jacobi, Gauss-Seidel and SOR are the same functions as in method_race(), with the
+    same tolerance and cap, run again and again with a growing limit on the number of sweeps. Each run
+    gives the answer as it stood after that many sweeps.
+    Bisection: the same bisection() as in design_stiffness(), on the same bracket, given a function that
+    notes every point it is asked for."""
+    x, m, Ks, k, tri = structure(p); w1, _ = first_mode(Ks, m)
+    F = static_check(p, x, m, Ks, k, tri, 2 * math.pi / w1)["F"]; n = len(F)
+    exact = gauss_solve(Ks, F); es = 1e-7; cap = 6000 if (tri and n <= 20) else 800
+    runs = {"Jacobi": lambda lim: jacobi(Ks, F, es, lim), "Gauss-Seidel": lambda lim: gauss_seidel(Ks, F, es, lim),
+            "SOR": lambda lim: sor(Ks, F, omega, es, lim)}
+    methods = {}
+    for name, run in runs.items():
+        u, total, _ = run(cap); counts = []; c = 1.0
+        while int(c) < total:                                  # 1, 2, 3, 4, 6, 9, 13, ... sweeps, then the last one
+            if not counts or int(c) != counts[-1]:
+                counts.append(int(c))
+            c *= 1.45
+        frames = [{"k": lim, "u": run(lim)[0]} for lim in counts] + [{"k": total, "u": u}]
+        methods[name] = {"it": total, "frames": frames, "bad": bool(not np.all(np.isfinite(u)))}
+    out = {"exact": exact, "methods": methods, "cap": cap, "omega": omega, "n": n}
+    d = design_stiffness(p)
+    if "error" in d:
+        out["root"] = {"error": d["error"]}
+    else:
+        lo, hi = d["bracket"]; seen = []
+        f = lambda q: drift_ratio_for_scale(p, q) - 1.0
+        def noted(q):
+            v = f(q); seen.append([q, v]); return v
+        root, it, _ = bisection(noted, lo, hi, 1e-6, 300)
+        grid = [lo + (hi - lo) * i / 30.0 for i in range(31)]
+        out["root"] = {"bracket": [lo, hi], "seen": seen, "s": root, "it": it, "curve": [[q, f(q)] for q in grid]}
+    return out
+
+
 def det_roots(p, nroots=3):
     """Natural frequencies as roots of det(K - lambda M) = 0: scan, then bisect."""
     x, m, Ks, k, tri = structure(p); kref = float(np.max(np.diag(Ks))); mref = float(np.max(m))
@@ -1858,6 +1896,7 @@ def api(name, payload):
         elif name == "euler": r = euler_demo(a)
         elif name == "race": r = method_race(a)
         elif name == "det": r = det_roots(a)
+        elif name == "replay": r = replay(a["p"], float(a["omega"]))
         elif name == "skyline": r = skyline(a["p"], a["heights"], a["freqs"])
         elif name == "detect": r = detect(a)
         elif name == "record": r = record(a)
@@ -2069,6 +2108,7 @@ function latest(run) {
   };
 }
 const onClick = (id, fn) => $(id).addEventListener("click", e => job(() => fn(e), e.currentTarget));   // a button that needs the solver
+$("btnReplay").addEventListener("click", e => { if (replayTimer) stopReplay(); else job(runReplay, e.currentTarget); });
 
 // ------------------------------------------------------------ 4 charts
 // A canvas's height in CSS pixels lives in its data-h attribute. (Reading it back from the height
@@ -2491,7 +2531,7 @@ function drawSky(t) {
     c.fillStyle = P.acc; c.fillRect(xr - bw / 2 - 2, yr - 3, bw + 4, 3);
     c.textAlign = "center"; c.font = FONT(k === best ? 11 : 9.5); c.fillStyle = k === best ? P.acc : P.mut; c.fillText(fmt(amps[k] * 1000) + (slot > 58 ? " mm" : ""), cx, top0 - 9);
     c.font = FONT(10.5); c.fillStyle = r.N === R.N ? P.acc2 : P.ink; c.fillText(r.N + (slot > 58 ? " storeys" : ""), cx, ground + 26);
-    c.font = FONT(9.5); c.fillStyle = P.mut; c.fillText(fmt(r.T) + " s", cx, ground + 39);
+    c.font = FONT(9.5); c.fillStyle = P.mut; c.fillText(fmt(r.T) + (slot > 58 ? " s" : ""), cx, ground + 39);      // on a narrow screen the units are left to the note below
   });
   // the words under the drawing are written from the same numbers, and only when they change
   const b = rows[best], near = rows.reduce((q, r, k) => Math.abs(r.T - 1 / f) < Math.abs(rows[q].T - 1 / f) ? k : q, 0);
@@ -3015,6 +3055,53 @@ function drawK(K, n) {
   c.globalAlpha = 1;
 }
 // The Lab has no "run" button. It fills itself when its tab is opened, and again whenever the building has changed.
+// ---- watching the solvers work -----------------------------------------------------------------------------------------
+// One solver call, replay, gives the answers of Jacobi, Gauss-Seidel and SOR as they stood after 1, 2, 3, 4, 6, 9, ...
+// sweeps, and every point bisection was asked for. The page only shows them one after another: it does none of the
+// arithmetic itself. STEP_MS is the time one picture stays up.
+const STEP_MS = 480;
+let REPLAY = null, replayTimer = null;
+function stopReplay() { if (replayTimer) { clearInterval(replayTimer); replayTimer = null; $("btnReplay").textContent = "▶ Replay the solvers"; } }
+function replayFrame(step) {
+  const d = REPLAY, cols = {Jacobi: "--mut", "Gauss-Seidel": "--acc", SOR: "--acc2"}, floors = d.exact.map((_, i) => i + 1), top = Math.max(...d.exact.map(Math.abs)) * 1000;
+  // the sweep counts that are shown, taken from the method with the most frames
+  const counts = Object.values(d.methods).reduce((a, m) => m.frames.length > a.length ? m.frames.map(f => f.k) : a, []);
+  const k = counts[Math.min(step, counts.length - 1)];
+  const at = m => { let f = m.frames[0]; for (const g of m.frames) if (g.k <= k) f = g; return f; };       // the last picture of this method at or before k sweeps
+  const series = [{x: floors, y: d.exact.map(v => v * 1000), color: "--ink", dash: [5, 4], w: 1.2, label: "exact"}];
+  const said = [];
+  for (const [name, m] of Object.entries(d.methods)) {
+    const f = at(m), done = k >= m.it;
+    series.push({x: floors, y: f.u.map(v => v == null || Math.abs(v * 1000) > 3 * top ? null : v * 1000), color: cols[name], label: `${name} (${f.k})`});
+    const wild = m.bad || m.frames[m.frames.length - 1].u.some(v => v == null || Math.abs(v * 1000) > 100 * top);
+    said.push(`${name} ${wild ? (done ? `diverged after ${m.it}` : "is diverging") : done ? (m.it >= d.cap ? `stopped at the cap of ${d.cap}` : `finished in ${m.it}`) : "still closing in"}`);
+  }
+  plot($("cvPlayIter"), series, {xl: "storey", yl: "sway (mm)", ymin: 0, ymax: 1.25 * top});
+  $("playIterNote").textContent = `After ${k} sweep${k === 1 ? "" : "s"}: ${said.join(", ")}. SOR uses ω = ${d.omega}. Each line is one method's answer so far; the dashed line is the exact answer from Gauss elimination.`;
+  const r = d.root;
+  if (r.error) { $("playRootNote").textContent = "Bisection has nothing to do for this building: " + r.error + "."; return counts.length; }
+  // the bracket after `step` halvings: the closest point so far on each side of the answer
+  const seen = r.seen.slice(0, Math.min(r.seen.length, 2 + step)), up = Math.sign(r.seen[0][1]);      // the sign of the function at the bracket's lower end
+  const lo = Math.max(...seen.filter(q => Math.sign(q[1]) === up).map(q => q[0])), hi = Math.min(...seen.filter(q => Math.sign(q[1]) !== up).map(q => q[0]));
+  const mid = seen.length > 2 ? seen[seen.length - 1] : null;
+  const wide = hi - lo, x0 = lo - wide, x1 = hi + wide;
+  const known = r.curve.concat(r.seen).filter(q => q[0] >= x0 && q[0] <= x1).sort((a, b) => a[0] - b[0]);      // every point of the curve the solver has worked out inside the window
+  plot($("cvPlayRoot"), [{x: known.map(q => q[0]), y: known.map(q => q[1]), label: "drift ÷ limit − 1"}, {x: [x0, x1], y: [0, 0], color: "--mut", dash: [3, 3]}]
+      .concat(mid ? [{x: [mid[0]], y: [mid[1]], pts: true, color: "--acc2", label: "newest midpoint"}] : []),
+    {xl: "stiffness multiplier (the picture zooms in with the bracket)", yl: "drift ÷ limit − 1", vl: [[lo, "", "--acc2"], [hi, "", "--acc2"]]});
+  $("playRootNote").textContent = `After ${seen.length - 2} of ${r.it} halvings the answer lies between ${fmt(lo, 5)} and ${fmt(hi, 5)}: a bracket ${fmt(hi - lo, 2)} wide. Bisection ends at ${fmt(r.s, 6)}.`;
+  return Math.max(counts.length, r.seen.length - 1);
+}
+async function runReplay() {
+  stopReplay();
+  const p = params(), key = structureKey(p), row = (LAB_RACE && LAB_RACE.key === key ? LAB_RACE.rows : (await solver.must("race", p)).rows).find(r => r.name.startsWith("SOR"));
+  if (!REPLAY || REPLAY.key !== key) REPLAY = {key, ...(await solver.must("replay", {p, omega: +(/omega = ([\d.]+)/.exec(row.name) || [0, 1])[1]}))};
+  if (stillOnly.matches) { replayFrame(1e9); return; }                    // reduced motion: the last picture only
+  let step = 0; const last = replayFrame(0);
+  $("btnReplay").textContent = "■ Stop";
+  replayTimer = setInterval(() => { step++; replayFrame(step); if (step >= last || !tabOn("lab") || REPLAY.key !== structureKey(params())) stopReplay(); }, STEP_MS);
+}
+let LAB_RACE = null;                                                      // the lab's own table, so that the replay uses the same ω
 async function runLab() {
   const p = params(), stamp = structureKey(p);
   labBusyFor = stamp;
@@ -3031,6 +3118,7 @@ async function fillLab(p, stamp) {
   const {K, N: n, tri, condK} = R;          // K is the structure's own matrix: no base slab, no damper
   // 1. the same static problem by every linear solver
   const race = await solver.must("race", p);
+  LAB_RACE = {key: stamp, rows: race.rows};
   retained($("cvK"), () => drawK(K, n));
   $("kNote").textContent = `Each square is one number of the ${n} × ${n} matrix: orange is positive, blue is negative, faint is zero. ${tri ? "Only three diagonals are filled, so the fast Thomas algorithm can be used." : "The matrix is full, so Cholesky is used."} Condition number: ${fmt(condK, 3)}.`;
   const diverged = r => r.it != null && (r.bad || r.resid == null || r.resid > 100), capped = r => r.it != null && !diverged(r) && r.it >= race.cap;
