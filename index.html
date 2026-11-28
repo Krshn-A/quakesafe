@@ -2306,11 +2306,7 @@ function drawBuilding(cv, disp, colors, opt = {}) {
   if (opt.env) {                                                          // the two extremes of the swing, and the points that stay still
     c.strokeStyle = P.acc2; c.lineWidth = 1.1; c.setLineDash([5, 4]); c.globalAlpha = 0.7;
     for (const s of [-1, 1]) { c.beginPath(); c.moveTo(cx + (iso ? s * opt.env[0] * fw : 0), ground - isoH); for (let j = 0; j < N; j++) c.lineTo(cx + s * opt.env[j + off] * fw, Y[j] + slab); c.stroke(); }
-    c.setLineDash([]); c.globalAlpha = 1; c.font = FONT(9.5); c.textAlign = "left";
-    for (let j = 0; j < N; j++) {
-      const lo = j ? opt.env[j - 1 + off] : (iso ? opt.env[0] : 0), hi = opt.env[j + off], yLo = j ? Y[j - 1] + slab : ground - isoH;
-      if (lo * hi < 0) { const yy = yLo + (Y[j] + slab - yLo) * (lo / (lo - hi)); c.fillStyle = P.stage; c.strokeStyle = P.acc2; c.lineWidth = 1.6; c.beginPath(); c.arc(cx, yy, 4.5, 0, 7); c.fill(); c.stroke(); }
-    }
+    c.setLineDash([]); c.globalAlpha = 1;
   }
   let baseX = cx + gs, baseY = ground;
   if (iso) {                                                              // rubber bearings that shear sideways, and the base slab on top of them
@@ -2399,6 +2395,12 @@ function drawBuilding(cv, disp, colors, opt = {}) {
     c.lineWidth = 1.6; c.strokeStyle = P.acc; glow(c, P.acc, 6);
     for (let k = 1; k < n; k++) { c.globalAlpha = 0.9 * (1 - k / n); c.beginPath(); c.moveTo(cx + opt.trail[k - 1] * fw, y0 - (k - 1) * step); c.lineTo(cx + opt.trail[k] * fw, y0 - k * step); c.stroke(); }
     c.globalAlpha = 1; c.fillStyle = P.acc; c.beginPath(); c.arc(cx + opt.trail[0] * fw, y0, 3, 0, 7); c.fill(); glow(c, "", 0);
+  }
+  if (opt.env) {                                                          // the points of a mode that stay still, drawn last so that the building does not hide them
+    for (let j = 0; j < N; j++) {
+      const lo = j ? opt.env[j - 1 + off] : (iso ? opt.env[0] : 0), hi = opt.env[j + off], yLo = j ? Y[j - 1] + slab : ground - isoH;
+      if (lo * hi < 0) { const yy = yLo + (Y[j] + slab - yLo) * (lo / (lo - hi)); c.fillStyle = P.stage; c.strokeStyle = P.acc2; c.lineWidth = 2; c.beginPath(); c.arc(cx, yy, 5.5, 0, 7); c.fill(); c.stroke(); c.beginPath(); c.moveTo(cx - half - 10, yy); c.lineTo(cx + half + 10, yy); c.setLineDash([2, 3]); c.lineWidth = 1; c.stroke(); c.setLineDash([]); }
+    }
   }
   if (opt.ground) {                                                       // the ground's own movement, in words
     c.font = FONT(9.5); c.fillStyle = P.mut; c.textAlign = "center";
