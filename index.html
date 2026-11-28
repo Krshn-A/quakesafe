@@ -403,6 +403,8 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <p class="eyebrow">02 / The network</p>
     <h3>Stations and epicentre</h3>
     <canvas id="cvMap" data-h="380" role="img" aria-label="Schematic map of stations, cities, the true earthquake and the estimated epicentre. The table below lists the same distances."></canvas>
+    <button class="b" id="btnPlay" aria-pressed="false">▶ Play the earthquake</button>
+    <p class="note" id="playNote" role="status" hidden></p>
     <p class="note">Each circle is one station's estimate of how far away the earthquake is. Where the circles cross is the earthquake. ▲ station · ● city · ★ true earthquake · ✚ estimate. Positions only, no coastline.</p>
     <div class="scroll" tabindex="0" role="region" aria-label="Stations: true and estimated distances"><table id="tbSt"></table></div>
     <p class="note" id="stNote" hidden></p>
@@ -2699,9 +2701,11 @@ function drawMap() {
   for (let la = 22; la <= 31; la += 2) { c.beginPath(); c.moveTo(30, Y(la)); c.lineTo(W - 10, Y(la)); c.stroke(); c.textAlign = "right"; c.fillText(la + "°N", 27, Y(la) + 3); }
   const kx = (X(55) - X(54)) / (111.32 * Math.cos(26 * Math.PI / 180)), ky = (Y(26) - Y(27)) / 110.57;      // pixels per km
   c.strokeStyle = css("--acc"); c.lineWidth = 1;
+  c.globalAlpha = playing ? 0.25 : 1;                                    // fainter while the earthquake is being played, so the waves stand out
   DET.stations.forEach((r, i) => {                                       // distance circles
     if (r.est != null) { c.beginPath(); c.ellipse(X(st[i][2]), Y(st[i][1]), Math.abs(r.est * kx), Math.abs(r.est * ky), 0, 0, 7); c.stroke(); }
   });
+  c.globalAlpha = 1;
   for (const [name, lat, lon, side] of CITIES) {                         // a dot and a label on the side that keeps clear of its neighbours
     const x = X(lon), y = Y(lat);
     c.fillStyle = css("--mut"); c.beginPath(); c.arc(x, y, 2.5, 0, 7); c.fill();
@@ -2711,9 +2715,80 @@ function drawMap() {
   st.forEach((s, i) => { const x = X(s[2]), y = Y(s[1]); c.fillStyle = DET.stations[i].est == null ? css("--mut") : css("--acc"); c.beginPath(); c.moveTo(x, y - 7); c.lineTo(x - 6, y + 5); c.lineTo(x + 6, y + 5); c.fill(); });
   c.fillStyle = css("--bad"); c.font = "18px system-ui"; c.textAlign = "center"; c.fillText("★", X(EQ.lon), Y(EQ.lat) + 6);
   if (DET.epi) { c.fillStyle = css("--ink"); c.fillText("✚", X(DET.epi.lon), Y(DET.epi.lat) + 6); }
+  if (playing) drawWaves(c, W, X, Y, kx, ky);
   cv._map = {W, H};
 }
+// ---- playing the earthquake on the map -------------------------------------------------------------------------------
+// Nothing new is computed: the picture is drawn from the numbers the solver has already returned for this earthquake.
+//   two rings  the fast P wave and the slower, stronger S wave, spreading from the true earthquake at the solver's speeds
+//   a station  lights up at the moment the solver's trigger picked the P wave there (stations with no pick stay dark)
+//   the alert  goes out at the solver's alert time: the first pick plus the processing delay
+//   a city     counts down from the alert until the S wave arrives. At the alert its count is the table's warning time.
+// PLAY_MS is how long the whole story takes on screen. `playing.t` is the time since the earthquake began, in seconds.
+const PLAY_MS = 14000;
+let playing = null;
+function waveSpeeds() {                                                   // the solver's wave speeds, read back from its own arrival times
+  const c = DET.cities.find(q => q.s_arrival > 0), r = DET.stations.find(q => q.true > 0);
+  const vs = c.dist / c.s_arrival, vp = 1 / (1 / vs - (r.tS_true - r.tP_true) / r.true);
+  return {vp, vs};
+}
+function drawWaves(c, W, X, Y, kx, ky) {
+  const t = playing.t, {vp, vs} = playing, ex = X(EQ.lon), ey = Y(EQ.lat), alertAt = DET.first_alarm == null || DET.false_alarm ? null : DET.first_alarm + S.delay;
+  c.save(); c.beginPath(); c.rect(30, 10, W - 40, c.canvas.clientHeight - 30); c.clip();
+  for (const [v, col, name] of [[vp, "--acc2", "P"], [vs, "--bad", "S"]]) {     // the two rings
+    const r = v * t; if (r <= 0) continue;
+    c.strokeStyle = css(col); c.lineWidth = name === "S" ? 2.6 : 1.6; glow(c, css(col), 8);
+    c.beginPath(); c.ellipse(ex, ey, Math.abs(r * kx), Math.abs(r * ky), 0, 0, 7); c.stroke(); glow(c, "", 0);
+    c.fillStyle = css(col); c.font = FONT(10); c.textAlign = "center"; c.fillText(name, ex, ey - Math.abs(r * ky) - 4);
+  }
+  c.restore();
+  DET_ST.forEach((s, i) => {                                             // stations that have triggered
+    const r = DET.stations[i]; if (r.tP == null) return;
+    const at = r.true / vp + (r.tP - r.tP_true); if (t < at) return;
+    const x = X(s[2]), y = Y(s[1]), age = Math.min(1, (t - at) / 6);
+    c.strokeStyle = css("--acc2"); c.lineWidth = 2; c.globalAlpha = 1 - 0.6 * age; c.beginPath(); c.arc(x, y, 9 + 9 * age, 0, 7); c.stroke(); c.globalAlpha = 1;
+  });
+  c.font = FONT(10);
+  for (const [name, lat, lon, side] of CITIES) {                         // cities: a countdown after the alert, then a mark when the S wave is there
+    const q = DET.cities.find(k => k.name === name); if (!q) continue;
+    const x = X(lon), y = Y(lat), hit = t >= q.s_arrival;
+    if (hit) { c.fillStyle = css("--bad"); glow(c, css("--bad"), 8); c.beginPath(); c.arc(x, y, 4.5, 0, 7); c.fill(); glow(c, "", 0); }
+    else if (alertAt != null && t >= alertAt) {
+      c.fillStyle = css("--ok"); c.textAlign = side === "w" ? "left" : "right";
+      c.fillText(Math.ceil(q.s_arrival - t) + " s", x + (side === "w" ? 8 : -8), y + 4);
+    }
+  }
+  c.fillStyle = css("--ink"); c.font = FONT(11); c.textAlign = "left";      // the clock
+  c.fillText(`T + ${t.toFixed(0)} s`, 36, 24);
+  if (alertAt != null && t >= alertAt) { c.fillStyle = css("--ok"); c.fillText("● ALERT SENT", 36, 39); }
+}
+function stopPlay() {
+  if (!playing) return;
+  cancelAnimationFrame(playing.raf); playing = null;
+  const b = $("btnPlay"); b.textContent = "▶ Play the earthquake"; b.setAttribute("aria-pressed", "false");
+  $("playNote").hidden = true;
+  if (DET && tabOn("detect")) drawMap();
+}
+function startPlay() {
+  if (!DET || !DET.cities.length) return;
+  const end = Math.max(...DET.cities.map(q => q.s_arrival)) * 1.03, t0 = performance.now(), b = $("btnPlay");
+  b.textContent = "■ Stop"; b.setAttribute("aria-pressed", "true");
+  const alertAt = DET.first_alarm == null || DET.false_alarm ? null : DET.first_alarm + S.delay;
+  $("playNote").hidden = false;
+  $("playNote").textContent = `Shown ${fmt(end * 1000 / PLAY_MS, 2)} times faster than real time. Blue ring: the fast P wave. Red ring: the slower, stronger S wave. `
+    + (alertAt == null ? "No alert goes out for this earthquake." : `The alert goes out ${fmt(alertAt)} s after the earthquake begins, and each city then counts down to its S wave.`);
+  playing = {t: 0, ...waveSpeeds(), raf: 0};
+  if (stillOnly.matches) { playing.t = alertAt == null ? end / 2 : alertAt; drawMap(); return; }      // reduced motion: one still picture, at the moment of the alert
+  const step = now => {
+    if (!playing) return;
+    playing.t = (now - t0) / PLAY_MS * end;
+    if (playing.t >= end || !tabOn("detect")) { stopPlay(); return; }
+    drawMap(); playing.raf = requestAnimationFrame(step);
+  };
+  playing.raf = requestAnimationFrame(step);
+}
 function renderDetect(show) {
+  stopPlay();                                                             // a new earthquake or a new result: the old story is over
   retained($("cvMap"), drawMap);
   // the solver marks a pick made more than a second before the true arrival: noise crossed the threshold, not the earthquake
   const falseTrigger = r => r.false_trigger, late = (t, t0) => t == null ? "–" : fmt(t - t0, 2);
@@ -2750,6 +2825,7 @@ function moveQuake(lat, lon) {
   EQ.lat = clamp(lat, MAPBOX.lat0, MAPBOX.lat1); EQ.lon = clamp(lon, MAPBOX.lon0, MAPBOX.lon1);
   syncInputs(); refreshDetect();
 }
+$("btnPlay").addEventListener("click", () => playing ? stopPlay() : startPlay());
 $("cvMap").addEventListener("click", e => {
   const m = $("cvMap")._map; if (!m) return;
   moveQuake(MAPBOX.lat0 + (m.H - 20 - e.offsetY) / (m.H - 30) * (MAPBOX.lat1 - MAPBOX.lat0), MAPBOX.lon0 + (e.offsetX - 30) / (m.W - 40) * (MAPBOX.lon1 - MAPBOX.lon0));
