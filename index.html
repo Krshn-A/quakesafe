@@ -351,6 +351,7 @@ td.n,th.n{text-align:right}td.n{font:12px var(--mono);font-variant-numeric:tabul
     <canvas id="cvSweep" data-h="300" role="img" aria-label="Chart: roof sway against shaking frequency. The peak and the value at the chosen frequency are listed below it."></canvas>
     <p class="note">How far the roof sways when the ground shakes slowly (left) or quickly (right). The peak is the speed to avoid: the building's own rhythm. Orange is your building now. The dashed line is the same building with no damping.</p>
     <label for="freq">Shaking frequency <b id="vfreq"></b></label><input type="range" id="freq" min="0" max="100" step="1" value="20">
+    <button class="b" id="btnSweep" aria-pressed="false">▶ Sweep through every frequency</button>
     <div class="kv" id="kvS"></div>
     <div id="bandOut"></div>
     <h4>Condition number (how hard the equations are to solve)</h4>
@@ -2564,6 +2565,33 @@ $("kMul").addEventListener("input", e => { if (sel >= 0) { kMul[sel] = +e.target
 $("cvB").addEventListener("click", e => { const y = e.offsetY, h = ($("cvB")._hit || []).find(r => y >= r[0] && y <= r[1]); selectFloor(h ? h[2] : -1); });
 $("viewBtns").addEventListener("click", e => { const v = e.target.dataset.v; if (v == null || e.target.disabled) return; setView(v); drawNow(); });
 $("freq").addEventListener("input", () => { if (R) { renderShake(); drawNow(); } });
+// ---- the sweep button: the frequency slider moves by itself from one end to the other, once -------------------------
+// Nothing new is computed. Every position of the slider is one of the frequencies the solver has already answered for,
+// so the sweep only shows those answers one after another. It stops at the end, on a second press, when the slider
+// is grabbed or when the tab is left.
+const SWEEP_MS = 18000;
+let sweeping = null;
+function stopSweep() {
+  if (!sweeping) return;
+  cancelAnimationFrame(sweeping.raf); sweeping = null;
+  const b = $("btnSweep"); b.textContent = "▶ Sweep through every frequency"; b.setAttribute("aria-pressed", "false");
+}
+function startSweep() {
+  if (!R) return;
+  const el = $("freq"), b = $("btnSweep"), t0 = performance.now();
+  b.textContent = "■ Stop the sweep"; b.setAttribute("aria-pressed", "true");
+  const step = t => {
+    if (!sweeping) return;
+    const q = (t - t0) / SWEEP_MS;
+    if (q >= 1 || !tabOn("shake")) { stopSweep(); return; }
+    const v = Math.round(q * 100);
+    if (v !== +el.value) { el.value = v; el.dispatchEvent(new Event("input", {bubbles: true})); }
+    sweeping.raf = requestAnimationFrame(step);
+  };
+  sweeping = {raf: requestAnimationFrame(step)};
+}
+$("btnSweep").addEventListener("click", () => sweeping ? stopSweep() : startSweep());
+$("freq").addEventListener("pointerdown", stopSweep);
 
 const HIST_COLOURS = {bisection: "--acc", false_position: "--acc2", fixed_point: "--ok"};
 const histSeries = d => Object.keys(HIST_COLOURS).filter(k => d[k] && d[k].hist).map(k => ({x: d[k].hist.map((_, i) => i + 1), y: d[k].hist, color: HIST_COLOURS[k], label: `${k.replace("_", " ")} (${d[k].it})`}));
